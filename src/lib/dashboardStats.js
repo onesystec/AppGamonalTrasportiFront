@@ -715,13 +715,13 @@ export const computeVehicleMaintenanceAlerts = (vehicles) =>
 // el mismo dia o el siguiente, no despues.
 // entries: ya vienen sin pagar (ver listUnpaidAreaCEntriesRequest) - dismissible:
 // false a proposito, esta alerta no se "oculta" a mano, se resuelve marcando pagado en
-// la seccion Area C del Mapa (ahi desaparece sola, ver NotificationsBell.jsx).
+// la seccion Area C de Finanzas (ahi desaparece sola, ver NotificationsBell.jsx).
 export const computeAreaCAlerts = (entries) =>
   entries.map((entry) => ({
     id: `area-c-${entry.id}`,
     severity: "urgent",
     message: `${entry.targa} entro al Area C el ${formatDateTime(entry.enteredAt)} sin autorizacion - pagalo antes de que venza el plazo.`,
-    link: "/mapa",
+    link: "/finanzas/area-c",
     dismissible: false,
   }));
 

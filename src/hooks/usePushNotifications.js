@@ -26,12 +26,12 @@ export const usePushNotifications = () => {
       registeredToken = token.value;
       registerPushTokenRequest(token.value, Capacitor.getPlatform()).catch(() => {});
     };
-    // Al tocar la notificacion (app cerrada, en segundo plano o abierta), la lleva
-    // directo al Mapa - ahi se ven tanto la seccion Area C como el historial de
-    // exceso de velocidad (Control de Flota).
+    // Al tocar la notificacion (app cerrada, en segundo plano o abierta), la lleva directo a su pantalla:
+    // Area C en Finanzas, el seguimiento del servicio, etc.; si no sabe cual, al Mapa.
     const onTap = (action) => {
       const type = action?.notification?.data?.type;
       if (type === "gps-respaldo") navigate("/");
+      else if (type === "area-c") navigate("/finanzas/area-c");
       else if (type === "gps") navigate("/finanzas/paradas");
       else if (type === "permiso") navigate(user?.cargo === "CHOFER" ? "/calendario" : "/permisos");
       else if (type === "seguimiento") {

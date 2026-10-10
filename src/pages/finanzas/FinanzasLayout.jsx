@@ -153,6 +153,11 @@ export const FinanzasLayout = () => {
         <NavLink to="/finanzas/multas" className={tabClass}>
           Multas
         </NavLink>
+        {isPrivileged && (
+          <NavLink to="/finanzas/area-c" className={tabClass}>
+            Área C
+          </NavLink>
+        )}
       </nav>
 
       <Outlet context={{ refreshPendingCount }} />

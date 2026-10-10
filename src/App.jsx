@@ -39,7 +39,7 @@ const NewDriverPage = lazy(() =>
 );
 const MapPage = lazy(() => import("./pages/map/MapPage").then((m) => ({ default: m.MapPage })));
 const SeguimientoPage = lazy(() => import("./pages/map/SeguimientoPage").then((m) => ({ default: m.SeguimientoPage })));
-const AreaCPage = lazy(() => import("./pages/map/AreaCPage").then((m) => ({ default: m.AreaCPage })));
+const AreaCPage = lazy(() => import("./pages/finanzas/AreaCPage").then((m) => ({ default: m.AreaCPage })));
 const ControlFlotaPage = lazy(() =>
   import("./pages/control-flota/ControlFlotaPage").then((m) => ({ default: m.ControlFlotaPage })),
 );
@@ -293,6 +293,7 @@ function App() {
                 <Route path="horas" element={<RoleOnly privileged><HorasAprobacionPage /></RoleOnly>} />
                 <Route path="paradas" element={<RoleOnly privileged><ParadasPage /></RoleOnly>} />
                 <Route path="gastos" element={<RoleOnly privileged><GastosServiciosPage /></RoleOnly>} />
+                <Route path="area-c" element={<RoleOnly privileged><AreaCPage /></RoleOnly>} />
                 <Route path="mancato" element={<MancatoPagamentoPage />} />
                 <Route path="mancato/new" element={<NewMancatoPage />} />
                 <Route path="mancato/:id" element={<MancatoDetailPage />} />
@@ -309,7 +310,8 @@ function App() {
               <Route path="/combustible/*" element={<LegacyRedirect from="/combustible" to="/finanzas/combustible" />} />
               <Route path="/mapa" element={<RoleOnly privileged><MapPage /></RoleOnly>} />
               <Route path="/mapa/seguimiento" element={<RoleOnly privileged><SeguimientoPage /></RoleOnly>} />
-              <Route path="/mapa/area-c" element={<RoleOnly privileged><AreaCPage /></RoleOnly>} />
+              {/* El Area C ahora vive en Finanzas; el enlace viejo sigue funcionando. */}
+              <Route path="/mapa/area-c" element={<Navigate to="/finanzas/area-c" replace />} />
               <Route path="/control-flota" element={<RoleOnly privileged><ControlFlotaPage /></RoleOnly>} />
               <Route path="/mecanica" element={<RoleOnly privileged><MecanicaPage /></RoleOnly>} />
               <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />

@@ -150,7 +150,7 @@ export const NotificationsBell = ({ variant = "default" }) => {
                         situacion empeore (ver isDismissed en NotificationsContext).
                         dismissible === false (ej. Area C): no tiene sentido "ocultarla"
                         a mano, tiene que resolverse de verdad (marcar pagado en la
-                        seccion Area C del Mapa) para que deje de aparecer. */}
+                        seccion Area C de Finanzas) para que deje de aparecer. */}
                     {alert.dismissible !== false && (
                       <button
                         type="button"

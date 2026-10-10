@@ -4,10 +4,9 @@ import { NavLink } from "react-router-dom";
 const TABS = [
   { to: "/mapa", label: "Mapa", end: true },
   { to: "/mapa/seguimiento", label: "Seguimiento", end: false },
-  { to: "/mapa/area-c", label: "Área C", end: false },
 ];
 
-// Selector de las vistas de la seccion Mapa: la flota en vivo, el seguimiento de servicios y el listado de Area C.
+// Selector de las vistas de la seccion Mapa: la flota en vivo y el seguimiento de servicios.
 export const MapSectionTabs = ({ className }) => (
   <nav aria-label="Vistas del mapa" className={clsx("inline-flex items-center gap-1 rounded-full glass-surface-sm p-1", className)}>
     {TABS.map((tab) => (

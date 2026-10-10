@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { MapSectionTabs } from "../../components/layout/MapSectionTabs";
 import { Alert } from "../../components/ui/Alert";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { GlassCard } from "../../components/ui/GlassCard";
@@ -245,16 +244,10 @@ export const AreaCPage = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Área C</h1>
-          <p className="mt-1 max-w-xl text-[14px] text-ink-300">
-            Vehículos sin autorización detectados dentro del Área C. Marca los pagados, sube el comprobante o
-            elimina los que no quieras guardar.
-          </p>
-        </div>
-        <MapSectionTabs />
-      </div>
+      <p className="max-w-xl text-[14px] text-ink-300">
+        Vehículos sin autorización detectados dentro del Área C. Marca los pagados, sube el comprobante o elimina los
+        que no quieras guardar.
+      </p>
 
       <Alert>{error}</Alert>
 
