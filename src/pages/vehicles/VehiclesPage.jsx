@@ -38,7 +38,7 @@ import {
 } from "../../lib/constants";
 import { computeFleetKmUsage, computeVehicleDocumentAlerts, filterToMainAreas } from "../../lib/dashboardStats";
 import { listRecordsByMonthRequest } from "../../lib/records.api";
-import { listVehiclesRequest, syncVehiclesFromVelocityFleetRequest } from "../../lib/vehicles.api";
+import { getSpeedingSummaryRequest, listVehiclesRequest, syncVehiclesFromVelocityFleetRequest } from "../../lib/vehicles.api";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
 import { kmRecorrido } from "../../lib/km";
 
@@ -197,11 +197,11 @@ const VehicleTable = ({ vehicles }) => {
 
 // Documentos por vencer (poliza / revision tecnica), Tagliando proximo o urgente y
 // vehiculos que no estan disponibles - todo con lo que ya trae la lista de vehiculos.
-const AttentionPanel = ({ vehicles }) => {
+const AttentionPanel = ({ vehicles, speeding }) => {
   const location = useLocation();
   const state = { backgroundLocation: location };
 
-  const { documents, tagliando, unavailable } = useMemo(() => {
+  const { documents, tagliando, unavailable, speedingItems } = useMemo(() => {
     const now = new Date();
     const documents = computeVehicleDocumentAlerts(vehicles).map((alert) => ({
       key: alert.id,
@@ -241,11 +241,25 @@ const AttentionPanel = ({ vehicles }) => {
         detail: v.estado === "FUERA_DE_SERVICIO" ? "Fuera de servicio" : "En mantenimiento",
       }));
 
-    return { documents, tagliando, unavailable };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicles]);
+    // Vehiculos con excesos de velocidad en la ultima semana (solo la oficina; vacio si no hay o no se pudo cargar), el que mas
+    // tiene primero; rojo si alguno supero el umbral por 10 km/h o hubo varios. El detalle esta en la ficha del vehiculo.
+    const recentMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const speedingItems = (speeding?.vehicles ?? [])
+      .filter((v) => new Date(v.lastAt).getTime() >= recentMs)
+      .map((v) => ({
+      key: `speeding-${v.vehicleId}`,
+      to: `/vehiculos/${v.vehicleId}`,
+      state,
+      tone: v.count >= 5 || v.maxSpeedKmh >= (speeding.thresholdKmh ?? 120) + 10 ? "danger" : "warning",
+      title: v.targa,
+      detail: `${v.count} ${v.count === 1 ? "exceso" : "excesos"} en ${speeding.retentionDays ?? 30} días · máx. ${Math.round(v.maxSpeedKmh)} km/h`,
+    }));
 
-  const total = documents.length + tagliando.length + unavailable.length;
+    return { documents, tagliando, unavailable, speedingItems };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicles, speeding]);
+
+  const total = documents.length + tagliando.length + unavailable.length + speedingItems.length;
 
   return (
     <PanelShell
@@ -269,6 +283,7 @@ const AttentionPanel = ({ vehicles }) => {
           <AttentionGroup title="Documentos" items={documents} />
           <AttentionGroup title="Tagliando" items={tagliando} />
           <AttentionGroup title="Estado de la flota" items={unavailable} />
+          <AttentionGroup title="Excesos de velocidad (última semana)" items={speedingItems} />
         </div>
       )}
     </PanelShell>
@@ -472,6 +487,7 @@ export const VehiclesPage = () => {
   const { version: recordsVersion } = useDataRefresh("records");
 
   const [vehicles, setVehicles] = useState(null);
+  const [speeding, setSpeeding] = useState(null);
   const [monthlyRecords, setMonthlyRecords] = useState(null);
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -506,6 +522,14 @@ export const VehiclesPage = () => {
       .then(setVehicles)
       .catch((err) => setError(parseApiError(err).message));
   }, [canAccess, vehiclesVersion]);
+
+  // Resumen de excesos de velocidad (chico, solo la oficina): alimenta el panel "Atencion requerida". Si falla no se muestra nada.
+  useEffect(() => {
+    if (!isPrivileged) return;
+    getSpeedingSummaryRequest()
+      .then(setSpeeding)
+      .catch(() => {});
+  }, [isPrivileged, vehiclesVersion]);
 
   // Depende tambien de recordsVersion: el uso de flota/ranking sale de los registros
   // del mes, no de los vehiculos - si se edita un km desde el detalle de un registro,
@@ -736,7 +760,7 @@ export const VehiclesPage = () => {
           </div>
 
           <aside className="flex flex-col gap-5 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1">
-            <AttentionPanel vehicles={vehicles} />
+            <AttentionPanel vehicles={vehicles} speeding={speeding} />
             <CenterSummaryPanel vehicles={vehicles} />
             {!isRrhh && <KmMonthPanel records={monthlyRecords} />}
             {!isRrhh && <FleetRankingPanel records={monthlyRecords} />}

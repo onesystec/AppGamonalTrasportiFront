@@ -11,6 +11,7 @@ import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
 import { StatCard } from "../../components/ui/StatCard";
 import { TextField } from "../../components/ui/TextField";
 import { VehicleStatusBadge } from "../../components/ui/VehicleStatusBadge";
+import { VehicleSpeedingSection } from "../../components/vehicles/VehicleSpeedingSection";
 import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
@@ -484,6 +485,8 @@ export const VehicleDetailPage = () => {
             </div>
           </div>
         )}
+
+        {!editing && (user?.cargo === "OWNER" || user?.cargo === "ADMIN") && <VehicleSpeedingSection vehicleId={vehicle.id} />}
       </GlassCard>
     </div>
 

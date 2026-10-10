@@ -40,9 +40,6 @@ const NewDriverPage = lazy(() =>
 const MapPage = lazy(() => import("./pages/map/MapPage").then((m) => ({ default: m.MapPage })));
 const SeguimientoPage = lazy(() => import("./pages/map/SeguimientoPage").then((m) => ({ default: m.SeguimientoPage })));
 const AreaCPage = lazy(() => import("./pages/finanzas/AreaCPage").then((m) => ({ default: m.AreaCPage })));
-const ControlFlotaPage = lazy(() =>
-  import("./pages/control-flota/ControlFlotaPage").then((m) => ({ default: m.ControlFlotaPage })),
-);
 const MecanicaPage = lazy(() => import("./pages/mecanica/MecanicaPage").then((m) => ({ default: m.MecanicaPage })));
 const DailySummaryPage = lazy(() =>
   import("./pages/notifications/DailySummaryPage").then((m) => ({ default: m.DailySummaryPage })),
@@ -312,7 +309,8 @@ function App() {
               <Route path="/mapa/seguimiento" element={<RoleOnly privileged><SeguimientoPage /></RoleOnly>} />
               {/* El Area C ahora vive en Finanzas; el enlace viejo sigue funcionando. */}
               <Route path="/mapa/area-c" element={<Navigate to="/finanzas/area-c" replace />} />
-              <Route path="/control-flota" element={<RoleOnly privileged><ControlFlotaPage /></RoleOnly>} />
+              {/* Control de Flota ya no existe: Area C esta en Finanzas y los excesos de velocidad en Vehiculos. */}
+              <Route path="/control-flota" element={<Navigate to="/vehiculos" replace />} />
               <Route path="/mecanica" element={<RoleOnly privileged><MecanicaPage /></RoleOnly>} />
               <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />
             </Route>

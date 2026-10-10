@@ -733,7 +733,7 @@ export const computeSpeedingAlerts = (events) =>
     id: `speeding-${event.id}`,
     severity: "urgent",
     message: `${event.targa} supero los ${Math.round(event.speedKmh)} km/h el ${formatDateTime(event.occurredAt)}.`,
-    link: "/mapa",
+    link: event.vehicleId ? `/vehiculos/${event.vehicleId}` : "/vehiculos",
   }));
 
 // Choferes activos cuyo celular reporto que el permiso de ubicacion en segundo plano

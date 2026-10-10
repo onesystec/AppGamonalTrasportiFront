@@ -781,7 +781,7 @@ export const ProfilePage = () => {
                     ? [
                         "Registros de todas las areas",
                         "Choferes, vehiculos y documentos",
-                        "Mapa, Area C y Control de Flota",
+                        "Mapa, seguimiento, Area C y excesos de velocidad",
                         "Dashboard con facturacion y costos",
                       ]
                     : [
@@ -791,7 +791,7 @@ export const ProfilePage = () => {
                             : "Todavia no tienes areas asignadas (pidelas a un Admin)"
                           : "Registros de todas las areas",
                         "Choferes, vehiculos y documentos",
-                        "Mapa, Area C y Control de Flota",
+                        "Mapa, seguimiento, Area C y excesos de velocidad",
                       ]
                   ).map((item) => (
                     <li key={item} className="flex items-center gap-2.5">

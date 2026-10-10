@@ -200,21 +200,6 @@ const MapPinIcon = (props) => (
   </svg>
 );
 
-const ShieldIcon = (props) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z" />
-    <path d="M9 12l2 2 4-4" />
-  </svg>
-);
-
 // Nav vertical fija a la izquierda para pantallas de desktop (sm y mas anchas).
 // En celular se usa la BottomNavTab de mas abajo en su lugar.
 const SidebarNavTab = ({ to, label, icon: Icon }) => (
@@ -260,7 +245,6 @@ const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
-  { to: "/control-flota", label: "Control de Flota", icon: ShieldIcon },
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
 ];
 
@@ -384,9 +368,6 @@ export const AppShell = () => {
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
               {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} />}
-              {isPrivileged && (
-                <SidebarNavTab to="/control-flota" label="Control de Flota" icon={ShieldIcon} />
-              )}
               {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} />}
             </nav>
           </div>
