@@ -34,10 +34,10 @@ export const listUnpaidAreaCEntriesRequest = () =>
 export const updateAreaCEntryRequest = (id, formData) =>
   api.patch(`/vehiculos/area-c-entries/${id}`, formData).then((res) => res.data.data.entry);
 
-// Excesos de velocidad (SPEEDING_THRESHOLD_KMH en el backend) - para la campanita de
-// notificaciones (ver computeSpeedingAlerts en dashboardStats.js).
-export const listSpeedingEventsRequest = () =>
-  api.get("/vehiculos/speeding-events").then((res) => res.data.data.events);
+// Los excesos de velocidad del propio usuario en los ultimos 7 dias: lo que ve el chofer en sus avisos. La oficina ya no recibe estos avisos en la
+// campanita: los ve en Vehiculos > Avisos de velocidad (ver getSpeedingSummaryRequest).
+export const listMySpeedingEventsRequest = () =>
+  api.get("/vehiculos/speeding-events/mine").then((res) => res.data.data.events);
 
 // Importa a demanda (boton "Importar de Velocity Fleet" en Vehiculos) las targas que
 // reporte el GPS y que todavia no tengan ficha en la app - se crean con area "Sin
@@ -70,8 +70,8 @@ export const deleteVehicleMantenimientoRequest = (vehicleId, mantenimientoId) =>
 export const deleteAreaCEntryRequest = (id) =>
   api.delete(`/vehiculos/area-c-entries/${id}`).then((res) => res.data.data);
 
-// Excesos de velocidad: resumen liviano por vehiculo (panel "Atencion requerida" de Vehiculos) y el detalle de un vehiculo
-// (su ficha).
+// Excesos de velocidad: resumen liviano por vehiculo y el detalle de uno. Solo se piden cuando se abre Vehiculos > Avisos de velocidad (o la
+// seccion de la ficha del vehiculo), nunca al cargar la pagina.
 export const getSpeedingSummaryRequest = () =>
   api.get("/vehiculos/speeding-events/summary").then((res) => res.data.data.summary);
 

@@ -15,25 +15,29 @@ const dateTimeLabel = (value) =>
     timeZone: "Europe/Rome",
   });
 
-// Excesos de velocidad del vehiculo (se registran solos al pasar el umbral, ver SPEEDING_THRESHOLD_KMH en el backend). Va cerrado:
-// solo se ve el titulo y, si hay, cuantos son; el detalle se abre a pedido. Naranja si es leve, rojo si pasa del umbral por 10.
+// Excesos de velocidad del vehiculo (se registran solos al pasar el umbral, ver SPEEDING_THRESHOLD_KMH en el backend). Va cerrado y no pide
+// nada hasta que se abre: asi la ficha del vehiculo no descarga avisos que nadie esta mirando. Naranja si es leve, rojo si pasa del umbral por 10.
 export const VehicleSpeedingSection = ({ vehicleId }) => {
   const [events, setEvents] = useState(null);
   const [threshold, setThreshold] = useState(120);
-  const [retentionDays, setRetentionDays] = useState(30);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
 
+  // Si se cambia de vehiculo con la seccion abierta, vuelve a cerrarse y a pedir lo suyo cuando se abra.
   useEffect(() => {
-    let cancelled = false;
     setEvents(null);
     setError("");
+    setOpen(false);
+  }, [vehicleId]);
+
+  useEffect(() => {
+    if (!open || events !== null) return undefined;
+    let cancelled = false;
     Promise.all([listSpeedingEventsByVehicleRequest(vehicleId), getSpeedingSummaryRequest().catch(() => null)])
       .then(([list, summary]) => {
         if (cancelled) return;
         setEvents(list);
         if (summary?.thresholdKmh) setThreshold(summary.thresholdKmh);
-        if (summary?.retentionDays) setRetentionDays(summary.retentionDays);
       })
       .catch((err) => {
         if (!cancelled) setError(parseApiError(err).message);
@@ -41,34 +45,27 @@ export const VehicleSpeedingSection = ({ vehicleId }) => {
     return () => {
       cancelled = true;
     };
-  }, [vehicleId]);
+  }, [open, events, vehicleId]);
 
   const count = events?.length ?? 0;
-  const max = count ? Math.max(...events.map((e) => e.speedKmh)) : null;
-  const disabled = events !== null && count === 0;
 
   return (
     <div className="mt-6 border-t border-line/10 pt-6">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 text-left disabled:cursor-default"
+        className="flex w-full items-center justify-between gap-3 text-left"
       >
         <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-400">Excesos de velocidad</h3>
         <span className="flex items-center gap-2 text-[12px]">
-          {events === null && !error ? (
+          {open && events === null && !error ? (
             <Spinner className="h-3.5 w-3.5 border-line/20 border-t-line" />
           ) : error ? (
             <span className="text-danger-500">No se pudo cargar</span>
-          ) : count === 0 ? (
-            <span className="text-ink-400">Ninguno en {retentionDays} días</span>
           ) : (
             <>
-              <span className="text-ink-300">
-                {count} {count === 1 ? "exceso" : "excesos"} · máx. {Math.round(max)} km/h
-              </span>
+              <span className="text-ink-300">{events === null ? "Ver" : count === 0 ? "Ninguno" : `${count} ${count === 1 ? "exceso" : "excesos"}`}</span>
               <ChevronDownIcon className={clsx("h-4 w-4 text-ink-400 transition-transform", open && "rotate-180")} />
             </>
           )}
@@ -83,6 +80,7 @@ export const VehicleSpeedingSection = ({ vehicleId }) => {
               className="flex flex-wrap items-center justify-between gap-2 border-t border-line/[0.07] px-4 py-2 text-[13px] first:border-t-0"
             >
               <span className="text-ink-200">{dateTimeLabel(event.occurredAt)}</span>
+              <span className="text-ink-300">{event.driver ?? "Sin servicio en ese momento"}</span>
               <span
                 className={clsx(
                   "font-semibold",
@@ -98,6 +96,7 @@ export const VehicleSpeedingSection = ({ vehicleId }) => {
           ))}
         </ul>
       )}
+      {open && events !== null && count === 0 && <p className="mt-3 text-[13px] text-ink-300">Sin excesos de velocidad registrados.</p>}
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Spinner } from "../../components/ui/Spinner";
 import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
+import { getNotificationScopeRequest, vehicleInScope } from "../../lib/notifications.api";
 import { parseApiError } from "../../lib/api";
 import { TAGLIANDO_INTERVALO_KM, VEHICLE_AREA_OPTIONS, getTagliandoStatus } from "../../lib/constants";
 import { formatDateTime } from "../../lib/format";
@@ -107,12 +108,13 @@ export const MecanicaPage = () => {
   const [deletingRegistro, setDeletingRegistro] = useState(false);
   const [deleteRegistroError, setDeleteRegistroError] = useState("");
 
+  // Un Responsable solo ve (y recibe avisos de) los vehiculos de su asignacion; el Admin, todos.
   useEffect(() => {
     if (!isPrivileged) return;
-    listVehiclesRequest()
-      .then(setVehicles)
+    Promise.all([listVehiclesRequest(), getNotificationScopeRequest(user?.id).catch(() => ({ todo: true }))])
+      .then(([list, scope]) => setVehicles(list.filter((v) => vehicleInScope(scope, v.id))))
       .catch((err) => setLoadError(parseApiError(err).message));
-  }, [isPrivileged]);
+  }, [isPrivileged, user?.id]);
 
   const filteredVehicles = useMemo(() => {
     if (!vehicles) return [];

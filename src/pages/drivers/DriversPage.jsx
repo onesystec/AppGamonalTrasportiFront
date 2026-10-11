@@ -36,6 +36,7 @@ import {
   isReperibilidadNoDisponibleHoy,
 } from "../../lib/dashboardStats";
 import { listDocumentsRequest } from "../../lib/documents.api";
+import { driverInScope, getNotificationScopeRequest } from "../../lib/notifications.api";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
 import { listRecordsByMonthRequest } from "../../lib/records.api";
@@ -573,6 +574,16 @@ export const DriversPage = () => {
       .catch((err) => setError(parseApiError(err).message));
   }, [canAccess]);
 
+  // Los avisos de documentos por vencer son solo de los choferes de la asignacion de quien mira (un Responsable); el Admin ve todos.
+  const [scope, setScope] = useState(null);
+  useEffect(() => {
+    if (!isPrivileged) return;
+    getNotificationScopeRequest(user?.id)
+      .then(setScope)
+      .catch(() => setScope({ todo: true }));
+  }, [isPrivileged, user?.id]);
+  const alertDrivers = useMemo(() => (drivers && scope ? drivers.filter((d) => driverInScope(scope, d.id)) : null), [drivers, scope]);
+
   const progressByDriver = useMemo(
     () => (progress ? new Map(progress.items.map((item) => [item.id, item])) : null),
     [progress]
@@ -643,7 +654,7 @@ export const DriversPage = () => {
   const disponibles = onServiceIds
     ? choferesActivos.filter((d) => !onServiceIds.has(d.id) && !isReperibilidadNoDisponibleHoy(d)).length
     : null;
-  const docAlerts = drivers && documents ? computeDriverDocumentAlerts(documents, drivers).length : null;
+  const docAlerts = alertDrivers && documents ? computeDriverDocumentAlerts(documents, alertDrivers).length : null;
   const pct = (n) => (total > 0 ? `${Math.round((n / total) * 100)}% del equipo` : "");
 
   const groups = [
@@ -807,7 +818,7 @@ export const DriversPage = () => {
           </div>
 
           <aside className="flex flex-col gap-5 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1">
-            <AttentionPanel drivers={drivers} documents={documents} />
+            <AttentionPanel drivers={alertDrivers ?? []} documents={documents} />
             <CenterSummaryPanel drivers={drivers} />
             {!isRrhh && <DriverRankingPanel records={monthlyRecords} />}
           </aside>

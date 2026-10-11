@@ -10,10 +10,9 @@ import {
   computeLocationPermissionAlerts,
   computeOverdueServices,
   computeMultaAlerts,
-  computeSpeedingAlerts,
+  computeMySpeedingAlerts,
   computeVehicleDocumentAlerts,
   computeVehicleMaintenanceAlerts,
-  getVehicleMaintenanceAlert,
 } from "../lib/dashboardStats";
 import { listDocumentsRequest } from "../lib/documents.api";
 import { formatDate } from "../lib/format";
@@ -32,9 +31,10 @@ import { listPermisosRequest } from "../lib/permisos.api";
 import { computeSeguimientoAlerts } from "../lib/seguimiento";
 import { listSeguimientoRequest } from "../lib/seguimiento.api";
 import { listUsersRequest } from "../lib/users.api";
+import { driverInScope, getNotificationScopeRequest, vehicleInScope } from "../lib/notifications.api";
 import {
   getVehicleRequest,
-  listSpeedingEventsRequest,
+  listMySpeedingEventsRequest,
   listUnpaidAreaCEntriesRequest,
   listVehicleLivePositionsRequest,
   listVehiclesRequest,
@@ -81,9 +81,9 @@ const isDismissed = (alert, dismissed) => {
   return SEVERITY_ORDER[alert.severity] >= SEVERITY_ORDER[dismissedSeverity];
 };
 
-// Alertas operativas del chofer (vencimientos, mantenimiento del vehiculo asignado,
-// evidencia faltante).
-const buildChoferAlerts = async () => {
+// Alertas del chofer: solo lo que le pertenece en su trabajo (sus servicios, sus horas, su multa, su exceso de velocidad, sus documentos).
+// Los avisos de gestion de la flota (tagliando, documentos de vehiculos, Area C...) son de la oficina y no le llegan.
+const buildChoferAlerts = async (user) => {
   const records = await listRecordsRequest();
   const list = [];
 
@@ -131,9 +131,6 @@ const buildChoferAlerts = async () => {
           message: `El vehiculo asignado (${vehicle.targa}) esta en mantenimiento.`,
         });
       }
-
-      const tagliandoAlert = getVehicleMaintenanceAlert(vehicle, { withLink: false });
-      if (tagliandoAlert) list.push(tagliandoAlert);
     } catch {
       // si falla la consulta del vehiculo, no bloquea el resto de las alertas
     }
@@ -163,6 +160,13 @@ const buildChoferAlerts = async () => {
   // Multas que el chofer tiene que pagar el mismo (las "a descontar" las paga la empresa).
   list.push(...computeMultaAlerts(await listMultaAlertsRequest().catch(() => null), false));
 
+  // Excesos de velocidad del propio chofer (el aviso le llega solo a quien iba al volante).
+  list.push(...computeMySpeedingAlerts(await listMySpeedingEventsRequest().catch(() => [])));
+
+  // Sus propios documentos por vencer (carnet, permisos...).
+  const myDocuments = await listDocumentsRequest().catch(() => []);
+  list.push(...computeDriverDocumentAlerts(myDocuments, [user], new Date(), { propio: true }));
+
   return list;
 };
 
@@ -172,30 +176,30 @@ const buildChoferAlerts = async () => {
 // historico completo de registros solo para esa alerta hacia que las notificaciones
 // tardaran en cargar. computeLocationPermissionAlerts solo necesita saber que chofer
 // esta "en camino" ahora mismo, asi que le alcanza con los pendientes de hoy.
-const buildOwnerAlerts = async () => {
+const buildOwnerAlerts = async ({ user }) => {
   const [
     pendingRecords,
-    users,
-    vehicles,
-    documents,
+    allUsers,
+    allVehicles,
+    allDocuments,
     areaCEntries,
-    speedingEvents,
     multaAlerts,
     permisosPendientes,
     gpsEstado,
     ,
     seguimiento,
+    scope,
   ] =
     await Promise.all([
       listPendingRecordsRequest(),
       listUsersRequest(),
       listVehiclesRequest(),
       listDocumentsRequest(),
+      // Area C sin pagar: el servidor ya manda solo las de los vehiculos del Responsable.
       listUnpaidAreaCEntriesRequest(),
-      listSpeedingEventsRequest(),
       // Multas vencidas / por vencer / descuentos pendientes (una sola consulta liviana).
       listMultaAlertsRequest().catch(() => null),
-      // Solicitudes de permiso de los choferes esperando respuesta.
+      // Solicitudes de permiso de los choferes esperando respuesta (solo las de su asignacion).
       listPermisosRequest({ estado: "PENDIENTE" }).catch(() => []),
       // Estado del GPS de la flota (OneSystec): avisa si esta bloqueado o caido.
       getGpsEstadoRequest().catch(() => null),
@@ -207,7 +211,15 @@ const buildOwnerAlerts = async () => {
       listVehicleLivePositionsRequest().catch(() => null),
       // Seguimiento de servicios en camino: sin GPS activo o fuera de su ETA. De paso el backend manda los push.
       listSeguimientoRequest().catch(() => null),
+      // A que vehiculos y choferes se refiere lo suyo (el Admin ve todo).
+      getNotificationScopeRequest(user.id).catch(() => ({ todo: true })),
     ]);
+
+  // Un Responsable solo recibe avisos de su asignacion: sus vehiculos y sus choferes.
+  const vehicles = allVehicles.filter((v) => vehicleInScope(scope, v.id));
+  const users = allUsers.filter((u) => driverInScope(scope, u.id));
+  const documents = allDocuments.filter((d) => driverInScope(scope, d.usuarioId));
+  const isOwner = user.cargo === "OWNER";
 
   // Los avisos del seguimiento (servicio sin GPS o fuera de ETA) piden accion ya: van siempre arriba de todo.
   return [...computeSeguimientoAlerts(seguimiento), ...sortBySeverity([
@@ -217,9 +229,9 @@ const buildOwnerAlerts = async () => {
     ...computeVehicleMaintenanceAlerts(vehicles),
     ...computeBirthdayAlerts(users),
     ...computeAreaCAlerts(areaCEntries),
-    ...computeSpeedingAlerts(speedingEvents),
     ...computeMultaAlerts(multaAlerts, true),
-    ...(isGpsFailing(gpsEstado)
+    // El GPS de toda la flota no es de ningun area: solo lo ve el Admin.
+    ...(isOwner && isGpsFailing(gpsEstado)
       ? [
           {
             id: "gps-flota",
@@ -284,7 +296,7 @@ export const NotificationsProvider = ({ children }) => {
     }
 
     let cancelled = false;
-    const build = isChofer ? buildChoferAlerts : buildOwnerAlerts;
+    const build = () => (isChofer ? buildChoferAlerts(user) : buildOwnerAlerts({ user }));
 
     const run = () => {
       setLoading(true);
@@ -311,7 +323,8 @@ export const NotificationsProvider = ({ children }) => {
       cancelIdle(idleId);
       if (stopPolling) stopPolling();
     };
-  }, [isChofer, isPrivileged, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isChofer, isPrivileged, pathname, user?.id]);
 
   const visibleAlerts = alerts.filter((a) => !isDismissed(a, dismissed));
 

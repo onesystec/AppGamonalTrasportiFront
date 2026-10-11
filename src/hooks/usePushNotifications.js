@@ -32,7 +32,7 @@ export const usePushNotifications = () => {
       const type = action?.notification?.data?.type;
       if (type === "gps-respaldo") navigate("/");
       else if (type === "area-c") navigate("/finanzas/area-c");
-      else if (type === "speeding") navigate("/vehiculos");
+      else if (type === "speeding") navigate("/");
       else if (type === "gps") navigate("/finanzas/paradas");
       else if (type === "permiso") navigate(user?.cargo === "CHOFER" ? "/calendario" : "/permisos");
       else if (type === "seguimiento") {

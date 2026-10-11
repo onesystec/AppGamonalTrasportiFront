@@ -627,7 +627,7 @@ const daysUntil = (dateValue, now) => (new Date(dateValue).getTime() - now.getTi
 
 // Documentos de cualquier usuario (sin filtrar por cargo - OWNER/ADMIN tambien pueden
 // manejar) que vencen dentro de 30 dias, o ya vencidos.
-export const computeDriverDocumentAlerts = (documents, users, now = new Date()) => {
+export const computeDriverDocumentAlerts = (documents, users, now = new Date(), { propio = false } = {}) => {
   const userIds = new Set(users.map((u) => u.id));
 
   return documents
@@ -641,8 +641,9 @@ export const computeDriverDocumentAlerts = (documents, users, now = new Date()) 
       return {
         id: `driver-doc-${d.id}`,
         severity: "warning",
-        message: `${tipo} de ${nombre} vence el ${formatDate(d.fechaScadenza)}`,
-        link: `/choferes/${d.usuarioId}`,
+        // El chofer ve el suyo en primera persona y sin el link a la ficha de gestion (esa pantalla es de la oficina).
+        message: propio ? `Tu ${tipo} vence el ${formatDate(d.fechaScadenza)}` : `${tipo} de ${nombre} vence el ${formatDate(d.fechaScadenza)}`,
+        ...(propio ? {} : { link: `/choferes/${d.usuarioId}` }),
         date: d.fechaScadenza,
         // Grupo del chofer (Milano Nord/Sud/Roma/etc) - para poder filtrar por zona en
         // Resumen > Diario (ver DIARIO_ZONA_OPTIONS en DailySummaryPage.jsx). null si el
@@ -725,15 +726,13 @@ export const computeAreaCAlerts = (entries) =>
     dismissible: false,
   }));
 
-// Exceso de velocidad (SPEEDING_THRESHOLD_KMH en el backend, ver
-// checkSpeedingEvents) - a diferencia de Area C, es un aviso comun (dismissible: true
-// por defecto, se puede descartar con la X normal de la campanita).
-export const computeSpeedingAlerts = (events) =>
+// Excesos de velocidad del propio chofer (los ultimos 7 dias): el aviso le llega solo al que iba al volante. La oficina no los recibe como
+// notificacion: los consulta en Vehiculos > Avisos de velocidad.
+export const computeMySpeedingAlerts = (events) =>
   events.map((event) => ({
     id: `speeding-${event.id}`,
-    severity: "urgent",
-    message: `${event.targa} supero los ${Math.round(event.speedKmh)} km/h el ${formatDateTime(event.occurredAt)}.`,
-    link: event.vehicleId ? `/vehiculos/${event.vehicleId}` : "/vehiculos",
+    severity: "warning",
+    message: `Superaste el limite de velocidad con ${event.targa}: ibas a ${Math.round(event.speedKmh)} km/h el ${formatDateTime(event.occurredAt)} (limite ${event.thresholdKmh} km/h).`,
   }));
 
 // Choferes activos cuyo celular reporto que el permiso de ubicacion en segundo plano
