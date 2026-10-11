@@ -12,7 +12,7 @@ export const MancatoTotalAnual = ({ totales, periodoLabel }) => {
   const pctPagado = anual.total > 0 ? Math.round((anual.pagado / anual.total) * 100) : 0;
 
   return (
-    <div className="glass-surface flex flex-col gap-4 rounded-2xl p-3.5 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+    <div className="glass-surface @container flex flex-col gap-4 rounded-2xl p-3.5 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
       <div className="flex items-center gap-4 sm:min-w-[240px]">
         <span
           className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:flex"
@@ -22,7 +22,7 @@ export const MancatoTotalAnual = ({ totales, periodoLabel }) => {
         </span>
         <div className="min-w-0">
           <span className="block truncate text-[13px] font-medium text-ink-300">Total {anio}</span>
-          <span className="mt-0.5 block text-[19px] font-semibold leading-tight text-ink-50 sm:text-[26px]">
+          <span className="mt-0.5 block text-[clamp(19px,6cqw,26px)] font-semibold leading-tight text-ink-50">
             {formatCurrency(anual.total)}
           </span>
           <span className="mt-0.5 block text-[12px] text-ink-400">{avisos(anual.count)} registrados en el año</span>

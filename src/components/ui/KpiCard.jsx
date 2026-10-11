@@ -45,7 +45,7 @@ export const KpiCard = ({ icon: Icon, label, value, deltaPct, deltaLabel, series
   const positive = deltaPct != null && deltaPct >= 0;
 
   return (
-    <div className={clsx("glass-surface flex flex-col gap-3 rounded-2xl p-4 sm:p-5", className)}>
+    <div className={clsx("glass-surface @container flex flex-col gap-3 rounded-2xl p-4 sm:p-5", className)}>
       <div className="flex items-center gap-3">
         <span
           className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full sm:flex"
@@ -56,7 +56,7 @@ export const KpiCard = ({ icon: Icon, label, value, deltaPct, deltaLabel, series
         <span className="text-[13px] font-medium text-ink-200 sm:text-[14px]">{label}</span>
       </div>
 
-      <span className="text-[24px] font-semibold leading-none tracking-tight text-ink-50 sm:text-[30px]">{value}</span>
+      <span className="text-[clamp(20px,12cqw,30px)] font-semibold leading-none tracking-tight text-ink-50">{value}</span>
 
       <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
         {deltaPct != null ? (

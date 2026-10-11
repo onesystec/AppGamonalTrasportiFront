@@ -6,7 +6,7 @@ import clsx from "clsx";
 export const StatTile = ({ icon: Icon, value, label, detail, tone = "neutral" }) => (
   <div
     className={clsx(
-      "glass-surface flex items-center gap-3 rounded-2xl p-4",
+      "glass-surface @container flex items-center gap-3 rounded-2xl p-4",
       tone === "warning" && "border-warning-500/50 shadow-[0_0_24px_-10px_var(--warning-500)]",
       tone === "danger" && "border-danger-500/50 shadow-[0_0_24px_-10px_var(--danger-500)]"
     )}
@@ -22,10 +22,10 @@ export const StatTile = ({ icon: Icon, value, label, detail, tone = "neutral" })
     >
       <Icon className="h-5 w-5" />
     </span>
-    <div className="min-w-0">
+    <div className="min-w-0 flex-1">
       <div
         className={clsx(
-          "text-[26px] font-semibold leading-none tracking-tight",
+          "text-[clamp(20px,9cqw,26px)] font-semibold leading-none tracking-tight",
           tone === "warning" ? "text-warning-500" : tone === "danger" ? "text-danger-500" : "text-ink-50"
         )}
       >

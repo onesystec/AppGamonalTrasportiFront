@@ -11,9 +11,9 @@ const TONE_CLASSES = {
 // deltaPct: variacion porcentual vs. el periodo anterior equivalente (ej: "+8.4%
 // vs ayer"). Se omite si es null (sin base de comparacion, ej. periodo anterior en 0).
 export const StatCard = ({ label, value, sublabel, deltaPct, deltaLabel, tone = "default", className }) => (
-  <div className={clsx("glass-surface-sm rounded-xl px-4 py-4", className)}>
+  <div className={clsx("glass-surface-sm @container rounded-xl px-4 py-4", className)}>
     <span className="block text-[12px] uppercase tracking-wide text-ink-400">{label}</span>
-    <span className={clsx("mt-1 block text-[24px] font-semibold", TONE_CLASSES[tone])}>
+    <span className={clsx("mt-1 block text-[clamp(18px,11cqw,24px)] font-semibold", TONE_CLASSES[tone])}>
       {value}
     </span>
     {deltaPct != null ? (
