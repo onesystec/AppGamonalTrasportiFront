@@ -1,6 +1,6 @@
 import { AREAS_BY_KEY } from "../../lib/recordAreas";
 
-// Circulo con las iniciales del area (DHL amarillo, AB azul, Extras Piazza gris azulado).
+// Circulo con las iniciales del area (DHL amarillo con letras rojas, AB rojo, Extras Piazza celeste con "PS").
 export const AreaBadge = ({ areaKey, size = 36 }) => {
   const area = AREAS_BY_KEY[areaKey];
   if (!area) return null;
