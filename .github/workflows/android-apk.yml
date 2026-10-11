@@ -57,7 +57,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # Los servidores de GitHub ya traen el SDK de Android: solo hay que aceptar las licencias y tener la plataforma que usa la app.
+      - name: Preparar el SDK de Android
+        run: |
+          SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
