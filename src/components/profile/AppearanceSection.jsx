@@ -16,14 +16,18 @@ const MODES = [
   { id: "system", label: "Automático", icon: PhoneIcon },
 ];
 
-// Muestras de la paleta como pastillas verticales (misma idea que la referencia).
-const Swatches = ({ colors }) => (
-  <div className="flex gap-1.5" aria-hidden="true">
-    {colors.map((color) => (
-      <span key={color} className="h-9 flex-1 rounded-full ring-1 ring-black/10" style={{ backgroundColor: color }} />
-    ))}
-  </div>
-);
+// Circulo de la paleta: un gajo por color, en el orden de la lista (sentido horario desde arriba).
+const PaletteDisc = ({ colors }) => {
+  const step = 360 / colors.length;
+  const gradient = colors.map((color, i) => `${color} ${i * step}deg ${(i + 1) * step}deg`).join(", ");
+  return (
+    <span
+      aria-hidden="true"
+      className="block h-[46px] w-[46px] shrink-0 rounded-full ring-1 ring-black/10 sm:h-[72px] sm:w-[72px]"
+      style={{ backgroundImage: `conic-gradient(${gradient})` }}
+    />
+  );
+};
 
 // Selector de apariencia: modo (claro/oscuro) + paleta de color. Son ejes
 // independientes: cualquier paleta existe en modo claro y en modo oscuro. Se
@@ -62,7 +66,7 @@ export const AppearanceSection = () => {
 
       <div>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-ink-400">Paleta de color</p>
-        <div role="radiogroup" aria-label="Paleta de color" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div role="radiogroup" aria-label="Paleta de color" className="grid grid-cols-2 gap-2.5">
           {PALETTES.map((item) => {
             const selected = palette === item.id;
             return (
@@ -73,17 +77,19 @@ export const AppearanceSection = () => {
                 aria-checked={selected}
                 onClick={() => setPalette(item.id)}
                 className={clsx(
-                  "flex flex-col gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30",
+                  "flex items-center justify-between gap-2 rounded-xl border p-3 text-left sm:gap-3 sm:p-3.5 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30",
                   selected ? "border-accent-500/60 bg-accent-500/10" : "border-line/10 hover:bg-line/5"
                 )}
               >
-                <Swatches colors={item.swatches} />
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[14px] font-semibold text-ink-50">{item.label}</p>
-                    <p className="text-[12px] text-ink-300">{item.description}</p>
-                  </div>
-                  {selected && <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-400" />}
+                <div className="min-w-0">
+                  <p className="text-[14px] font-semibold leading-tight text-ink-50 sm:text-[15px]">{item.label}</p>
+                  <p className="mt-1 text-[12px] text-ink-300">{item.description}</p>
+                </div>
+                <div className="relative shrink-0">
+                  <PaletteDisc colors={item.swatches} />
+                  {selected && (
+                    <CheckCircleIcon className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-popover text-accent-400" />
+                  )}
                 </div>
               </button>
             );
