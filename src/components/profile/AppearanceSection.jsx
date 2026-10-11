@@ -3,9 +3,17 @@ import { useTheme } from "../../context/ThemeContext";
 import { PALETTES } from "../../lib/themes";
 import { CheckCircleIcon, MoonIcon, SunIcon } from "../ui/icons";
 
+const PhoneIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+    <path d="M11 18.5h2" />
+  </svg>
+);
+
 const MODES = [
   { id: "light", label: "Claro", icon: SunIcon },
   { id: "dark", label: "Oscuro", icon: MoonIcon },
+  { id: "system", label: "Automático", icon: PhoneIcon },
 ];
 
 // Muestras de la paleta como pastillas verticales (misma idea que la referencia).
@@ -21,24 +29,24 @@ const Swatches = ({ colors }) => (
 // independientes: cualquier paleta existe en modo claro y en modo oscuro. Se
 // guarda en este dispositivo (localStorage), no en la cuenta.
 export const AppearanceSection = () => {
-  const { theme, setTheme, palette, setPalette } = useTheme();
+  const { preference, setThemePreference, palette, setPalette } = useTheme();
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-ink-400">Modo</p>
-        <div role="radiogroup" aria-label="Modo" className="grid grid-cols-2 gap-2.5">
+        <div role="radiogroup" aria-label="Modo" className="grid grid-cols-3 gap-2.5">
           {MODES.map(({ id, label, icon: Icon }) => {
-            const selected = theme === id;
+            const selected = preference === id;
             return (
               <button
                 key={id}
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                onClick={() => setTheme(id)}
+                onClick={() => setThemePreference(id)}
                 className={clsx(
-                  "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[14px] font-medium transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30",
+                  "flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 sm:flex-row sm:gap-2 sm:px-3 text-[14px] font-medium transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30",
                   selected
                     ? "border-accent-500/60 bg-accent-500/15 text-accent-400"
                     : "border-line/10 text-ink-200 hover:bg-line/10"
@@ -83,7 +91,7 @@ export const AppearanceSection = () => {
         </div>
       </div>
 
-      <p className="text-[12px] text-ink-400">Se guarda en este dispositivo.</p>
+      <p className="text-[12px] text-ink-400">«Automático» sigue el modo claro u oscuro de tu celular. Se guarda en este dispositivo.</p>
     </div>
   );
 };

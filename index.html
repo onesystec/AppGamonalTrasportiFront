@@ -16,6 +16,9 @@
       (function () {
         try {
           var theme = localStorage.getItem("gt-theme") || "dark";
+          if (localStorage.getItem("gt-theme-pref") === "system" && window.matchMedia) {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
           document.documentElement.classList.add(theme);
           var palette = localStorage.getItem("gt-palette");
           if (palette && palette !== "clasico") {

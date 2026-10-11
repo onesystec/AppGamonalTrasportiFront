@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "../../assets/logo.webp";
+import { SettingsIcon } from "../ui/icons";
 
 const SunIcon = (props) => (
   <svg
@@ -52,7 +53,7 @@ const LogoutIcon = (props) => (
 // agrupa las secciones que no entran comodas en el nav inferior (Mapa, Mecanica),
 // mas cambiar de tema y cerrar sesion al pie. Solo existe en mobile (sm:hidden) -
 // en desktop esas secciones ya estan en el sidebar fijo de siempre.
-export const MobileNavDrawer = ({ open, onClose, items, theme, onToggleTheme, onLogout }) => {
+export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onToggleTheme, onLogout }) => {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e) => {
@@ -105,6 +106,23 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, onToggleTheme, on
         </div>
 
         <div className="flex flex-col gap-1 border-t border-sidebar-border pt-3">
+          <NavLink
+            to="/ajustes"
+            onClick={onClose}
+            className={({ isActive }) =>
+              clsx(
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
+                isActive
+                  ? "bg-sidebar-accent font-semibold text-white"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              )
+            }
+          >
+            <SettingsIcon className="h-5 w-5 shrink-0" />
+            Ajustes de la app
+            {updateDot}
+          </NavLink>
+
           <button
             type="button"
             onClick={onToggleTheme}

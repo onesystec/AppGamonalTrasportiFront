@@ -3,7 +3,6 @@ import { MisBustaPagaCard } from "../../components/bustapaga/MisBustaPagaCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import heroImage from "../../assets/login-hero.webp";
-import { AppearanceSection } from "../../components/profile/AppearanceSection";
 import { LocationSharingBlock } from "../../components/profile/LocationSharingBlock";
 import { Alert } from "../../components/ui/Alert";
 import { Avatar } from "../../components/ui/Avatar";
@@ -25,7 +24,7 @@ import {
   KeyIcon,
   MailIcon,
   MapPinIcon,
-  PaletteIcon,
+  SettingsIcon,
   PencilIcon,
   PhoneIcon,
   PlusIcon,
@@ -885,10 +884,6 @@ export const ProfilePage = () => {
             )}
           </Section>
 
-          <Section icon={PaletteIcon} title="Apariencia">
-            <AppearanceSection />
-          </Section>
-
           <Section icon={ZapIcon} title="Acciones rapidas">
             <div className="grid grid-cols-2 gap-2.5">
               {isChofer ? (
@@ -901,6 +896,7 @@ export const ProfilePage = () => {
                 </>
               )}
               <QuickAction icon={KeyIcon} label="Contrasena" onClick={() => setPasswordOpen(true)} />
+              <QuickAction icon={SettingsIcon} label="Ajustes de la app" to="/ajustes" />
             </div>
 
             {isChofer && user?.area === "EXTRAS_PIAZZA" && (

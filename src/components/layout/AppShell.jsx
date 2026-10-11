@@ -5,15 +5,17 @@ import logo from "../../assets/logo.webp";
 import { roleText } from "../../lib/roles";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
 import { useAuth } from "../../context/AuthContext";
+import { AppUpdateProvider, useAppUpdate } from "../../context/AppUpdateContext";
 import { NotificationsProvider } from "../../context/NotificationsContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useGpsRespaldo } from "../../hooks/useGpsRespaldo";
 import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
-import { CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, WalletIcon } from "../ui/icons";
+import { CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, WalletIcon } from "../ui/icons";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { NotificationsBell } from "./NotificationsBell";
+import { UpdateBanner } from "./UpdateBanner";
 
 const UserIcon = (props) => (
   <svg
@@ -254,7 +256,13 @@ const LIST_SEARCH_PLACEHOLDERS = {
   "/choferes": "Buscar chofer, correo, teléfono o centro...",
 };
 
-export const AppShell = () => {
+// Puntito que avisa que hay una version nueva de la app.
+const UpdateDot = () => {
+  const { hasUpdate } = useAppUpdate();
+  return hasUpdate ? <span className="ml-auto h-2 w-2 rounded-full bg-sidebar-active" aria-label="Hay una versión nueva" /> : null;
+};
+
+const AppShellContent = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
@@ -394,6 +402,22 @@ export const AppShell = () => {
               </div>
             )}
 
+            <NavLink
+              to="/ajustes"
+              className={({ isActive }) =>
+                clsx(
+                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
+                  isActive
+                    ? "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r-full before:bg-sidebar-active"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                )
+              }
+            >
+              <SettingsIcon className="h-5 w-5 shrink-0" />
+              Ajustes de la app
+              <UpdateDot />
+            </NavLink>
+
             <ThemeToggleButton
               label
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -459,6 +483,7 @@ export const AppShell = () => {
               isPrivileged ? "sm:pt-24" : "sm:pt-10"
             )}
           >
+            <UpdateBanner />
             <Outlet />
           </main>
         </div>
@@ -494,6 +519,7 @@ export const AppShell = () => {
         onClose={() => setMobileNavOpen(false)}
         items={isPrivileged ? DRAWER_NAV_ITEMS : []}
         theme={theme}
+        updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}
         onLogout={logout}
       />
@@ -501,3 +527,9 @@ export const AppShell = () => {
     </NotificationsProvider>
   );
 };
+
+export const AppShell = () => (
+  <AppUpdateProvider>
+    <AppShellContent />
+  </AppUpdateProvider>
+);

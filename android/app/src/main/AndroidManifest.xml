@@ -54,4 +54,6 @@
     permiso en si se pide en tiempo de ejecucion (ver PushNotifications.requestPermissions
     en usePushNotifications.js). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Actualizar la app desde Ajustes (Actualizar aplicacion): abrir el instalador con el APK nuevo, ver ApkInstallerPlugin. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>

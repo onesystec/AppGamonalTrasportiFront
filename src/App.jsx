@@ -44,6 +44,7 @@ const MecanicaPage = lazy(() => import("./pages/mecanica/MecanicaPage").then((m)
 const DailySummaryPage = lazy(() =>
   import("./pages/notifications/DailySummaryPage").then((m) => ({ default: m.DailySummaryPage })),
 );
+const SettingsPage = lazy(() => import("./pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const NewDhlAbServiceRecordPage = lazy(() =>
   import("./pages/records/NewDhlAbServiceRecordPage").then((m) => ({ default: m.NewDhlAbServiceRecordPage })),
@@ -270,6 +271,7 @@ function App() {
                 }
               />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/ajustes" element={<SettingsPage />} />
               <Route path="/records" element={<RecordsListPage />} />
               <Route path="/records/extras-piazza" element={<RecordsListPage section="extras-piazza" />} />
               <Route path="/records/extras-piazza/new" element={<NewRecordPage />} />
