@@ -40,6 +40,15 @@ export const deleteMultaRequest = (id) => api.delete(`${BASE}/${id}`);
 export const suggestMultaDriverRequest = (targa, fecha) =>
   api.get(`${BASE}/sugerencia-chofer`, { params: { targa, fecha } }).then((res) => res.data.data.sugerencia);
 
+// Quien pudo ser el responsable de una multa SIN chofer (solo sugiere, no asigna): { modo, resumen, fechaBase, hora,
+// candidatos: [{ id, nombre, apellido, confianza: ALTA|MEDIA|BAJA, score, motivos: [texto] }] }.
+export const getMultaSuggestionRequest = (id) =>
+  api.get(`${BASE}/${id}/sugerencia`).then((res) => res.data.data.sugerencia);
+
+// Lo mismo para varias a la vez (filas visibles de un acordeon, hasta 20): { [multaId]: sugerencia }.
+export const getMultasSuggestionsRequest = (ids) =>
+  api.get(`${BASE}/sugerencias`, { params: { ids: ids.join(",") } }).then((res) => res.data.data.sugerencias);
+
 // Para la campanita: vencidas, por vencer (7 dias) y descuentos pendientes.
 export const listMultaAlertsRequest = () => api.get(`${BASE}/alertas`).then((res) => res.data.data.alerts);
 

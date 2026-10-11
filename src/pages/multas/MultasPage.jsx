@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
+import { SugerenciaChip, useRowSuggestions } from "../../components/multas/MultaSugerencia";
 import { MultasSidebar } from "../../components/multas/MultasSidebar";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -90,7 +91,7 @@ const useDebounced = (value, ms) => {
 // Columnas de la tabla (escritorio). El chofer no ve la columna "Chofer": todo es suyo.
 const gridCols = (showDriver) =>
   showDriver
-    ? "lg:grid-cols-[116px_minmax(0,1.2fr)_minmax(0,1fr)_92px_104px_126px_112px_36px]"
+    ? "lg:grid-cols-[116px_minmax(0,1.6fr)_minmax(0,1fr)_92px_104px_126px_112px_36px]"
     : "lg:grid-cols-[116px_minmax(0,1.1fr)_92px_104px_126px_112px_36px]";
 
 const plazoParts = (m) => {
@@ -189,7 +190,7 @@ const RowMenu = ({ multa, isPrivileged, location, onChanged }) => {
   );
 };
 
-const MultaRow = ({ multa, showDriver, vehicle, location, isPrivileged, onChanged }) => {
+const MultaRow = ({ multa, showDriver, vehicle, location, isPrivileged, onChanged, sugerencia }) => {
   const estado = MULTA_ESTADOS.find((e) => e.value === multa.estado);
   const plazo = plazoParts(multa);
   const quien = quienPagaLabel(multa);
@@ -222,7 +223,10 @@ const MultaRow = ({ multa, showDriver, vehicle, location, isPrivileged, onChange
             >
               {initials(driverName)}
             </span>
-            <span className="truncate text-[13px] font-medium text-ink-50">{driverName}</span>
+            <div className="min-w-0">
+              <span className="block truncate text-[13px] font-medium text-ink-50">{driverName}</span>
+              {!multa.driver && <SugerenciaChip sugerencia={sugerencia} className="lg:hidden" />}
+            </div>
           </div>
         )}
 
@@ -264,6 +268,13 @@ const MultaRow = ({ multa, showDriver, vehicle, location, isPrivileged, onChange
         </div>
 
         <span className="hidden lg:block" aria-hidden="true" />
+
+        {/* Escritorio: la sugerencia va en una linea propia, porque la columna del chofer es angosta */}
+        {showDriver && !multa.driver && sugerencia?.candidatos?.length > 0 && (
+          <div className="hidden min-w-0 lg:col-span-full lg:block">
+            <SugerenciaChip sugerencia={sugerencia} wide />
+          </div>
+        )}
       </Link>
 
       <div className="absolute right-3 top-3 lg:inset-y-0 lg:flex lg:items-center">
@@ -335,6 +346,8 @@ const EstadoAccordion = ({
     }
   };
 
+  // Las que no tienen chofer muestran quien pudo ser (solo en la vista de oficina, y recien al abrir el acordeon).
+  const suggestions = useRowSuggestions(list.items, isPrivileged && showDriver);
   const remaining = list.items ? list.total - list.items.length : 0;
   const headerClass = "text-[11px] font-medium uppercase tracking-wide text-ink-400";
 
@@ -398,6 +411,7 @@ const EstadoAccordion = ({
                     location={location}
                     isPrivileged={isPrivileged}
                     onChanged={onChanged}
+                    sugerencia={suggestions[multa.id]}
                   />
                 ))}
               </div>

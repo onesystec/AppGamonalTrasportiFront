@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MultaChoferCard } from "../../components/chofer/MultaChoferCard";
 import { MultaForm } from "../../components/multas/MultaForm";
+import { SugerenciaPanel } from "../../components/multas/MultaSugerencia";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
@@ -251,7 +252,12 @@ const MultaOficinaDetail = () => {
           <>
             <GlassCard className={clsx("border-l-4", estado.edge)}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
-                {multa.fechaInfraccion && <Fact label="Infraccion">{formatDateOnly(multa.fechaInfraccion)}</Fact>}
+                {multa.fechaInfraccion && (
+                  <Fact label="Infraccion">
+                    {formatDateOnly(multa.fechaInfraccion)}
+                    {multa.horaInfraccion && <span className="block text-[12px] font-normal text-ink-400">{multa.horaInfraccion} hs</span>}
+                  </Fact>
+                )}
                 <Fact label="Recepcion">{formatDateOnly(multa.fechaRecepcion)}</Fact>
                 <Fact label="Vence">{formatDateOnly(multa.fechaVencimiento)}</Fact>
                 <Fact label="Costo">{formatCurrency(multa.costo)}</Fact>
@@ -278,6 +284,12 @@ const MultaOficinaDetail = () => {
                   )}
                 </Fact>
               </div>
+
+              {!multa.driver && (
+                <div className="mt-5">
+                  <SugerenciaPanel multaId={multa.id} disabled={busy} onAssign={(driverId) => quickUpdate({ driverId })} />
+                </div>
+              )}
 
               {multa.comentarios && (
                 <div className="mt-5 border-t border-line/10 pt-4">

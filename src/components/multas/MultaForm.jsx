@@ -101,6 +101,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     quienPaga: multa?.quienPaga ?? "",
     area: multa?.area ?? (myAreaKeys?.length === 1 ? myAreaKeys[0] : ""),
     fechaInfraccion: multa?.fechaInfraccion ? new Date(multa.fechaInfraccion).toISOString().slice(0, 10) : "",
+    horaInfraccion: multa?.horaInfraccion ?? "",
     fechaRecepcion: multa ? new Date(multa.fechaRecepcion).toISOString().slice(0, 10) : romeToday(),
     fechaVencimiento: multa ? new Date(multa.fechaVencimiento).toISOString().slice(0, 10) : "",
     comentarios: multa?.comentarios ?? "",
@@ -187,9 +188,11 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     e.preventDefault();
     const next = {};
     if (!form.numeroVerbale.trim()) next.numeroVerbale = "El numero de verbale es obligatorio";
-    if (!form.driverId) next.driverId = "Elige el chofer responsable";
+    if (!form.driverId && !isEdit) next.driverId = "Elige el chofer responsable";
     if (!normalizeTarga(form.targa)) next.targa = "La targa es obligatoria";
-    if (parseCosto(form.costo) == null) next.costo = "Ingresa un importe mayor a 0 (ej. 173,50)";
+    // Algunas multas importadas no traian el monto (quedaron en 0): se pueden guardar sin tocarlo.
+    const costoSinDato = isEdit && Number(multa?.costo) === 0 && (form.costo === "0" || form.costo === "");
+    if (parseCosto(form.costo) == null && !costoSinDato) next.costo = "Ingresa un importe mayor a 0 (ej. 173,50)";
     if (!form.quienPaga) next.quienPaga = "Indica si pago el chofer o se descuenta";
     if (myAreaKeys !== null && !form.area) next.area = "Elige el area de la multa";
     if (!form.fechaRecepcion) next.fechaRecepcion = "Indica la fecha de recepcion";
@@ -210,6 +213,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       targa: normalizeTarga(form.targa),
       costo: String(parseCosto(form.costo)),
       quienPaga: form.quienPaga,
+      horaInfraccion: form.horaInfraccion,
       // En edicion "" quita el area (solo un Admin); al crear, si esta vacia no se manda.
       area: form.area,
       fechaRecepcion: form.fechaRecepcion,
@@ -218,12 +222,14 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       // En edicion "" borra la fecha; al crear, si esta vacia no se manda.
       fechaInfraccion: form.fechaInfraccion,
     };
+    if (costoSinDato) delete fields.costo;
     if (isEdit) {
       fields.pagado = String(form.pagado);
       if (form.quienPaga === "A_DESCONTAR") fields.descontado = String(form.descontado);
     } else {
       if (!fields.comentarios) delete fields.comentarios;
       if (!fields.fechaInfraccion) delete fields.fechaInfraccion;
+      if (!fields.horaInfraccion) delete fields.horaInfraccion;
       if (!fields.area) delete fields.area;
     }
 
@@ -351,6 +357,21 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           />
           <span className="mt-1.5 block text-[12px] text-ink-400">
             Con la targa y este dia, el sistema te dice quien llevaba la unidad.
+          </span>
+        </div>
+
+        <div>
+          <TextField
+            id="horaInfraccion"
+            label="Hora de la infraccion (opcional)"
+            type="time"
+            value={form.horaInfraccion}
+            onChange={(e) => setField("horaInfraccion", e.target.value)}
+            error={err("horaInfraccion")}
+            disabled={!form.fechaInfraccion}
+          />
+          <span className="mt-1.5 block text-[12px] text-ink-400">
+            Si el verbale dice la hora, se sabe que servicio estaba en curso.
           </span>
         </div>
 
