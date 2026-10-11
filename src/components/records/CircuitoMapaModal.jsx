@@ -1,14 +1,17 @@
 import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Alert } from "../ui/Alert";
 import { Spinner } from "../ui/Spinner";
 import { parseApiError } from "../../lib/api";
 import { formatKmValue } from "../../lib/compactado";
 import { getCircuitoMapaRequest } from "../../lib/records.api";
+import { PEAJE_COLOR_EN_RUTA, RUTA_COLOR, RUTA_COLOR_SIN_PEAJE, nearestIndex, peajeTitulo } from "../../lib/peajes";
+import { PeajesLayer } from "../mapa/PeajesLayer";
 
 // Mismo arreglo vacio que MapPage: el script de Google Maps se carga una sola vez.
 const GOOGLE_MAPS_LIBRARIES = [];
-const LINE_COLOR = "#2f8dff";
+const LINE_COLOR = RUTA_COLOR;
 const TIPO_LABEL = { SALIDA: "Salida", RETIRO: "Retiro", PARADA: "Parada", REGRESO: "Regreso" };
 
 const letter = (index) => String.fromCharCode(65 + index);
@@ -68,10 +71,27 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const path = useMemo(
-    () => data?.geometria?.coordinates?.map(([lng, lat]) => ({ lat, lng })) ?? [],
+  // Ida y vuelta, cada una con su ruta: verde si el chofer declaro que no uso peaje (y la ruta realmente los evita), azul si no; el
+  // tramo donde cruza un peaje se pinta de magenta. Si no vienen separadas (servidor viejo) se usa la ruta completa de antes.
+  const rutas = useMemo(
+    () =>
+      (data?.rutas ?? [])
+        .map((r) => {
+          const path = r.geometria?.coordinates?.map(([lng, lat]) => ({ lat, lng })) ?? [];
+          const cruces = r.peajes.map((p) => {
+            const i = nearestIndex(path, p);
+            return { peaje: p, tramo: path.slice(Math.max(0, i - 10), i + 11) };
+          });
+          return { ...r, path, cruces };
+        })
+        .filter((r) => r.path.length > 1),
     [data]
   );
+  const path = useMemo(
+    () => (rutas.length ? rutas.flatMap((r) => r.path) : (data?.geometria?.coordinates?.map(([lng, lat]) => ({ lat, lng })) ?? [])),
+    [data, rutas]
+  );
+  const idsEnRuta = useMemo(() => new Set(rutas.flatMap((r) => r.peajes.map((p) => p.id))), [rutas]);
 
   useEffect(() => {
     if (!map || !data?.puntos?.length || !window.google) return;
@@ -83,7 +103,8 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
   const circuito = data?.circuito;
   const showMap = isLoaded && !loadError;
 
-  return (
+  // En el body: dentro de un panel lateral (con transform) el "fixed" queda recortado al panel y el mapa sale chico.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
       <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-backdrop backdrop-blur-sm" />
       <div className="glass-surface relative z-10 flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-background">
@@ -121,8 +142,47 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
                     onUnmount={() => setMap(null)}
                     options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
                   >
-                    {path.length > 1 && (
+                    {rutas.length === 0 && path.length > 1 && (
                       <Polyline path={path} options={{ strokeColor: LINE_COLOR, strokeWeight: 4, strokeOpacity: 0.85 }} />
+                    )}
+                    {rutas.map((r) => (
+                      <Polyline
+                        key={r.tipo}
+                        path={r.path}
+                        options={{
+                          strokeColor: r.sinPeaje && r.evitado ? RUTA_COLOR_SIN_PEAJE : LINE_COLOR,
+                          strokeWeight: r.tipo === "IDA" ? 5 : 4,
+                          strokeOpacity: 0.85,
+                        }}
+                      />
+                    ))}
+                    {rutas.flatMap((r) =>
+                      r.cruces.map((c) => (
+                        <Polyline
+                          key={`${r.tipo}-tramo-${c.peaje.id}`}
+                          path={c.tramo}
+                          options={{ strokeColor: PEAJE_COLOR_EN_RUTA, strokeWeight: 8, strokeOpacity: 0.95, zIndex: 3 }}
+                        />
+                      ))
+                    )}
+                    <PeajesLayer map={map} omitir={idsEnRuta} />
+                    {rutas.flatMap((r) =>
+                      r.peajes.map((p) => (
+                        <Marker
+                          key={`${r.tipo}-peaje-${p.id}`}
+                          position={{ lat: p.lat, lng: p.lng }}
+                          title={`Peaje en la ruta (${r.tipo === "IDA" ? "ida" : "vuelta"}): ${peajeTitulo(p)}`}
+                          zIndex={9}
+                          icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 9,
+                            fillColor: PEAJE_COLOR_EN_RUTA,
+                            fillOpacity: 1,
+                            strokeColor: "#ffffff",
+                            strokeWeight: 2.5,
+                          }}
+                        />
+                      ))
                     )}
                     {data.puntos.map((p, i) => (
                       <Marker
@@ -152,6 +212,42 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
                   ))}
                 </ol>
 
+                {rutas.length > 0 && (
+                  <>
+                    <h3 className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Peajes</h3>
+                    <ul className="mt-1.5 flex flex-col gap-1.5">
+                      {rutas.map((r) => (
+                        <li key={r.tipo} className="rounded-lg bg-line/[0.05] px-3 py-1.5 text-[12px] text-ink-200">
+                          <b className="text-ink-50">{r.tipo === "IDA" ? "Ida" : "Vuelta"}:</b>{" "}
+                          {r.sinPeaje ? (
+                            r.evitado ? (
+                              <span style={{ color: RUTA_COLOR_SIN_PEAJE }}>sin peaje (declarado por el chofer, ruta calculada sin autopistas de pago)</span>
+                            ) : (
+                              <span className="text-warning-500">
+                                el chofer declaró que no usó peaje, pero no se pudo calcular una ruta que los evite: se muestra la normal
+                              </span>
+                            )
+                          ) : r.peajes.length ? (
+                            <span style={{ color: PEAJE_COLOR_EN_RUTA }}>
+                              pasa por {r.peajes.length} {r.peajes.length === 1 ? "peaje" : "peajes"}: {r.peajes.map((p) => p.nombre).join(", ")}
+                            </span>
+                          ) : (
+                            "no pasa por peajes del catálogo"
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-400">
+                      <span className="flex items-center gap-1">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PEAJE_COLOR_EN_RUTA }} /> peaje en la ruta
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#ff8a1a" }} /> otros peajes cerca
+                      </span>
+                    </p>
+                  </>
+                )}
+
                 <h3 className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Km por tramo</h3>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {circuito.tramos?.map((t, i) => (
@@ -178,6 +274,7 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

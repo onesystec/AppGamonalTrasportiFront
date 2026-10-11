@@ -25,6 +25,8 @@ import { addMinutes } from "../../lib/format";
 import MILANO_ZONES from "../../lib/geo/milanoZones.json";
 import { HIDE_POI_STYLES, NIGHT_MODE_STYLES } from "../../lib/mapStyles";
 import { startVisibleInterval } from "../../lib/polling";
+import { PEAJE_COLOR_CERCA } from "../../lib/peajes";
+import { PeajesLayer } from "../../components/mapa/PeajesLayer";
 import { getRecordLiveEtaRequest, listPendingRecordsRequest } from "../../lib/records.api";
 import { getEtaToDestinationRequest, listVehicleLivePositionsRequest, listVehiclesRequest } from "../../lib/vehicles.api";
 import { getDriverReturnEtaRequest, listDriverLocationsRequest, listUsersRequest } from "../../lib/users.api";
@@ -206,6 +208,7 @@ export const MapPage = () => {
   const [openInfoId, setOpenInfoId] = useState(null);
   const [showAreaC, setShowAreaC] = useState(true);
   const [showAreaB, setShowAreaB] = useState(true);
+  const [showPeajes, setShowPeajes] = useState(true);
   // Lista lateral de vehiculos (encima del mapa, a la izquierda): filtro de texto por
   // targa/chofer, filtro por estado y si esta desplegada (en celular arranca cerrada).
   const [targaQuery, setTargaQuery] = useState("");
@@ -827,6 +830,16 @@ export const MapPage = () => {
                   <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: AREA_B_COLOR }} />
                   Área B
                 </label>
+                <label className="flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={showPeajes}
+                    onChange={(e) => setShowPeajes(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-[#ff8a1a]"
+                  />
+                  <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: PEAJE_COLOR_CERCA }} />
+                  Peajes
+                </label>
               </footer>
             </aside>
           ) : (
@@ -857,6 +870,7 @@ export const MapPage = () => {
                 styles: theme === "dark" ? [...NIGHT_MODE_STYLES, ...HIDE_POI_STYLES] : HIDE_POI_STYLES,
               }}
             >
+              <PeajesLayer map={map} visible={showPeajes} />
               {showAreaC && (
                 <Polygon
                   paths={AREA_C_PATH}

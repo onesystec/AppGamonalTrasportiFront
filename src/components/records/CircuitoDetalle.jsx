@@ -2,6 +2,21 @@ import { useState } from "react";
 import { formatKmValue } from "../../lib/compactado";
 import { CircuitoMapaModal } from "./CircuitoMapaModal";
 
+const sentido = (nombre, sinPeaje, evitado, lista, cantidad) => {
+  if (sinPeaje) return evitado ? `${nombre}: sin peaje` : `${nombre}: sin peaje (no se pudo calcular la ruta que los evita)`;
+  if (!cantidad) return `${nombre}: sin peajes en el camino`;
+  return `${nombre}: ${cantidad} ${cantidad === 1 ? "peaje" : "peajes"} (${lista.join(", ")})`;
+};
+
+// Que peajes tiene la ruta del circuito: si el chofer declaro que no uso peaje, la ruta se calculo sin autopistas de pago.
+const PeajesResumen = ({ peajes }) =>
+  peajes ? (
+    <p className="mt-1 text-[12px] text-ink-300">
+      {sentido("Ida", peajes.idaSinPeaje, peajes.idaEvitado, peajes.ida, peajes.idaCantidad)} ·{" "}
+      {sentido("Vuelta", peajes.vueltaSinPeaje, peajes.vueltaEvitado, peajes.vuelta, peajes.vueltaCantidad)}
+    </p>
+  ) : null;
+
 // Los km del circuito de un servicio o viaje tramo por tramo (lugar de espera -> retiro -> paradas -> lugar de espera), con un
 // boton para verlo en el mapa. `circuito` = record.circuito (con tramos).
 export const CircuitoDetalle = ({ circuito, recordId, className }) => {
@@ -15,6 +30,7 @@ export const CircuitoDetalle = ({ circuito, recordId, className }) => {
           Ver en el mapa
         </button>
       </div>
+      <PeajesResumen peajes={circuito.peajes} />
       <ul className="mt-1.5 flex flex-col gap-1">
         {circuito.tramos.map((t, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3 text-[12.5px] text-ink-200">

@@ -22,6 +22,8 @@ import {
   tipoMeta,
 } from "../../lib/seguimiento";
 import { getRutaSeguimientoRequest, listSeguimientoRequest } from "../../lib/seguimiento.api";
+import { PEAJE_COLOR_CERCA } from "../../lib/peajes";
+import { PeajesLayer } from "../../components/mapa/PeajesLayer";
 
 // Mismo arreglo vacio que MapPage: el script de Google Maps se carga una sola vez.
 const GOOGLE_MAPS_LIBRARIES = [];
@@ -194,6 +196,7 @@ export const SeguimientoPage = () => {
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [estadoFilter, setEstadoFilter] = useState("todos");
   const [query, setQuery] = useState("");
+  const [showPeajes, setShowPeajes] = useState(true);
   const [listOpen, setListOpen] = useState(
     () => typeof window === "undefined" || window.matchMedia("(min-width: 640px)").matches
   );
@@ -439,6 +442,16 @@ export const SeguimientoPage = () => {
               </ul>
 
               <footer className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/10 px-4 py-2 text-[11px] text-ink-300">
+                <label className="flex cursor-pointer items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={showPeajes}
+                    onChange={(e) => setShowPeajes(e.target.checked)}
+                    className="h-3 w-3 accent-[#ff8a1a]"
+                  />
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: PEAJE_COLOR_CERCA }} />
+                  Peajes
+                </label>
                 {SEGUIMIENTO_TIPOS.filter((t) => t.key !== "otros" || tipoCounts.otros).map((t) => (
                   <span key={t.key} className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
@@ -480,6 +493,7 @@ export const SeguimientoPage = () => {
                 styles: theme === "dark" ? [...NIGHT_MODE_STYLES, ...HIDE_POI_STYLES] : HIDE_POI_STYLES,
               }}
             >
+              <PeajesLayer map={map} visible={showPeajes} />
               {routePath.length > 1 && (
                 <Polyline
                   path={routePath}
