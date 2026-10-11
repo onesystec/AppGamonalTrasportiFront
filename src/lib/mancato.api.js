@@ -22,6 +22,11 @@ export const listMancatosRequest = (params) =>
 export const getMancatoSummaryRequest = (params) =>
   api.get(`${BASE}/summary`, { params }).then((res) => res.data.data.summary);
 
+// Resumen por mes (de la fecha del transito) para los acordeones por mes: [{ mes: "2026-06", count, total, PENDIENTE/VENCIDO/PAGADO: { count, total } }],
+// del mas reciente al mas antiguo. Mismos filtros que el resumen (sin estado).
+export const getMancatoMesesRequest = (params) =>
+  api.get(`${BASE}/meses`, { params }).then((res) => res.data.data.meses);
+
 // Indicadores del encabezado: deuda abierta, variacion contra el mes anterior, deuda por
 // chofer, evolucion mensual y datos para la recomendacion.
 export const getMancatoStatsRequest = (params) =>

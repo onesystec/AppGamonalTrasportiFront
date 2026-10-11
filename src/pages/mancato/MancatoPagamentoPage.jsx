@@ -7,6 +7,7 @@ import { MancatoSidebar } from "../../components/mancato/MancatoSidebar";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Select } from "../../components/ui/Select";
 import { Spinner } from "../../components/ui/Spinner";
 import { TextField } from "../../components/ui/TextField";
@@ -30,6 +31,7 @@ import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
 import { ASIGNACION_FILTER_OPTIONS, MANCATO_ASIGNACIONES, MANCATO_ESTADOS, sitioWebHref } from "../../lib/mancato";
 import {
+  getMancatoMesesRequest,
   getMancatoStatsRequest,
   getMancatoSummaryRequest,
   listMancatosRequest,
@@ -264,27 +266,32 @@ const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onCh
   );
 };
 
-// Acordeon de un estado: el encabezado muestra cantidad y total (viene del resumen, sin
-// traer filas); la tabla se pide recien al abrirlo y de a PAGE_SIZE.
-const EstadoAccordion = ({
-  estado,
-  summary,
-  params,
+// Acordeon generico: el encabezado muestra cantidad y total (vienen de un resumen, sin traer filas); la tabla se pide recien al abrirlo
+// y de a PAGE_SIZE. Lo usan los acordeones por estado y por mes.
+const GrupoAccordion = ({
+  title,
+  edgeClass,
+  dotClass,
+  pillClass,
+  count,
+  total,
+  headerExtra,
+  listParams,
   version,
   defaultOpen,
+  emptyText,
   showDriver,
   vehiclesByTarga,
   location,
   isPrivileged,
   onChanged,
 }) => {
-  const info = MANCATO_ESTADOS.find((e) => e.value === estado);
   // Mientras el usuario no lo toque, abre o cierra solo segun haya resultados; si lo toca,
   // se respeta su eleccion.
   const [userOpen, setUserOpen] = useState(null);
   const open = userOpen ?? defaultOpen;
   const [list, setList] = useState({ items: null, total: 0, page: 1, loading: false, error: "" });
-  const paramsKey = JSON.stringify(params);
+  const paramsKey = JSON.stringify(listParams);
 
   useEffect(() => {
     if (!open) {
@@ -293,7 +300,7 @@ const EstadoAccordion = ({
     }
     let cancelled = false;
     setList((prev) => ({ ...prev, loading: true, error: "" }));
-    listMancatosRequest({ ...params, estado, page: 1, pageSize: PAGE_SIZE })
+    listMancatosRequest({ ...listParams, page: 1, pageSize: PAGE_SIZE })
       .then((data) => {
         if (!cancelled) {
           setList({ items: data.items, total: data.total, page: 1, loading: false, error: "" });
@@ -305,14 +312,14 @@ const EstadoAccordion = ({
     return () => {
       cancelled = true;
     };
-    // paramsKey resume params: evita re-pedir por un objeto nuevo con el mismo contenido.
-  }, [open, paramsKey, version, estado]);
+    // paramsKey resume los parametros: evita re-pedir por un objeto nuevo con el mismo contenido.
+  }, [open, paramsKey, version]);
 
   const loadMore = async () => {
     const nextPage = list.page + 1;
     setList((prev) => ({ ...prev, loading: true, error: "" }));
     try {
-      const data = await listMancatosRequest({ ...params, estado, page: nextPage, pageSize: PAGE_SIZE });
+      const data = await listMancatosRequest({ ...listParams, page: nextPage, pageSize: PAGE_SIZE });
       setList((prev) => ({
         items: [...(prev.items ?? []), ...data.items],
         total: data.total,
@@ -330,22 +337,21 @@ const EstadoAccordion = ({
 
   // focus-within: la seccion con un menu abierto sube por encima de las de abajo.
   return (
-    <section className={clsx("glass-surface relative rounded-2xl border-l-4 focus-within:z-20", info.edge)}>
+    <section className={clsx("glass-surface relative rounded-2xl border-l-4 focus-within:z-20", edgeClass)}>
       <button
         type="button"
         onClick={() => setUserOpen(!open)}
         aria-expanded={open}
         className={clsx(
-          "flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-line/[0.05]",
+          "flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-5 py-4 text-left transition-colors hover:bg-line/[0.05]",
           open ? "rounded-t-2xl" : "rounded-2xl"
         )}
       >
-        <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", info.dot)} />
-        <span className="text-[16px] font-semibold text-ink-50">{info.plural}</span>
-        <span className={clsx("rounded-full px-2.5 py-0.5 text-[12px] font-semibold", info.pill)}>
-          {summary.count}
-        </span>
-        <span className="ml-auto text-[15px] font-semibold text-ink-50">{formatCurrency(summary.total)}</span>
+        <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", dotClass)} />
+        <span className="text-[16px] font-semibold text-ink-50">{title}</span>
+        <span className={clsx("rounded-full px-2.5 py-0.5 text-[12px] font-semibold", pillClass)}>{count}</span>
+        {headerExtra}
+        <span className="ml-auto text-[15px] font-semibold text-ink-50">{formatCurrency(total)}</span>
         <ChevronDownIcon
           className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
         />
@@ -361,11 +367,7 @@ const EstadoAccordion = ({
             </div>
           )}
 
-          {list.items?.length === 0 && (
-            <p className="px-3 py-4 text-[14px] text-ink-400">
-              No hay mancato pagamento {info.label.toLowerCase()}.
-            </p>
-          )}
+          {list.items?.length === 0 && <p className="px-3 py-4 text-[14px] text-ink-400">{emptyText}</p>}
 
           {list.items?.length > 0 && (
             <>
@@ -395,8 +397,7 @@ const EstadoAccordion = ({
 
               <div className="mt-2 flex flex-col items-center justify-between gap-2 px-3 sm:flex-row">
                 <span className="text-[12px] text-ink-400">
-                  Mostrando {list.items.length} de {list.total}{" "}
-                  {list.total === 1 ? "aviso" : "avisos"}
+                  Mostrando {list.items.length} de {list.total} {list.total === 1 ? "aviso" : "avisos"}
                 </span>
                 {remaining > 0 && (
                   <Button
@@ -417,6 +418,71 @@ const EstadoAccordion = ({
   );
 };
 
+// Acordeon de un estado (pendientes / vencidos / pagados).
+const EstadoAccordion = ({ estado, summary, params, ...rest }) => {
+  const info = MANCATO_ESTADOS.find((e) => e.value === estado);
+  return (
+    <GrupoAccordion
+      title={info.plural}
+      edgeClass={info.edge}
+      dotClass={info.dot}
+      pillClass={info.pill}
+      count={summary.count}
+      total={summary.total}
+      listParams={{ ...params, estado }}
+      emptyText={`No hay mancato pagamento ${info.label.toLowerCase()}.`}
+      {...rest}
+    />
+  );
+};
+
+const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const mesLabel = (mes) => {
+  const [year, month] = mes.split("-").map(Number);
+  const name = MESES_LARGO[month - 1];
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
+};
+const mesStart = (mes) => `${mes}-01`;
+const mesEnd = (mes) => {
+  const [year, month] = mes.split("-").map(Number);
+  return `${mes}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0")}`;
+};
+
+// Pildora chica de un estado dentro del encabezado de un mes ("12 pagados").
+const EstadoMini = ({ count, label, tone }) =>
+  count > 0 ? (
+    <span className={clsx("hidden rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline", tone)}>
+      {count} {label}
+    </span>
+  ) : null;
+
+// Acordeon de un mes (por la fecha del transito): cantidad, total y como se reparte por estado; las filas se piden al abrirlo.
+const MesAccordion = ({ mes, params, filters, ...rest }) => {
+  // Si hay un rango de fechas puesto a mano, el mes se recorta a ese rango.
+  const from = filters.from && filters.from > mesStart(mes.mes) ? filters.from : mesStart(mes.mes);
+  const to = filters.to && filters.to < mesEnd(mes.mes) ? filters.to : mesEnd(mes.mes);
+  return (
+    <GrupoAccordion
+      title={mesLabel(mes.mes)}
+      edgeClass="border-accent-500"
+      dotClass="bg-accent-400"
+      pillClass="bg-accent-500/15 text-accent-300"
+      count={mes.count}
+      total={mes.total}
+      headerExtra={
+        <>
+          <EstadoMini count={mes.VENCIDO.count} label="vencidos" tone="bg-danger-500/15 text-danger-500" />
+          <EstadoMini count={mes.PENDIENTE.count} label="pendientes" tone="bg-warning-500/15 text-warning-500" />
+          <EstadoMini count={mes.PAGADO.count} label="pagados" tone="bg-success-500/15 text-success-500" />
+        </>
+      }
+      listParams={{ ...params, from, to, estado: filters.estado || undefined }}
+      emptyText="No hay mancato pagamento este mes con estos filtros."
+      {...rest}
+    />
+  );
+};
+
 const MancatoOficinaPage = () => {
   const { user } = useAuth();
   const location = useLocation();
@@ -428,6 +494,11 @@ const MancatoOficinaPage = () => {
   // Los avisos de "Atencion requerida" (Finanzas) llegan con ?asignacion=... para abrir la
   // lista ya filtrada.
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, asignacion: asignacionParam ?? "" }));
+  // Como se agrupan los avisos: por mes (acordeon por mes con selector) o por estado (pendientes, vencidos, pagados).
+  const [grupo, setGrupo] = useState("mes");
+  const [meses, setMeses] = useState(null);
+  // Todos los meses que hay (para el selector), aunque haya un rango de fechas puesto: se actualiza solo con pedidos sin fechas.
+  const [mesesOpciones, setMesesOpciones] = useState([]);
   useEffect(() => {
     if (asignacionParam !== null) setFilters((prev) => ({ ...prev, asignacion: asignacionParam }));
   }, [asignacionParam]);
@@ -495,6 +566,41 @@ const MancatoOficinaPage = () => {
     };
     // paramsKey resume params (ver arriba).
   }, [paramsKey, version]);
+
+  // Mes elegido en el selector: es un rango de fechas que justo coincide con un mes completo.
+  const mesSeleccionado = useMemo(
+    () => mesesOpciones.find((m) => filters.from === mesStart(m.mes) && filters.to === mesEnd(m.mes))?.mes ?? "",
+    [mesesOpciones, filters.from, filters.to]
+  );
+  // Con un rango a mano (que no es un mes entero) los totales de cada mes tienen que respetarlo: se piden con las fechas.
+  const customRange = Boolean((filters.from || filters.to) && !mesSeleccionado);
+  const mesesParams = useMemo(() => {
+    if (customRange) return params;
+    const { from, to, ...rest } = params;
+    return rest;
+  }, [params, customRange]);
+  const mesesKey = JSON.stringify(mesesParams);
+
+  useEffect(() => {
+    if (grupo !== "mes") return undefined;
+    let cancelled = false;
+    getMancatoMesesRequest(mesesParams)
+      .then((data) => {
+        if (cancelled) return;
+        setMeses(data);
+        if (!customRange) setMesesOpciones(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(parseApiError(err).message);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // mesesKey resume mesesParams (ver arriba).
+  }, [grupo, mesesKey, version]);
+
+  const setMes = (mes) =>
+    setFilters((prev) => ({ ...prev, from: mes ? mesStart(mes) : "", to: mes ? mesEnd(mes) : "" }));
 
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
@@ -710,27 +816,80 @@ const MancatoOficinaPage = () => {
               </div>
             </div>
 
-            {/* Acordeones por estado */}
-            <div className="flex flex-col gap-4">
-              {visibleEstados.map((estado) => (
-                <EstadoAccordion
-                  // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
-                  key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
-                  estado={estado.value}
-                  summary={summary[estado.value]}
-                  params={listParams}
-                  version={version}
-                  defaultOpen={
-                    summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")
-                  }
-                  showDriver={isPrivileged}
-                  vehiclesByTarga={vehiclesByTarga}
-                  location={location}
-                  isPrivileged={isPrivileged}
-                  onChanged={refresh}
-                />
-              ))}
+            {/* Agrupar por mes (con selector) o por estado */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SegmentedControl
+                options={[
+                  { value: "mes", label: "Por mes" },
+                  { value: "estado", label: "Por estado" },
+                ]}
+                value={grupo}
+                onChange={setGrupo}
+              />
+              {grupo === "mes" && (
+                <div className="w-full sm:w-64">
+                  <Select
+                    id="filtro-mes"
+                    label="Mes"
+                    options={[
+                      { value: "", label: customRange ? "Rango personalizado" : "Todos los meses" },
+                      ...mesesOpciones.map((m) => ({ value: m.mes, label: `${mesLabel(m.mes)} (${m.count})` })),
+                    ]}
+                    value={mesSeleccionado}
+                    onChange={(e) => setMes(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
+
+            {grupo === "mes" ? (
+              <div className="flex flex-col gap-4">
+                {meses === null && <PageLoader />}
+                {meses?.length === 0 && (
+                  <p className="px-1 py-4 text-[14px] text-ink-400">No hay mancato pagamento con estos filtros.</p>
+                )}
+                {(meses ?? [])
+                  .filter((m) => !mesSeleccionado || m.mes === mesSeleccionado)
+                  .map((mes, index) => (
+                    <MesAccordion
+                      // Al cambiar de filtros se reinicia la eleccion manual de abrir/cerrar.
+                      key={`${mes.mes}-${hasActiveFilters ? "f" : "n"}`}
+                      mes={mes}
+                      params={listParams}
+                      filters={filters}
+                      version={version}
+                      defaultOpen={Boolean(mesSeleccionado) || (index === 0 && mes.count > 0)}
+                      showDriver={isPrivileged}
+                      vehiclesByTarga={vehiclesByTarga}
+                      location={location}
+                      isPrivileged={isPrivileged}
+                      onChanged={refresh}
+                    />
+                  ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {visibleEstados.map((estado) => (
+                  <EstadoAccordion
+                    // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
+                    key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
+                    estado={estado.value}
+                    summary={summary[estado.value]}
+                    params={listParams}
+                    version={version}
+                    defaultOpen={
+                      summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")
+                    }
+                    showDriver={isPrivileged}
+                    vehiclesByTarga={vehiclesByTarga}
+                    location={location}
+                    isPrivileged={isPrivileged}
+                    onChanged={refresh}
+                  />
+                ))}
+              </div>
+
+            )}
           </div>
 
           <MancatoSidebar
