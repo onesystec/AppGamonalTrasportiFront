@@ -219,7 +219,6 @@ const buildOwnerAlerts = async ({ user }) => {
   const vehicles = allVehicles.filter((v) => vehicleInScope(scope, v.id));
   const users = allUsers.filter((u) => driverInScope(scope, u.id));
   const documents = allDocuments.filter((d) => driverInScope(scope, d.usuarioId));
-  const isOwner = user.cargo === "OWNER";
 
   // Los avisos del seguimiento (servicio sin GPS o fuera de ETA) piden accion ya: van siempre arriba de todo.
   return [...computeSeguimientoAlerts(seguimiento), ...sortBySeverity([
@@ -230,8 +229,8 @@ const buildOwnerAlerts = async ({ user }) => {
     ...computeBirthdayAlerts(users),
     ...computeAreaCAlerts(areaCEntries),
     ...computeMultaAlerts(multaAlerts, true),
-    // El GPS de toda la flota no es de ningun area: solo lo ve el Admin.
-    ...(isOwner && isGpsFailing(gpsEstado)
+    // El GPS de toda la flota no es de ningun area: lo ven el Admin y todos los Responsables.
+    ...(isGpsFailing(gpsEstado)
       ? [
           {
             id: "gps-flota",
