@@ -2,18 +2,18 @@ import { useState } from "react";
 import { formatKmValue } from "../../lib/compactado";
 import { CircuitoMapaModal } from "./CircuitoMapaModal";
 
-const sentido = (nombre, sinPeaje, evitado, lista, cantidad) => {
+const sentido = (nombre, sinPeaje, evitado, lista, cantidad, revisar) => {
   if (sinPeaje) return evitado ? `${nombre}: sin peaje` : `${nombre}: sin peaje (no se pudo calcular la ruta que los evita)`;
   if (!cantidad) return `${nombre}: sin peajes en el camino`;
-  return `${nombre}: ${cantidad} ${cantidad === 1 ? "peaje" : "peajes"} (${lista.join(", ")})`;
+  return `${nombre}: ${cantidad} ${cantidad === 1 ? "pago" : "pagos"} de peaje (${lista.join(" · ")})${revisar ? " · revisar" : ""}`;
 };
 
 // Que peajes tiene la ruta del circuito: si el chofer declaro que no uso peaje, la ruta se calculo sin autopistas de pago.
 const PeajesResumen = ({ peajes }) =>
   peajes ? (
     <p className="mt-1 text-[12px] text-ink-300">
-      {sentido("Ida", peajes.idaSinPeaje, peajes.idaEvitado, peajes.ida, peajes.idaCantidad)} ·{" "}
-      {sentido("Vuelta", peajes.vueltaSinPeaje, peajes.vueltaEvitado, peajes.vuelta, peajes.vueltaCantidad)}
+      {sentido("Ida", peajes.idaSinPeaje, peajes.idaEvitado, peajes.ida, peajes.idaCantidad, peajes.idaRevisar)} ·{" "}
+      {sentido("Vuelta", peajes.vueltaSinPeaje, peajes.vueltaEvitado, peajes.vuelta, peajes.vueltaCantidad, peajes.vueltaRevisar)}
     </p>
   ) : null;
 

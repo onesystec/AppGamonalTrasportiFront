@@ -227,9 +227,13 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
                                 el chofer declaró que no usó peaje, pero no se pudo calcular una ruta que los evite: se muestra la normal
                               </span>
                             )
-                          ) : r.peajes.length ? (
+                          ) : r.pagos?.length ? (
                             <span style={{ color: PEAJE_COLOR_EN_RUTA }}>
-                              pasa por {r.peajes.length} {r.peajes.length === 1 ? "peaje" : "peajes"}: {r.peajes.map((p) => p.nombre).join(", ")}
+                              {r.pagos.length} {r.pagos.length === 1 ? "pago" : "pagos"} de peaje (estimado):{" "}
+                              {r.pagos.map((pago) => (pago.hasta ? `${pago.desde} → ${pago.hasta}` : pago.desde)).join(" · ")}
+                              {r.pagos.some((pago) => pago.tipo === "BARRERA_UNICA") && (
+                                <span className="text-warning-500"> · caseta sin pareja: revisar (barrera única o falta la otra en el catálogo)</span>
+                              )}
                             </span>
                           ) : (
                             "no pasa por peajes del catálogo"
@@ -239,7 +243,7 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
                     </ul>
                     <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-400">
                       <span className="flex items-center gap-1">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PEAJE_COLOR_EN_RUTA }} /> peaje en la ruta
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PEAJE_COLOR_EN_RUTA }} /> caseta en la ruta (entrada + salida = 1 pago)
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#ff8a1a" }} /> otros peajes cerca
