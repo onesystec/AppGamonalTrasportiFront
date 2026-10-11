@@ -418,9 +418,9 @@ export const OwnerDashboardPage = () => {
       {headerBlock}
 
       {/* General o una sola area - ver MIS_AREAS_VISTA_OPTIONS. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[13px] font-medium text-ink-400">Vista</span>
-        <SegmentedControl options={MIS_AREAS_VISTA_OPTIONS} value={misAreasVista} onChange={setMisAreasVista} />
+      <div className="flex items-center gap-3">
+        <span className="hidden text-[13px] font-medium text-ink-400 sm:inline">Vista</span>
+        <SegmentedControl options={MIS_AREAS_VISTA_OPTIONS} value={misAreasVista} onChange={setMisAreasVista} className="min-w-0" />
       </div>
 
       {/* Indicadores del periodo, con variacion contra el periodo anterior. */}
