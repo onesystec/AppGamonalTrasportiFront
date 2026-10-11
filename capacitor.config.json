@@ -4,5 +4,9 @@
   "webDir": "dist",
   "android": {
     "useLegacyBridge": true
+  },
+  "server": {
+    "url": "https://app-gamonal-trasporti-front.vercel.app",
+    "errorPath": "offline.html"
   }
 }
