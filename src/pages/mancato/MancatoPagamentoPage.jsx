@@ -29,7 +29,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
-import { ASIGNACION_FILTER_OPTIONS, MANCATO_ASIGNACIONES, MANCATO_ESTADOS, sitioWebHref } from "../../lib/mancato";
+import { ASIGNACION_FILTER_OPTIONS, MANCATO_ESTADOS, asignacionInfo, sitioWebHref } from "../../lib/mancato";
 import {
   getMancatoMesesRequest,
   getMancatoStatsRequest,
@@ -180,7 +180,7 @@ const RowMenu = ({ mancato, isPrivileged, location, onChanged }) => {
 
 // Servicio al que pertenece el peaje, o por que todavia no tiene (ver MancatoServicioCard).
 const ServicioTag = ({ mancato }) => {
-  const info = MANCATO_ASIGNACIONES[mancato.asignacion];
+  const info = asignacionInfo(mancato.asignacion);
   if (mancato.asignacion === "AUTO" || mancato.asignacion === "CONFIRMADO" || mancato.asignacion === "MANUAL") {
     return mancato.servicio ? (
       <span className="block truncate text-[11px] text-ink-400">Servicio {mancato.servicio.codigo}</span>

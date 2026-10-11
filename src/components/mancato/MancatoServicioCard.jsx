@@ -8,7 +8,7 @@ import { Spinner } from "../ui/Spinner";
 import { CheckCircleIcon, ClockIcon, TruckIcon } from "../ui/icons";
 import { parseApiError } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
-import { MANCATO_ASIGNACIONES, TRAMO_LABELS, formatTransito } from "../../lib/mancato";
+import { TRAMO_LABELS, asignacionInfo, formatTransito } from "../../lib/mancato";
 import { listMancatoCandidatesRequest } from "../../lib/mancato.api";
 
 // A que servicio pertenece este peaje (lo calcula el sistema) y, para OWNER/ADMIN, como
@@ -20,7 +20,7 @@ export const MancatoServicioCard = ({ mancato, isPrivileged, busy, onChange }) =
   const [candidates, setCandidates] = useState(null);
   const [error, setError] = useState("");
 
-  const info = MANCATO_ASIGNACIONES[mancato.asignacion];
+  const info = asignacionInfo(mancato.asignacion);
   const servicio = mancato.servicio;
   const canConfirm = isPrivileged && servicio && ["SUGERIDO", "AUTO"].includes(mancato.asignacion);
 

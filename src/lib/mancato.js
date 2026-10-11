@@ -91,6 +91,10 @@ export const MANCATO_ASIGNACIONES = {
   HISTORICO: { label: "Histórico", pill: "bg-line/15 text-ink-300", tone: "text-ink-300" },
 };
 
+// Un estado que el front no conoce (backend mas nuevo que el front) se muestra neutro en vez de romper la pantalla.
+export const asignacionInfo = (value) =>
+  MANCATO_ASIGNACIONES[value] ?? { label: "Sin servicio", pill: "bg-line/15 text-ink-300", tone: "text-ink-300" };
+
 export const ASIGNACION_FILTER_OPTIONS = [
   { value: "", label: "Todos" },
   { value: "REVISAR", label: "Por revisar" },
