@@ -87,6 +87,8 @@ export const MANCATO_ASIGNACIONES = {
     pill: "bg-line/15 text-ink-300",
     tone: "text-ink-300",
   },
+  // Anteriores al 1 de julio de 2026 y sin servicio: no se asignan ni generan alertas.
+  HISTORICO: { label: "Histórico", pill: "bg-line/15 text-ink-300", tone: "text-ink-300" },
 };
 
 export const ASIGNACION_FILTER_OPTIONS = [
@@ -95,6 +97,7 @@ export const ASIGNACION_FILTER_OPTIONS = [
   { value: "SUGERIDO", label: "Por confirmar" },
   { value: "EN_ESPERA", label: "Esperando servicio" },
   { value: "FUERA_DE_HORARIO", label: "Fuera del horario laboral" },
+  { value: "HISTORICO", label: "Histórico (antes de julio)" },
 ];
 
 export const TRAMO_LABELS = { IDA: "Ida", VUELTA: "Vuelta" };
