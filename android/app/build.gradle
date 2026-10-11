@@ -7,7 +7,7 @@ android {
         applicationId "com.gamonaltrasporti.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // Los pone GitHub Actions al compilar (ver .github/workflows/android-apk.yml); compilando a mano valen estos.
+        // Los pone GitHub Actions al compilar (ver .github/workflows/android-apk.yml); compilando a mano valen estos. En GitHub suben solos con cada corrida.
         versionCode Integer.parseInt(System.getenv("APP_VERSION_CODE") ?: "2")
         versionName System.getenv("APP_VERSION_NAME") ?: "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
