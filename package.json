@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "build:mobile": "VITE_API_URL=https://appgamonaltrasportiback-vv19.onrender.com/api vite build && npx cap sync android && npx cap sync ios",
+    "android:build": "VITE_API_URL=https://appgamonaltrasportiback-vv19.onrender.com/api vite build && npx cap sync android && cd android && JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" ./gradlew assembleDebug",
     "android:apk": "cd android && JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" ./gradlew assembleDebug",
     "ios:open": "npx cap open ios"
   },
