@@ -4,6 +4,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { MancatoSidebar } from "../../components/mancato/MancatoSidebar";
+import { MancatoTotalAnual } from "../../components/mancato/MancatoTotalAnual";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -662,6 +663,20 @@ const MancatoOficinaPage = () => {
       {summary && stats && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-6">
+            {/* Total del año (y del mes elegido) */}
+            {stats.totales && (
+              <MancatoTotalAnual
+                totales={stats.totales}
+                periodoLabel={
+                  mesSeleccionado
+                    ? mesLabel(mesSeleccionado)
+                    : filters.from || filters.to
+                      ? `${filters.from ? formatDateOnly(filters.from) : "…"} a ${filters.to ? formatDateOnly(filters.to) : "…"}`
+                      : ""
+                }
+              />
+            )}
+
             {/* Indicadores */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
               <MancatoKpi
