@@ -1,5 +1,6 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ClientAutocomplete } from "../../components/ui/ClientAutocomplete";
@@ -147,12 +148,12 @@ export const NewExtrasStefaniaRecordPage = () => {
     <SlideOverPanel closeTo="/records/extras-stefania">
     <div className="flex flex-col gap-6">
       <div>
-        <Link
+        <BackLink
           to="/records/extras-stefania"
           className="text-[13px] font-medium text-accent-400 hover:text-accent-300"
         >
           &larr; Mis registros
-        </Link>
+        </BackLink>
       </div>
 
       <div>

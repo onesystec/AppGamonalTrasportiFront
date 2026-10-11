@@ -1,5 +1,6 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CombustibleForm } from "../../components/combustible/CombustibleForm";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
@@ -50,9 +51,9 @@ export const NewCombustiblePage = () => {
     <SlideOverPanel closeTo="/finanzas/combustible">
       <div className="flex flex-col gap-6">
         <div>
-          <Link to="/finanzas/combustible" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          <BackLink to="/finanzas/combustible" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
             &larr; Registro Combustible
-          </Link>
+          </BackLink>
         </div>
 
         <div>

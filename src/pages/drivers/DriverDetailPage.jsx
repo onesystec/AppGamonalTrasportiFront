@@ -1,3 +1,4 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { AsistenciaCard } from "../../components/calendario/AsistenciaCard";
@@ -390,9 +391,9 @@ export const DriverDetailPage = () => {
     <SlideOverPanel closeTo="/choferes">
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link to="/choferes" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+        <BackLink to="/choferes" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
           &larr; Choferes
-        </Link>
+        </BackLink>
         {!editing && (
           <div className="flex items-center gap-2">
             {driver.id !== user.id && !isRrhh && (

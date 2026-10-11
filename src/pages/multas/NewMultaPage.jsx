@@ -1,5 +1,6 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { MultaForm } from "../../components/multas/MultaForm";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
@@ -46,9 +47,9 @@ export const NewMultaPage = () => {
     <SlideOverPanel closeTo="/finanzas/multas">
       <div className="flex flex-col gap-6">
         <div>
-          <Link to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          <BackLink to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
             &larr; Multas
-          </Link>
+          </BackLink>
         </div>
 
         <div>

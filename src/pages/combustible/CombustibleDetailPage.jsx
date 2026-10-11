@@ -1,5 +1,6 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { CombustibleForm } from "../../components/combustible/CombustibleForm";
 import { CombustibleServicioCard } from "../../components/combustible/CombustibleServicioCard";
 import { Alert } from "../../components/ui/Alert";
@@ -139,9 +140,9 @@ export const CombustibleDetailPage = () => {
     <SlideOverPanel closeTo="/finanzas/combustible">
       <div className="flex flex-col gap-6">
         <div>
-          <Link to="/finanzas/combustible" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          <BackLink to="/finanzas/combustible" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
             &larr; Registro Combustible
-          </Link>
+          </BackLink>
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { FaltantesCard } from "../../components/records/FaltantesPanel";
 import { ViajeCompactoCard } from "../../components/records/ViajeCompactoCard";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { BackLink } from "../../components/ui/BackLink";
+import { useCloseOverlay } from "../../hooks/useCloseOverlay";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { CerrarServicioModal } from "../../components/horas/CerrarServicioModal";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { RecepcionPaqueteCard } from "../../components/horas/RecepcionPaqueteCard";
@@ -466,7 +468,6 @@ const PencilIcon = (props) => (
 
 export const RecordDetailPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const isChofer = user?.cargo === "CHOFER";
@@ -491,9 +492,26 @@ export const RecordDetailPage = () => {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Cerrar el servicio vuelve a la pantalla desde la que se abrio (Dashboard, Pago a choferes, Mapa, una lista...); la lista de su seccion es solo
+  // el respaldo si se abrio directo por la URL.
+  const fallbackCloseTo = location.state?.from ?? (record ? backToSection(record) : "/records/extras-piazza");
+  const closeDetail = useCloseOverlay(fallbackCloseTo);
+
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [showHours, setShowHours] = useState(false);
+
+  // El aviso "Cambios guardados" se va solo.
+  useEffect(() => {
+    if (!saveSuccess || isEditing) return undefined;
+    const timer = setTimeout(() => setSaveSuccess(false), 5000);
+    return () => clearTimeout(timer);
+  }, [saveSuccess, isEditing]);
+
+  // Al pasar de la edicion a la vista del servicio (o al reves) el panel vuelve arriba, no queda a mitad de pagina.
+  useEffect(() => {
+    document.querySelector("[data-slideover-scroll]")?.scrollTo({ top: 0 });
+  }, [isEditing]);
 
   const load = useCallback(() => {
     setLoadError("");
@@ -595,6 +613,8 @@ export const RecordDetailPage = () => {
       const updated = await updateRecordRequest(id, payload);
       setRecord(updated);
       setForm(toFormState(updated));
+      // Guardado: sale de la edicion y vuelve a la vista de informacion del servicio (con el aviso de que se guardo).
+      setIsEditing(false);
       setSaveSuccess(true);
       refreshRecords();
     } catch (err) {
@@ -635,14 +655,12 @@ export const RecordDetailPage = () => {
     try {
       await deleteRecordRequest(id);
       refreshRecords();
-      navigate(location.state?.from ?? backToSection(record), { replace: true });
+      closeDetail();
     } catch (err) {
       setDeleteError(parseApiError(err).message);
       setDeleting(false);
     }
   };
-
-  const fallbackCloseTo = location.state?.from ?? "/records/extras-piazza";
 
   if (loadError) {
     return (
@@ -669,15 +687,15 @@ export const RecordDetailPage = () => {
     ? vehicles.map((v) => ({ value: v.id, label: `${v.targa} - ${v.modelo}` }))
     : [];
 
-  const backTo = location.state?.from ?? backToSection(record);
+  const backTo = fallbackCloseTo;
 
   return (
     <SlideOverPanel closeTo={backTo}>
     <div className="flex flex-col gap-6">
       <div>
-        <Link to={backTo} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
-          &larr; {location.state?.from === "/mapa" ? "Mapa" : "Mis registros"}
-        </Link>
+        <BackLink to={backTo} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          &larr; Volver
+        </BackLink>
       </div>
 
       {isEditing ? (
@@ -704,7 +722,11 @@ export const RecordDetailPage = () => {
           files={files}
           isChofer={isChofer}
           isPrivileged={isPrivileged}
-          onEdit={() => setIsEditing(true)}
+          onEdit={() => {
+            setSaveSuccess(false);
+            setIsEditing(true);
+          }}
+          saveSuccess={saveSuccess}
           onDeleteClick={() => {
             setDeleteError("");
             setShowDeleteConfirm(true);
@@ -758,6 +780,7 @@ const RecordSummaryView = ({
   onUpload,
   onOpenHours,
   onReload,
+  saveSuccess,
 }) => {
   const [copyCostsFeedback, setCopyCostsFeedback] = useState("");
   const onCopyCosts = () => {
@@ -772,6 +795,11 @@ const RecordSummaryView = ({
 
   return (
   <>
+    {saveSuccess && (
+      <div className="mb-4">
+        <Alert variant="success">Cambios guardados correctamente.</Alert>
+      </div>
+    )}
     <GlassCard>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

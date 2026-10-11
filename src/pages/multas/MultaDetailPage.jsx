@@ -1,6 +1,7 @@
+import { BackLink } from "../../components/ui/BackLink";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MultaChoferCard } from "../../components/chofer/MultaChoferCard";
 import { MultaForm } from "../../components/multas/MultaForm";
@@ -189,9 +190,9 @@ const MultaOficinaDetail = () => {
     <SlideOverPanel closeTo="/finanzas/multas">
       <div className="flex flex-col gap-6">
         <div>
-          <Link to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          <BackLink to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
             &larr; Multas
-          </Link>
+          </BackLink>
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -405,9 +406,9 @@ const MultaChoferDetail = () => {
   return (
     <SlideOverPanel closeTo="/finanzas/multas">
       <div className="flex flex-col gap-5">
-        <Link to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+        <BackLink to="/finanzas/multas" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
           &larr; Multas
-        </Link>
+        </BackLink>
         <Alert>{error}</Alert>
         {!multa && !error && <PageLoader />}
         {multa && (

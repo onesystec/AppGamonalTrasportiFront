@@ -1,5 +1,6 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { GlassCard } from "../../components/ui/GlassCard";
@@ -70,9 +71,9 @@ export const NewDriverPage = () => {
     <SlideOverPanel closeTo="/choferes">
     <div className="flex flex-col gap-6">
       <div>
-        <Link to="/choferes" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+        <BackLink to="/choferes" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
           &larr; Choferes
-        </Link>
+        </BackLink>
       </div>
 
       <div>

@@ -1,6 +1,7 @@
+import { BackLink } from "../../components/ui/BackLink";
 import { useCallback, useEffect, useState } from "react";
 import { CATEGORIA_VEHICULO_LABELS, CATEGORIA_VEHICULO_OPTIONS } from "../../lib/vehiculos";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
@@ -270,9 +271,9 @@ export const VehicleDetailPage = () => {
     <SlideOverPanel closeTo="/vehiculos">
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link to="/vehiculos" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+        <BackLink to="/vehiculos" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
           &larr; Vehiculos
-        </Link>
+        </BackLink>
         {!editing && (
           <div className="flex items-center gap-2">
             {user?.cargo !== "RRHH" && (

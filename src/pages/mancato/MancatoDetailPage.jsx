@@ -1,6 +1,7 @@
+import { BackLink } from "../../components/ui/BackLink";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MancatoForm } from "../../components/mancato/MancatoForm";
 import { MancatoServicioCard } from "../../components/mancato/MancatoServicioCard";
@@ -191,9 +192,9 @@ export const MancatoDetailPage = () => {
     <SlideOverPanel closeTo="/finanzas/mancato">
       <div className="flex flex-col gap-6">
         <div>
-          <Link to="/finanzas/mancato" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+          <BackLink to="/finanzas/mancato" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
             &larr; Mancato Pagamento
-          </Link>
+          </BackLink>
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
