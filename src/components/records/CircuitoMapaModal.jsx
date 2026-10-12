@@ -12,7 +12,7 @@ import { PeajesLayer } from "../mapa/PeajesLayer";
 // Mismo arreglo vacio que MapPage: el script de Google Maps se carga una sola vez.
 const GOOGLE_MAPS_LIBRARIES = [];
 const LINE_COLOR = RUTA_COLOR;
-const TIPO_LABEL = { SALIDA: "Salida", RETIRO: "Retiro", PARADA: "Parada", REGRESO: "Regreso" };
+const TIPO_LABEL = { SALIDA: "Salida", RETIRO: "Retiro", PASO: "Paso", PARADA: "Parada", REGRESO: "Regreso" };
 
 const letter = (index) => String.fromCharCode(65 + index);
 
