@@ -16,6 +16,13 @@ export const tipoMeta = (key) => SEGUIMIENTO_TIPOS.find((t) => t.key === key) ??
 // A partir de cuantos minutos sobre la ETA se considera fuera de hora (igual que el backend: RETRASO_AVISO_MIN).
 export const RETRASO_AVISO_MIN = 5;
 
+// "posicion de hace 12 min": el celular a veces pierde cobertura y la ultima posicion tiene unos minutos. Vacio si es reciente.
+export const gpsAgeText = (gps, now = Date.now()) => {
+  if (!gps?.actualizada || gps.fuente === "SIMULADO") return "";
+  const minutes = Math.round((now - new Date(gps.actualizada).getTime()) / 60000);
+  return minutes >= 4 ? ` - posicion de hace ${minutes} min (la llegada se ajusta)` : "";
+};
+
 export const FUENTE_GPS_LABEL = {
   VEHICULO: "GPS del vehículo",
   CELULAR: "GPS del celular",

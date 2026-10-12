@@ -12,6 +12,7 @@ import { HIDE_POI_STYLES, NIGHT_MODE_STYLES } from "../../lib/mapStyles";
 import { startVisibleInterval } from "../../lib/polling";
 import {
   FUENTE_GPS_LABEL,
+  gpsAgeText,
   RETRASO_AVISO_MIN,
   SEGUIMIENTO_COLOR_RETRASO,
   SEGUIMIENTO_COLOR_SIN_GPS,
@@ -119,7 +120,7 @@ const ServicioItem = ({ s, active, onSelect }) => {
             )}
           </div>
         ) : (
-          s.gps && <p className="mt-1 text-[11px] text-ink-400">{FUENTE_GPS_LABEL[s.gps.fuente]}</p>
+          s.gps && <p className="mt-1 text-[11px] text-ink-400">{FUENTE_GPS_LABEL[s.gps.fuente]}{gpsAgeText(s.gps)}</p>
         )}
       </div>
     </li>
