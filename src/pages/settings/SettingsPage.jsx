@@ -126,7 +126,8 @@ export const SettingsPage = () => {
   const { installed } = useAppUpdate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
-  const isChofer = user?.cargo === "CHOFER";
+  // Choferes y tambien Admin/Responsables pueden compartir el celular cuando hacen un servicio.
+  const isChofer = ["CHOFER", "ADMIN", "OWNER"].includes(user?.cargo);
   const native = Capacitor.isNativePlatform();
 
   // /ajustes#actualizar (desde el aviso de version nueva) baja directo a esa seccion.

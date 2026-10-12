@@ -14,7 +14,7 @@ const CHECK_INTERVAL_MS = 60 * 1000;
 // se detiene sola. En el APK sigue con la pantalla apagada; en el navegador solo con la pestania abierta.
 export const useGpsRespaldo = () => {
   const { user } = useAuth();
-  const permitido = user?.cargo === "CHOFER" && Boolean(user?.gpsRespaldoPermitido);
+  const permitido = ["CHOFER", "ADMIN", "OWNER"].includes(user?.cargo) && Boolean(user?.gpsRespaldoPermitido);
 
   useEffect(() => {
     if (!permitido) return undefined;
