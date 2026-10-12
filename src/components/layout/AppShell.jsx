@@ -245,6 +245,7 @@ const BottomNavTab = ({ to, label, icon: Icon }) => (
 // header. En desktop siguen en el sidebar fijo de siempre, sin cambios.
 const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
+  { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
