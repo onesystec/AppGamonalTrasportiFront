@@ -79,5 +79,6 @@ export const formatHours = (value) =>
 export const needsHours = (record) =>
   // En un viaje compacto las horas se cargan una sola vez, en el servicio principal.
   !(record.compactado && !record.compactado.principal) &&
-  ["CONSEGNATO", "RITIRATO"].includes(record.estado) &&
+  // Un servicio reprogramado por la oficina tambien: el chofer manejo hasta ahi y se le paga.
+  (["CONSEGNATO", "RITIRATO"].includes(record.estado) || (record.estado === "RISCHEDULATO" && Boolean(record.reprogramado))) &&
   (!record.jornada?.estado || record.jornada.estado === "DEVUELTAS");

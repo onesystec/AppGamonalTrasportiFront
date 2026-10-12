@@ -96,3 +96,17 @@ export const getSinSustentarRequest = () => api.get("/records/sin-sustentar").th
 
 // Circuito del servicio (o del viaje) para verlo en un mapa: { circuito, puntos: [{ tipo, nombre, lat, lng }], geometria }.
 export const getCircuitoMapaRequest = (id) => api.get(`/records/${id}/circuito`).then((res) => res.data.data);
+
+// Reprogramacion (solo Admin/Responsable). "previa" devuelve la hora de salida sugerida para una ETA (o la ETA para una
+// salida) y los avisos de choque; "km-gps" los km que hizo el vehiculo desde que salio; "reprogramar" crea el servicio nuevo.
+export const getReprogramacionPreviaRequest = (id, params) =>
+  api.get(`/records/${id}/reprogramacion/previa`, { params }).then((res) => res.data.data);
+
+export const getReprogramacionKmGpsRequest = (id) =>
+  api.get(`/records/${id}/reprogramacion/km-gps`, { timeout: 40000 }).then((res) => res.data.data);
+
+export const reprogramarRecordRequest = (id, payload) =>
+  api.post(`/records/${id}/reprogramar`, payload).then((res) => res.data.data);
+
+export const deshacerReprogramacionRequest = (id) =>
+  api.post(`/records/${id}/reprogramacion/deshacer`).then((res) => res.data.data.record);

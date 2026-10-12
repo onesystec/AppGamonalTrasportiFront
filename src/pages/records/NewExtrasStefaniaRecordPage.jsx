@@ -169,6 +169,18 @@ export const NewExtrasStefaniaRecordPage = () => {
           <Alert>{formError}</Alert>
 
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <SearchableSelect
+                id="estado"
+                label="Estado inicial"
+                placeholder="Escribe para buscar un estado"
+                options={RECORD_STATUS_OPTIONS}
+                maxSuggestions={RECORD_STATUS_OPTIONS.length}
+                value={form.estado}
+                onChange={(v) => setField("estado", v)}
+              />
+            </div>
+
             <TextField
               id="codigo"
               label="Codigo"
@@ -207,16 +219,6 @@ export const NewExtrasStefaniaRecordPage = () => {
               value={form.vehicleId}
               onChange={(v) => setField("vehicleId", v)}
               error={fieldErrors.vehicleId?.[0]}
-            />
-
-            <SearchableSelect
-              id="estado"
-              label="Estado inicial"
-              placeholder="Escribe para buscar un estado"
-              options={RECORD_STATUS_OPTIONS}
-              maxSuggestions={RECORD_STATUS_OPTIONS.length}
-              value={form.estado}
-              onChange={(v) => setField("estado", v)}
             />
 
             <div>

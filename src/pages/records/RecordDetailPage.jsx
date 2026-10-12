@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FaltantesCard } from "../../components/records/FaltantesPanel";
 import { ViajeCompactoCard } from "../../components/records/ViajeCompactoCard";
 import { BackLink } from "../../components/ui/BackLink";
@@ -22,6 +22,8 @@ import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
 import { CircuitoDetalle } from "../../components/records/CircuitoDetalle";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
+import { ReprogramacionModal } from "../../components/records/ReprogramacionModal";
+import { MOTIVO_LABEL, ReprogramacionPanel, buildReprogBody, emptyReprog, reprogError } from "../../components/records/ReprogramacionPanel";
 import { combineStopAddress, StopListEditor } from "../../components/records/StopListEditor";
 import { buildSalidaPayload } from "../../components/records/SalidaField";
 import { useAuth } from "../../context/AuthContext";
@@ -45,8 +47,10 @@ import {
 } from "../../lib/format";
 import {
   deleteRecordRequest,
+  deshacerReprogramacionRequest,
   getRecordRequest,
   listRecordFilesRequest,
+  reprogramarRecordRequest,
   updateRecordRequest,
   uploadRecordFileRequest,
 } from "../../lib/records.api";
@@ -88,7 +92,8 @@ const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
     );
   }
   const j = record.jornada ?? {};
-  const delivered = ["CONSEGNATO", "RITIRATO", "IN_CONSEGNA"].includes(record.estado);
+  // Un servicio reprogramado por la oficina tambien se carga: el chofer manejo hasta ahi y se le paga.
+  const delivered = ["CONSEGNATO", "RITIRATO", "IN_CONSEGNA"].includes(record.estado) || (record.estado === "RISCHEDULATO" && Boolean(record.reprogramado));
   const canLoad = isChofer && delivered && j.estado !== "APROBADAS" && j.estado !== "PENDIENTE";
   const canEdit = isChofer && j.estado === "PENDIENTE";
   return (
@@ -175,6 +180,84 @@ const TraspasoOfService = ({ record, isChofer, onChanged }) => {
           Tu jornada no termina al entregar el paquete: termina cuando vuelves al lugar de espera.
         </p>
       )}
+    </div>
+  );
+};
+
+// Reprogramacion: del servicio reprogramado, los km que hizo el chofer y el servicio nuevo; del servicio nuevo, de cual viene.
+// La oficina puede deshacerla mientras el servicio nuevo no tenga movimiento.
+const ReprogramacionOfService = ({ record, isChofer, onChanged }) => {
+  const { reprogramado, reprogramadoDe } = record;
+  const [confirming, setConfirming] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const [error, setError] = useState("");
+  if (!reprogramado && !reprogramadoDe) return null;
+
+  const undo = async () => {
+    setUndoing(true);
+    setError("");
+    try {
+      await deshacerReprogramacionRequest(record.id);
+      setConfirming(false);
+      onChanged();
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setUndoing(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-xl border border-status-rischedulato/30 bg-status-rischedulato/5 px-4 py-3">
+      <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-400">Reprogramacion</h3>
+      {reprogramado && (
+        <>
+          <p className="mt-1.5 text-[14px] text-ink-100">
+            {reprogramado.kmHechos != null && !isChofer ? (
+              <>
+                El chofer hizo <b>{reprogramado.kmHechos} km</b>
+                {reprogramado.kmPlanificados != null ? ` de ${reprogramado.kmPlanificados}` : ""}; se facturan y se pagan.{" "}
+              </>
+            ) : (
+              "Reprogramado. "
+            )}
+            {reprogramado.motivo ? `Motivo: ${MOTIVO_LABEL[reprogramado.motivo] ?? reprogramado.motivo}. ` : ""}
+            {reprogramado.nuevoId && (
+              <>
+                Reprogramado como{" "}
+                <Link to={`/records/${reprogramado.nuevoId}`} className="font-medium text-accent-400 hover:text-accent-300">
+                  {reprogramado.nuevoCodigo} &rarr;
+                </Link>
+              </>
+            )}
+          </p>
+          {!isChofer && reprogramado.nuevoId && (
+            <div className="mt-2">
+              <button type="button" onClick={() => setConfirming(true)} className="text-[13px] font-medium text-danger-500 hover:brightness-110">
+                Deshacer la reprogramacion
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      {reprogramadoDe && (
+        <p className="mt-1.5 text-[14px] text-ink-100">
+          Reprogramacion de{" "}
+          <Link to={`/records/${reprogramadoDe.recordId}`} className="font-medium text-accent-400 hover:text-accent-300">
+            {reprogramadoDe.codigo ?? "otro servicio"} &rarr;
+          </Link>
+        </p>
+      )}
+      <ConfirmModal
+        open={confirming}
+        title="Deshacer la reprogramacion"
+        description={`Se borra el servicio nuevo ${reprogramado?.nuevoCodigo ?? ""} y ${record.codigo} vuelve a su estado y sus km originales. Solo se puede si el servicio nuevo todavia no tiene movimiento.`}
+        confirmLabel="Deshacer"
+        error={error}
+        loading={undoing}
+        onConfirm={undo}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   );
 };
@@ -276,6 +359,8 @@ const FuelOfService = ({ record }) => {
 
 // Estados de un servicio todavia abierto: el chofer mueve el viaje compacto entre estos; lo entrega terminando el viaje.
 const OPEN_STATUSES = ["IN_SOSPESO", "IN_CONSEGNA", "RITIRATO"];
+// Se puede reprogramar desde el formulario un servicio abierto y comun (sin viaje compacto ni traspaso entre choferes).
+const canReprogramar = (record) => OPEN_STATUSES.includes(record.estado) && !record.compactado && !record.relevo && !record.origen;
 const STATUS_LABEL = Object.fromEntries(RECORD_STATUS_OPTIONS.map((opt) => [opt.value, opt.label]));
 
 const OPERATIONAL_FIELDS = [
@@ -315,6 +400,8 @@ const OWNER_FIELDS = [
 
 const toFormState = (record) => ({
   estado: record.estado ?? "",
+  // Datos de la reprogramacion (solo se usan si el estado pasa a Reprogramado, ver ReprogramacionPanel).
+  reprog: emptyReprog(),
   horasDia: record.horasDia ?? "",
   horasNoche: record.horasNoche ?? "",
   tiempoEspera: record.tiempoEspera ?? "",
@@ -501,6 +588,10 @@ export const RecordDetailPage = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [showHours, setShowHours] = useState(false);
+  const [showReprog, setShowReprog] = useState(false);
+  const [reprogSaving, setReprogSaving] = useState(false);
+  const [reprogErr, setReprogErr] = useState("");
+  const [reprogDone, setReprogDone] = useState(null);
 
   // El aviso "Cambios guardados" se va solo.
   useEffect(() => {
@@ -514,16 +605,34 @@ export const RecordDetailPage = () => {
     document.querySelector("[data-slideover-scroll]")?.scrollTo({ top: 0 });
   }, [isEditing]);
 
+  const editarRef = useRef(false);
+  useEffect(() => {
+    editarRef.current = Boolean(location.state?.editar);
+  }, [location.key, location.state]);
+
   const load = useCallback(() => {
     setLoadError("");
     setIsEditing(false);
+    setShowReprog(false);
+    setReprogDone(null);
     Promise.all([getRecordRequest(id), listRecordFilesRequest(id)])
       .then(([recordData, filesData]) => {
         setRecord(recordData);
         setForm(toFormState(recordData));
         setFiles(filesData);
+        // Venir del aviso "Servicio reprogramado" (abrir el servicio nuevo para retocarlo): entra directo a editar.
+        if (editarRef.current && !isChofer) {
+          editarRef.current = false;
+          setIsEditing(true);
+        }
       })
       .catch((err) => setLoadError(parseApiError(err).message));
+  }, [id, isChofer]);
+
+  // Al pasar a otro servicio (por ejemplo del original al reprogramado) no queda a la vista el anterior mientras carga el nuevo.
+  useEffect(() => {
+    setRecord(null);
+    setForm(null);
   }, [id]);
 
   useEffect(() => {
@@ -549,12 +658,8 @@ export const RecordDetailPage = () => {
   const handleCheckboxChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.checked }));
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaveError("");
-    setSaveSuccess(false);
-
+  // Datos a guardar segun lo escrito en el formulario. null si falta algo (el aviso ya quedo en saveError).
+  const buildSavePayload = () => {
     const HOURS_TOTALS = ["horasDia", "horasNoche", "tiempoEspera"];
     const fieldsToSubmit = isChofer
       ? OPERATIONAL_FIELDS.filter((field) => !HOURS_TOTALS.includes(field))
@@ -589,8 +694,7 @@ export const RecordDetailPage = () => {
     if (!isChofer && !record.origen) {
       if (form.otroChoferTermino && !form.choferRelevoId) {
         setSaveError("Selecciona el chofer que termino el servicio");
-        setSaving(false);
-        return;
+        return null;
       }
       const wanted = form.otroChoferTermino ? form.choferRelevoId : null;
       if (wanted !== (record.relevo?.driverId ?? null)) payload.choferRelevoId = wanted;
@@ -610,6 +714,35 @@ export const RecordDetailPage = () => {
         if (form[field] && form[field] !== toRomeDateTimeInputValue(record[field])) payload[field] = form[field];
       }
     }
+    return payload;
+  };
+
+  // Marcar el servicio como Reprogramado abre el panel de reprogramacion: se guarda con la confirmacion de abajo.
+  const wantsReprogramar = !isChofer && form?.estado === "RISCHEDULATO" && record?.estado !== "RISCHEDULATO" && record && canReprogramar(record);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaveError("");
+    setSaveSuccess(false);
+
+    if (wantsReprogramar) {
+      const missing = reprogError(form.reprog, record.kmFacturables);
+      if (missing) {
+        setSaveError(missing);
+        return;
+      }
+      if (!buildSavePayload()) return;
+      setReprogErr("");
+      setShowReprog(true);
+      return;
+    }
+
+    setSaving(true);
+    const payload = buildSavePayload();
+    if (!payload) {
+      setSaving(false);
+      return;
+    }
 
     try {
       const updated = await updateRecordRequest(id, payload);
@@ -623,6 +756,36 @@ export const RecordDetailPage = () => {
       setSaveError(parseApiError(err).message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Confirmada la reprogramacion: primero se guardan los demas cambios del formulario (el servicio nuevo sale ya con ellos) y luego
+  // se reprograma. El estado no se manda en el guardado: lo cambia la reprogramacion.
+  const handleConfirmReprogramacion = async () => {
+    setReprogSaving(true);
+    setReprogErr("");
+    try {
+      // Solo se guarda antes lo que se haya cambiado en el formulario (la reprogramacion ya cambia el estado y los km): asi un
+      // servicio que solo se reprograma no espera un guardado completo.
+      const initial = toFormState(record);
+      const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null });
+      if (rest(form) !== rest(initial)) {
+        const payload = buildSavePayload();
+        if (!payload) return;
+        delete payload.estado;
+        if (Object.keys(payload).length > 0) await updateRecordRequest(id, payload);
+      }
+      const result = await reprogramarRecordRequest(id, buildReprogBody(form.reprog));
+      setRecord(result.original);
+      setForm(toFormState(result.original));
+      setIsEditing(false);
+      setSaveSuccess(false);
+      setReprogDone(result);
+      refreshRecords();
+    } catch (err) {
+      setReprogErr(parseApiError(err).message);
+    } finally {
+      setReprogSaving(false);
     }
   };
 
@@ -712,6 +875,7 @@ export const RecordDetailPage = () => {
           saving={saving}
           saveError={saveError}
           saveSuccess={saveSuccess}
+          reprogramar={wantsReprogramar}
           handleChange={handleChange}
           setField={setField}
           handleCheckboxChange={handleCheckboxChange}
@@ -752,6 +916,23 @@ export const RecordDetailPage = () => {
         }}
       />
     )}
+
+    <ReprogramacionModal
+      open={showReprog || Boolean(reprogDone)}
+      record={record}
+      value={form.reprog}
+      driverOptions={driverOptions}
+      vehicleOptions={vehicleOptions}
+      loading={reprogSaving}
+      error={reprogErr}
+      done={reprogDone}
+      onConfirm={handleConfirmReprogramacion}
+      onCancel={() => setShowReprog(false)}
+      onClose={() => {
+        setShowReprog(false);
+        setReprogDone(null);
+      }}
+    />
 
     <ConfirmModal
       open={showDeleteConfirm}
@@ -871,6 +1052,7 @@ const RecordSummaryView = ({
       </div>
 
       <TraspasoOfService record={record} isChofer={isChofer} onChanged={onReload} />
+      <ReprogramacionOfService record={record} isChofer={isChofer} onChanged={onReload} />
 
       <MancatosOfService mancatos={record.mancatos} />
 
@@ -1037,6 +1219,7 @@ const RecordEditForm = ({
   saving,
   saveError,
   saveSuccess,
+  reprogramar,
   handleChange,
   setField,
   handleCheckboxChange,
@@ -1075,6 +1258,45 @@ const RecordEditForm = ({
       <form className="mt-6 flex flex-col gap-5" onSubmit={onSubmit}>
         {saveSuccess && <Alert variant="success">Cambios guardados correctamente.</Alert>}
         <Alert>{saveError}</Alert>
+
+        {isChofer && record.compactado && !OPEN_STATUSES.includes(record.estado) ? (
+          <p className="text-[13px] text-ink-300">
+            Estado: <b className="text-ink-50">{STATUS_LABEL[record.estado] ?? record.estado}</b>. Los servicios de un
+            viaje se entregan todos juntos al terminar el viaje.
+          </p>
+        ) : (
+          <div>
+            <SearchableSelect
+              id="estado"
+              label="Estado"
+              placeholder="Escribe para buscar un estado"
+              options={
+                isChofer && record.compactado
+                  ? RECORD_STATUS_OPTIONS.filter((opt) => OPEN_STATUSES.includes(opt.value))
+                  : RECORD_STATUS_OPTIONS
+              }
+              maxSuggestions={RECORD_STATUS_OPTIONS.length}
+              value={form.estado}
+              onChange={(v) => setField("estado", v)}
+            />
+            {isChofer && record.compactado && (
+              <p className="mt-1.5 text-[12px] text-ink-400">
+                Cambia el estado de todo el viaje. Para entregarlo usa «Terminar viaje».
+              </p>
+            )}
+          </div>
+        )}
+
+        {reprogramar && (
+          <ReprogramacionPanel
+            record={record}
+            value={form.reprog}
+            onChange={(v) => setField("reprog", v)}
+            driverOptions={driverOptions}
+            vehicleOptions={vehicleOptions}
+            disabled={saving}
+          />
+        )}
 
         {!isChofer && (
           <>
@@ -1228,34 +1450,6 @@ const RecordEditForm = ({
               onChange={handleChange("descripcion")}
             />
           </>
-        )}
-
-        {isChofer && record.compactado && !OPEN_STATUSES.includes(record.estado) ? (
-          <p className="text-[13px] text-ink-300">
-            Estado: <b className="text-ink-50">{STATUS_LABEL[record.estado] ?? record.estado}</b>. Los servicios de un
-            viaje se entregan todos juntos al terminar el viaje.
-          </p>
-        ) : (
-          <div>
-            <SearchableSelect
-              id="estado"
-              label="Estado"
-              placeholder="Escribe para buscar un estado"
-              options={
-                isChofer && record.compactado
-                  ? RECORD_STATUS_OPTIONS.filter((opt) => OPEN_STATUSES.includes(opt.value))
-                  : RECORD_STATUS_OPTIONS
-              }
-              maxSuggestions={RECORD_STATUS_OPTIONS.length}
-              value={form.estado}
-              onChange={(v) => setField("estado", v)}
-            />
-            {isChofer && record.compactado && (
-              <p className="mt-1.5 text-[12px] text-ink-400">
-                Cambia el estado de todo el viaje. Para entregarlo usa «Terminar viaje».
-              </p>
-            )}
-          </div>
         )}
 
         {record.compactado ? (

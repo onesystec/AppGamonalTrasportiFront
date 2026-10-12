@@ -230,15 +230,17 @@ export const NewDhlAbServiceRecordPage = () => {
           <Alert>{formError}</Alert>
 
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <SearchableSelect
-              id="estado"
-              label="Estado"
-              placeholder="Escribe para buscar un estado"
-              options={RECORD_STATUS_OPTIONS}
-              maxSuggestions={RECORD_STATUS_OPTIONS.length}
-              value={form.estado}
-              onChange={(v) => setField("estado", v)}
-            />
+            <div className="sm:col-span-2">
+              <SearchableSelect
+                id="estado"
+                label="Estado"
+                placeholder="Escribe para buscar un estado"
+                options={RECORD_STATUS_OPTIONS}
+                maxSuggestions={RECORD_STATUS_OPTIONS.length}
+                value={form.estado}
+                onChange={(v) => setField("estado", v)}
+              />
+            </div>
 
             <SearchableSelect
               id="driverId"
