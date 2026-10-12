@@ -907,3 +907,27 @@ html[data-palette="navidad"].dark {
 @utility animate-slide-in-left {
   animation: slide-in-left 0.25s ease-out;
 }
+
+/* Barra de desplazamiento siempre visible (tablas anchas, como la de Multas en pantallas chicas). En Chrome y Safari se dibuja
+   con ::-webkit-scrollbar (si se declarara tambien scrollbar-color, Chrome la volveria a ocultar en macOS); Firefox usa las
+   propiedades estandar. */
+@utility h-scroll {
+  &::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+  }
+  &::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--ink-400, #8b97b5) 14%, transparent);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ink-400, #8b97b5) 60%, transparent);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: auto;
+    scrollbar-color: color-mix(in srgb, var(--ink-400, #8b97b5) 60%, transparent) transparent;
+  }
+}
