@@ -31,6 +31,7 @@ const INITIAL_FORM = {
   stops: [{ direccion: "", cap: "", lat: null, lng: null }],
   // Punto de salida: en blanco al empezar (si queda vacio se usa el deposito).
   salida: EMPTY_SALIDA,
+  pasaPorBrennero: false,
   descripcion: "",
   eta: "",
   fechaRetiro: "",
@@ -94,7 +95,7 @@ export const NewExtrasStefaniaRecordPage = () => {
     const salidaPayload = buildSalidaPayload(salida);
     const payload = Object.fromEntries(
       Object.entries({ ...formWithoutSalida, ...(salidaPayload ? { salida: salidaPayload } : {}), stops: trimmedStops, spedizzione: "EXTRAS_STEFANIA" }).filter(
-        ([key, value]) => key === "stops" || value !== ""
+        ([key, value]) => key === "stops" || key === "pasaPorBrennero" || value !== ""
       )
     );
 
@@ -259,6 +260,8 @@ export const NewExtrasStefaniaRecordPage = () => {
               onChange={(stops) => setField("stops", stops)}
               salida={form.salida}
               onSalidaChange={(salida) => setField("salida", salida)}
+              pasaPorBrennero={form.pasaPorBrennero}
+              onPasaPorBrenneroChange={(value) => setField("pasaPorBrennero", value)}
               salidaError={fieldErrors.salida?.[0]}
               error={fieldErrors.stops?.[0]}
               disabled={submitting}

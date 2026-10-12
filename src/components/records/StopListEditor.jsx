@@ -2,6 +2,7 @@ import { Button } from "../ui/Button";
 import { TextField } from "../ui/TextField";
 import { DEPOT_ORIGIN_LABEL } from "../../lib/constants";
 import { DestinoSugerencias } from "./DestinoSugerencias";
+import { BrenneroCheckbox } from "./BrenneroCheckbox";
 import { SalidaField } from "./SalidaField";
 
 // Arma la direccion final que recibe el backend a partir de la parada (texto
@@ -22,7 +23,7 @@ export const combineStopAddress = ({ direccion, cap, lat, lng }) => {
 // referencia). Cada parada tiene una
 // direccion de texto libre y un CAP opcional aparte (ayuda para que el backend
 // geocodifique mejor); se combinan en un solo string antes de enviar al backend.
-export const StopListEditor = ({ stops, onChange, error, disabled, salida, onSalidaChange, salidaError, sugerencias, salidaPorDefecto }) => {
+export const StopListEditor = ({ stops, onChange, error, disabled, salida, onSalidaChange, salidaError, sugerencias, salidaPorDefecto, pasaPorBrennero, onPasaPorBrenneroChange }) => {
   const updateStop = (index, field, value) => {
     const next = [...stops];
     next[index] = { ...next[index], [field]: value };
@@ -60,7 +61,10 @@ export const StopListEditor = ({ stops, onChange, error, disabled, salida, onSal
   return (
     <div className="flex flex-col gap-3">
       {salida && onSalidaChange ? (
-        <SalidaField value={salida} onChange={onSalidaChange} disabled={disabled} error={salidaError} porDefecto={salidaPorDefecto} />
+        <>
+          <SalidaField value={salida} onChange={onSalidaChange} disabled={disabled} error={salidaError} porDefecto={salidaPorDefecto} />
+          {onPasaPorBrenneroChange && <BrenneroCheckbox checked={pasaPorBrennero} onChange={onPasaPorBrenneroChange} disabled={disabled} />}
+        </>
       ) : (
         <div>
           <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Paradas</span>

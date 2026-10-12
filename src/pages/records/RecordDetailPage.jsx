@@ -332,6 +332,7 @@ const toFormState = (record) => ({
     lat: record.salida?.lat ?? null,
     lng: record.salida?.lng ?? null,
   },
+  pasaPorBrennero: Boolean(record.pasaPorBrennero),
   aplicativo: record.aplicativo ?? "",
   extrasPiazzaZona: record.extrasPiazzaZona ?? "",
   stops: record.stops?.length
@@ -581,6 +582,7 @@ export const RecordDetailPage = () => {
       const changed =
         next.direccion.trim() !== (saved?.direccion ?? "") || next.lat !== (saved?.lat ?? null) || next.lng !== (saved?.lng ?? null);
       if (changed) payload.salida = buildSalidaPayload(next) ?? null;
+      if (form.pasaPorBrennero !== Boolean(record.pasaPorBrennero)) payload.pasaPorBrennero = form.pasaPorBrennero;
     }
 
     // Traspaso: solo si cambio respecto de lo guardado.
@@ -846,6 +848,7 @@ const RecordSummaryView = ({
         />
         <InfoRow label="ETA" value={`${formatRomeDateTime(record.eta)} (Roma)`} />
         {record.salida?.direccion && <InfoRow label="Salida" value={record.salida.direccion} />}
+        {record.pasaPorBrennero && <InfoRow label="Ruta" value="Pasa por Brennero" />}
         <InfoRow
           label="Vehiculo"
           value={`${record.vehicle?.targa ?? "-"} - ${record.vehicle?.modelo ?? ""}`}
@@ -1211,6 +1214,8 @@ const RecordEditForm = ({
               onChange={(stops) => setField("stops", stops)}
               salida={form.salida}
               onSalidaChange={(salida) => setField("salida", salida)}
+              pasaPorBrennero={form.pasaPorBrennero}
+              onPasaPorBrenneroChange={(value) => setField("pasaPorBrennero", value)}
               sugerencias={destinoSugerencias(record.spedizzione, record.extrasPiazzaZona)}
               salidaPorDefecto={salidaPorDefectoLabel(record.spedizzione, record.extrasPiazzaZona)}
               disabled={saving}
