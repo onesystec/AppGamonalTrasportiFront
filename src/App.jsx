@@ -107,6 +107,7 @@ const PermisosChoferPage = lazy(() =>
 const PermisosPage = lazy(() =>
   import("./pages/calendario/PermisosPage").then((m) => ({ default: m.PermisosPage })),
 );
+const TrabajosAdicionalesPage = lazy(() => import("./pages/trabajos/TrabajosAdicionalesPage").then((m) => ({ default: m.TrabajosAdicionalesPage })));
 const MisHorasPage = lazy(() => import("./pages/horas/MisHorasPage").then((m) => ({ default: m.MisHorasPage })));
 const GastosServiciosPage = lazy(() =>
   import("./pages/finanzas/GastosServiciosPage").then((m) => ({ default: m.GastosServiciosPage })),
@@ -238,6 +239,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/resumen" element={<RoleOnly privileged><DailySummaryPage /></RoleOnly>} />
               <Route path="/mis-horas" element={<MisHorasPage />} />
+              <Route path="/trabajos-adicionales" element={<TrabajosAdicionalesPage />} />
               <Route
                 path="/mis-servicios"
                 element={

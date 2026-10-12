@@ -140,6 +140,16 @@ export const MisHorasPage = () => {
         <MonthSelector month={month} onChange={setMonth} />
       </div>
 
+      <Link
+        to="/trabajos-adicionales"
+        className="flex items-center justify-between gap-3 rounded-2xl glass-surface-sm px-4 py-3 text-[14px] text-ink-200 transition-colors hover:bg-line/10"
+      >
+        <span>
+          <b className="text-ink-50">¿Hiciste un trabajo fuera de tus servicios?</b> Cargalo como trabajo adicional para que cuente en tus horas.
+        </span>
+        <span className="shrink-0 font-medium text-accent-400">Ir &rarr;</span>
+      </Link>
+
       <Alert>{error}</Alert>
       {!data && !error && <PageLoader />}
 
@@ -150,7 +160,7 @@ export const MisHorasPage = () => {
               icon={ClockIcon}
               label="Horas trabajadas"
               value={formatHours(me?.horas ?? 0)}
-              detail={`Dia ${formatHours(me?.horasDia ?? 0)} - Noche ${formatHours(me?.horasNoche ?? 0)}`}
+              detail={`Dia ${formatHours(me?.horasDia ?? 0)} - Noche ${formatHours(me?.horasNoche ?? 0)}${me?.adicionales?.count ? ` - ${formatHours(me.adicionales.horas)} adicionales` : ""}`}
               color="#2f8dff"
             />
             <MancatoKpi

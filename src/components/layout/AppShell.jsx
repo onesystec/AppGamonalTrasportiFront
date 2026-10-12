@@ -12,7 +12,7 @@ import { useGpsRespaldo } from "../../hooks/useGpsRespaldo";
 import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
-import { CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, WalletIcon } from "../ui/icons";
+import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, WalletIcon } from "../ui/icons";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { NotificationsBell } from "./NotificationsBell";
 import { UpdateBanner } from "./UpdateBanner";
@@ -367,12 +367,14 @@ const AppShellContent = () => {
                   <SidebarNavTab to="/" label="Hoy" icon={HomeIcon} />
                   <SidebarNavTab to="/mis-servicios" label="Mis servicios" icon={ListIcon} />
                   <SidebarNavTab to="/mis-horas" label="Mis horas" icon={ClockIcon} />
+                  <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />
                   <SidebarNavTab to="/calendario" label="Calendario" icon={CalendarIcon} />
                   <SidebarNavTab to="/finanzas" label="Mis cargos" icon={WalletIcon} />
                 </>
               )}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/choferes" label="Choferes" icon={UsersIcon} />}
               {user?.cargo === "OWNER" && <SidebarNavTab to="/busta-paga" label="Busta paga" icon={FileTextIcon} />}
+              {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
               {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} />}
