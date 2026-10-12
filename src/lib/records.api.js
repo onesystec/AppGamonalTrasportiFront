@@ -21,6 +21,12 @@ export const searchRecordsRequest = (q) =>
 export const exportRecordsRequest = (filters) =>
   api.get("/records/export", { params: filters }).then((res) => res.data.data.records);
 
+// Export con TODA la informacion de cada servicio: { columnas, filas } ya escritas como texto (ver recordExport.service.js).
+export const exportFullRecordsRequest = (filters) =>
+  api
+    .get("/records/export", { params: { ...filters, formato: "completo" }, timeout: 120000 })
+    .then((res) => res.data.data.csv);
+
 // Resumen liviano (id/fechaServicio/estado) de un mes, para armar el acordeon de
 // dias sin traer stops/ruta/economico de cada registro.
 export const listRecordsSummaryByMonthRequest = (year, month) =>

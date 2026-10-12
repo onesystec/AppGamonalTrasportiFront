@@ -6,10 +6,10 @@ import { TextField } from "../ui/TextField";
 import { RECORD_STATUS_OPTIONS, ZONA_OPTIONS } from "../../lib/constants";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { exportRecordsRequest } from "../../lib/records.api";
+import { exportFullRecordsRequest } from "../../lib/records.api";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
-import { buildRecordsCsv, downloadCsv } from "../../lib/csv";
+import { buildFullCsv, downloadCsv } from "../../lib/csv";
 
 const SECCION_OPTIONS = [
   { value: "EXTRA_PIAZZA", label: "Extras Piazza" },
@@ -116,13 +116,13 @@ export const ExportRecordsModal = ({ open, onClose }) => {
     };
 
     try {
-      const records = await exportRecordsRequest(filters);
-      if (records.length === 0) {
+      const csv = await exportFullRecordsRequest(filters);
+      if (csv.filas.length === 0) {
         setExportError("No hay registros que coincidan con esos filtros.");
         return;
       }
       const rango = form.from || form.to ? `_${form.from || "inicio"}_a_${form.to || "hoy"}` : "";
-      downloadCsv(`registros${rango}.csv`, buildRecordsCsv(records));
+      downloadCsv(`registros${rango}.csv`, buildFullCsv(csv));
       onClose();
     } catch (err) {
       // parseApiError trae "details" (fieldErrors) ademas del message generico - sin
