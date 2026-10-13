@@ -793,7 +793,10 @@ export const computeBirthdayAlerts = (users, now = new Date()) =>
 // ---------------------------------------------------------------------------
 
 const isActiveRecord = (r) => r.estado !== "ANNULLATO";
-const realKm = (r) => r.kilometrosReales ?? r.kilometros ?? 0;
+// UN solo criterio de km para todo el dashboard (tarjeta, tarjetas por area, tabla por vehiculo y grafico de tendencia): los km reales
+// si el chofer los cargo y, si no, los planificados contados como se facturan - DHL (Milano y Roma) y AB Service x2 (el cliente manda solo
+// la ida), Extras Piazza x1. Ver kmRecorrido en lib/km.js. Antes estas partes usaban dos criterios distintos y no coincidian.
+const realKm = (r) => kmRecorrido(r);
 const uniqueCount = (list, pick) => new Set(list.map(pick).filter(Boolean)).size;
 
 const KPI_METRICS = {
@@ -843,7 +846,7 @@ export const computePeriodKpis = (records, period, now = new Date(), selectedMon
 };
 
 // Km por vehiculo en el periodo, con variacion contra el periodo anterior (tabla
-// "Kilometros por vehiculo"). Usa el km real si ya se cargo, si no el planificado.
+// "Kilometros por vehiculo"). Mismo criterio de km que el resto del dashboard (ver realKm).
 export const computeFleetKmTable = (records, period, now = new Date(), selectedMonth = null, limit = 5) => {
   const group = (list) => {
     const totals = new Map();
