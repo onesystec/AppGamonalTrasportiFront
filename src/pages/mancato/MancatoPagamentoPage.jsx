@@ -134,8 +134,20 @@ const useDebounced = (value, ms) => {
 // Columnas de la tabla (escritorio). El chofer no ve la columna "Chofer": todo es suyo.
 const gridCols = (showDriver) =>
   showDriver
-    ? "lg:grid-cols-[116px_minmax(0,1.25fr)_minmax(0,1.1fr)_96px_110px_132px_36px]"
+    ? "lg:grid-cols-[132px_minmax(0,1.25fr)_minmax(0,1.1fr)_96px_110px_132px_36px]"
     : "lg:grid-cols-[116px_minmax(0,1.2fr)_96px_110px_132px_36px]";
+
+// "02/10/2026 11:05" en hora de Roma.
+const formatSubida = (value) =>
+  new Date(value).toLocaleString("es-AR", {
+    timeZone: "Europe/Rome",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
 const plazoParts = (m) => {
   if (m.estado === "PAGADO") {
@@ -261,10 +273,10 @@ const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onCh
           "lg:rounded-lg lg:border-l-0 lg:border-b lg:border-b-line/10 lg:py-2.5 lg:pr-4"
         )}
       >
-        {/* Fecha + numero */}
+        {/* Fecha del aviso + cuando se subio (el numero ya va en la columna del mancato) */}
         <div className="min-w-0">
           <span className="block text-[13px] font-medium text-ink-50">{formatDateOnly(mancato.fecha)}</span>
-          <span className="block truncate text-[12px] text-ink-400">#{mancato.numero}</span>
+          <span className="block truncate text-[11px] text-ink-400">Subido el {formatSubida(mancato.registradoAt)}</span>
         </div>
 
         {/* Chofer */}

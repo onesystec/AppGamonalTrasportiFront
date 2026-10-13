@@ -6,7 +6,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { ChevronRightIcon, PlusIcon, ReceiptIcon } from "../../components/ui/icons";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
-import { formatDateOnly } from "../../lib/format";
+import { formatCurrency, formatDateOnly } from "../../lib/format";
 import { listMancatosRequest } from "../../lib/mancato.api";
 
 const PAGE_SIZE = 15;
@@ -112,10 +112,18 @@ export const MancatoChoferPage = () => {
                       Aviso del {formatDateOnly(m.fecha)}
                       {m.horaTransito ? ` · ${m.horaTransito}` : ""}
                     </span>
-                    <span className="block text-[12px] text-ink-300">Subido el {formatSubida(m.registradoAt)}</span>
+                    <span className="block text-[12px] text-ink-300">
+                      Subido el {formatSubida(m.registradoAt)}
+                      {m.subidoTarde && (
+                        <span className="font-medium text-danger-500">
+                          {" "}
+                          · {Math.floor(m.horasHastaSubida / 24)} dias despues
+                        </span>
+                      )}
+                    </span>
                     <span className="block truncate text-[12px] text-ink-400">
-                      #{m.numero} · {m.targa}
-                      {m.servicio ? ` · Servicio ${m.servicio.codigo}` : ""}
+                      #{m.numero} · {m.targa} · {formatCurrency(m.costo)}
+                      {m.sitioWeb ? ` · ${m.sitioWeb}` : ""}
                     </span>
                   </span>
                   <span className="shrink-0 rounded-full bg-success-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-success-500">
