@@ -1,7 +1,8 @@
 import { api } from "./api";
+import { sharedGet } from "./sharedRequest";
 
-export const listVehiclesRequest = () =>
-  api.get("/vehiculos").then((res) => res.data.data.vehicles);
+// Compartida (ver sharedRequest.js): al abrir la app la piden varias pantallas a la vez.
+export const listVehiclesRequest = () => sharedGet("vehiculos", () => api.get("/vehiculos").then((res) => res.data.data.vehicles));
 
 // GPS del vehiculo (Velocity Fleet, seccion Mapa) - solo trae los vehiculos que
 // tienen ese dispositivo instalado (no todos todavia). Ver MapPage.jsx: se usa para

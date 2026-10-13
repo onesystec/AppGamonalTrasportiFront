@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearSharedRequests } from "./sharedRequest";
 import { clearToken, getToken } from "./token";
 
 export const AUTH_LOGOUT_EVENT = "gt:auth-logout";
@@ -8,6 +9,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  // Una escritura puede cambiar lo que devuelven las lecturas compartidas (ver sharedRequest.js): se descartan.
+  if (config.method && config.method.toLowerCase() !== "get") clearSharedRequests();
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -16,7 +19,11 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Tambien al terminar: una lectura que empezo antes de la escritura no debe quedar guardada con datos viejos.
+    if (response.config?.method && response.config.method.toLowerCase() !== "get") clearSharedRequests();
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       clearToken();

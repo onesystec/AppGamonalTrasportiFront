@@ -1,7 +1,8 @@
 import { api } from "./api";
+import { sharedGet } from "./sharedRequest";
 
-export const listUsersRequest = () =>
-  api.get("/users").then((res) => res.data.data.users);
+// Compartida (ver sharedRequest.js): al abrir la app la piden varias pantallas a la vez.
+export const listUsersRequest = () => sharedGet("users", () => api.get("/users").then((res) => res.data.data.users));
 
 export const createUserRequest = (payload) =>
   api.post("/users", payload).then((res) => res.data.data.user);

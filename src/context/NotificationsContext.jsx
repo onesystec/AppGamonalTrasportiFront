@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { PHONE_GPS_ENABLED } from "../lib/features";
 import { useAuth } from "./AuthContext";
@@ -44,6 +44,9 @@ const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 // Las alertas OWNER/ADMIN dependen de tiempos concretos (ETA a 45min, vencimientos
 // a 30 dias): se refrescan solas cada 2 minutos para no depender de que el usuario navegue.
 const OWNER_REFRESH_MS = 2 * 60 * 1000;
+// Cambiar de pantalla vuelve a armar los avisos (unos 15 pedidos en paralelo al servidor), pero no mas de una vez cada tanto: navegar
+// rapido entre pantallas disparaba esa rafaga en cada paso. El primer armado de la sesion y el que se hace cada OWNER_REFRESH_MS no se frenan.
+const MIN_REBUILD_MS = 30 * 1000;
 
 const SEVERITY_ORDER = { urgent: 0, warning: 1, reminder: 2 };
 const sortBySeverity = (list) =>
@@ -287,6 +290,8 @@ export const NotificationsProvider = ({ children }) => {
     });
   };
 
+  const lastBuildRef = useRef({ key: null, at: 0 });
+
   useEffect(() => {
     if (!isChofer && !isPrivileged) {
       setAlerts([]);
@@ -296,12 +301,16 @@ export const NotificationsProvider = ({ children }) => {
 
     let cancelled = false;
     const build = () => (isChofer ? buildChoferAlerts(user) : buildOwnerAlerts({ user }));
+    const sessionKey = `${user?.id}|${isChofer ? "chofer" : "oficina"}`;
 
     const run = () => {
       setLoading(true);
       return build()
         .then((list) => {
-          if (!cancelled) setAlerts(list);
+          if (cancelled) return;
+          // Se anota cuando el resultado SE USO: si el armado se cancelo por cambiar de pantalla a mitad, el siguiente no se salta.
+          lastBuildRef.current = { key: sessionKey, at: Date.now() };
+          setAlerts(list);
         })
         .catch(() => {
           if (!cancelled) setAlerts([]);
@@ -311,7 +320,10 @@ export const NotificationsProvider = ({ children }) => {
         });
     };
 
-    const idleId = scheduleIdle(run);
+    // Solo se salta el armado por cambio de pantalla: si cambio la sesion o el rol, o pasaron MIN_REBUILD_MS, se arma igual.
+    const last = lastBuildRef.current;
+    const recent = last.key === sessionKey && Date.now() - last.at < MIN_REBUILD_MS;
+    const idleId = recent ? null : scheduleIdle(run);
     // Pausa sola mientras la pestania no esta visible (ver startVisibleInterval) - una
     // pestania olvidada en segundo plano no tiene por que seguir pidiendo esto cada
     // 2 minutos para siempre (5 pedidos en paralelo cada vez, ver buildOwnerAlerts).
@@ -319,7 +331,7 @@ export const NotificationsProvider = ({ children }) => {
 
     return () => {
       cancelled = true;
-      cancelIdle(idleId);
+      if (idleId != null) cancelIdle(idleId);
       if (stopPolling) stopPolling();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
