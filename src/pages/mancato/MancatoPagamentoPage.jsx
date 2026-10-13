@@ -281,6 +281,11 @@ const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onCh
               {mancato.fueraDePlazo && (
                 <span className="block text-[11px] font-medium text-danger-500">Fuera de plazo</span>
               )}
+              {mancato.subidoTarde && (
+                <span className="block text-[11px] font-medium text-danger-500">
+                  Subido {Math.floor(mancato.horasHastaSubida / 24)} dias despues
+                </span>
+              )}
               <ServicioTag mancato={mancato} />
             </div>
           </div>

@@ -220,6 +220,14 @@ export const MancatoDetailPage = () => {
             </span>
           </div>
         )}
+        {isPrivileged && mancato.subidoTarde && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-danger-500/10 px-4 py-3 text-[13px] text-danger-500">
+            <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              El chofer lo subio {mancato.horasHastaSubida} horas despues del aviso (mas de 48 horas).
+            </span>
+          </div>
+        )}
         {isPrivileged && mancato.pagadoFueraDePlazo && (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-500/10 px-4 py-3 text-[13px] text-warning-500">
             <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
