@@ -184,8 +184,9 @@ export const MancatoDetailPage = () => {
   }
 
   const estado = MANCATO_ESTADO_BY_VALUE[mancato.estado];
-  // El chofer puede editar lo suyo mientras no este pagado; OWNER/ADMIN siempre.
-  const canEdit = isPrivileged || !mancato.pagado;
+  // El chofer puede editar lo suyo mientras no este pagado; OWNER/ADMIN siempre. Al chofer el servidor
+  // no le dice si esta pagado, solo si todavia lo puede corregir ("editable").
+  const canEdit = isPrivileged || (mancato.editable ?? !mancato.pagado);
   const canUploadComprobante = canEdit;
 
   return (
@@ -219,6 +220,15 @@ export const MancatoDetailPage = () => {
             </span>
           </div>
         )}
+        {mancato.subidoTarde && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-danger-500/10 px-4 py-3 text-[13px] text-danger-500">
+            <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              {isPrivileged ? "El chofer lo subio" : "Lo subiste"} {mancato.horasHastaSubida} horas despues del aviso
+              (mas de 48 horas).
+            </span>
+          </div>
+        )}
         {isPrivileged && mancato.pagadoFueraDePlazo && (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-500/10 px-4 py-3 text-[13px] text-warning-500">
             <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
@@ -246,9 +256,13 @@ export const MancatoDetailPage = () => {
           <>
             <GlassCard className={clsx(isPrivileged && ["border-l-4", estado.edge])}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
-                <Fact label="Fecha">{formatDateOnly(mancato.fecha)}</Fact>
+                <Fact label={isPrivileged ? "Fecha" : "Fecha del aviso"}>{formatDateOnly(mancato.fecha)}</Fact>
                 <Fact label="Hora del tránsito">{mancato.horaTransito ?? "-"}</Fact>
-                {isPrivileged && <Fact label="Vence">{formatDateOnly(mancato.fechaVencimiento)}</Fact>}
+                {isPrivileged ? (
+                  <Fact label="Vence">{formatDateOnly(mancato.fechaVencimiento)}</Fact>
+                ) : (
+                  <Fact label="Subido el">{formatRomeDateTime(mancato.registradoAt).replace(" (hora de Roma)", "")}</Fact>
+                )}
                 <Fact label="Costo">{formatCurrency(mancato.costo)}</Fact>
                 <Fact label="Targa">{mancato.targa}</Fact>
                 <Fact label="Chofer">

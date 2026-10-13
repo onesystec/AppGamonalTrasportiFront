@@ -6,13 +6,25 @@ import { Spinner } from "../../components/ui/Spinner";
 import { ChevronRightIcon, PlusIcon, ReceiptIcon } from "../../components/ui/icons";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
-import { formatDateOnly } from "../../lib/format";
+import { formatCurrency, formatDateOnly } from "../../lib/format";
 import { listMancatosRequest } from "../../lib/mancato.api";
 
 const PAGE_SIZE = 15;
 
 // "Mancato Pagamento" para el chofer: solo sube sus avisos. El pago, los plazos y los estados los
-// maneja la empresa, asi que aca no se muestran.
+// maneja la empresa, asi que aca no se muestran: solo lo que el sube, la fecha del aviso y cuando lo subio.
+
+// "13/10/2026 09:42" en hora de Roma.
+const formatSubida = (value) =>
+  new Date(value).toLocaleString("es-AR", {
+    timeZone: "Europe/Rome",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 export const MancatoChoferPage = () => {
   const location = useLocation();
   const { version } = useDataRefresh("mancato");
@@ -60,7 +72,8 @@ export const MancatoChoferPage = () => {
           <div className="max-w-md">
             <h2 className="text-[19px] font-semibold text-ink-50">Mis avisos de mancato pagamento</h2>
             <p className="mt-1 text-[13px] text-ink-300">
-              Sube el aviso apenas lo recibas. La empresa se encarga del pago y de asignarlo a tu servicio.
+              Sube el aviso apenas lo recibas: tienes 24 horas desde la fecha del aviso. La empresa se encarga del
+              pago y de asignarlo a tu servicio.
             </p>
           </div>
           <Link to="/finanzas/mancato/new" state={{ backgroundLocation: location }}>
@@ -96,12 +109,21 @@ export const MancatoChoferPage = () => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-medium text-ink-50">
-                      {formatDateOnly(m.fecha)}
+                      Aviso del {formatDateOnly(m.fecha)}
                       {m.horaTransito ? ` · ${m.horaTransito}` : ""}
                     </span>
+                    <span className="block text-[12px] text-ink-300">
+                      Subido el {formatSubida(m.registradoAt)}
+                      {m.subidoTarde && (
+                        <span className="font-medium text-danger-500">
+                          {" "}
+                          · {Math.floor(m.horasHastaSubida / 24)} dias despues
+                        </span>
+                      )}
+                    </span>
                     <span className="block truncate text-[12px] text-ink-400">
-                      #{m.numero} · {m.targa}
-                      {m.servicio ? ` · Servicio ${m.servicio.codigo}` : ""}
+                      #{m.numero} · {m.targa} · {formatCurrency(m.costo)}
+                      {m.sitioWeb ? ` · ${m.sitioWeb}` : ""}
                     </span>
                   </span>
                   <span className="shrink-0 rounded-full bg-success-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-success-500">

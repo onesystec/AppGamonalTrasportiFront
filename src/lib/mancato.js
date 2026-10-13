@@ -32,7 +32,22 @@ export const MANCATO_ESTADOS = [
   },
 ];
 
-export const MANCATO_ESTADO_BY_VALUE = Object.fromEntries(MANCATO_ESTADOS.map((e) => [e.value, e]));
+// Observado: la oficina lo marco porque no se puede pagar por algun motivo. Solo existe en
+// Mancato Pagamento (las Multas reutilizan MANCATO_ESTADOS y no lo tienen).
+export const MANCATO_OBSERVADO = {
+  value: "OBSERVADO",
+  label: "Observado",
+  plural: "Observados",
+  dot: "bg-[#a78bfa] shadow-[0_0_6px_#a78bfa]",
+  pill: "bg-[#a78bfa]/20 text-[#a78bfa] ring-1 ring-[#a78bfa]/40",
+  text: "text-[#a78bfa]",
+  edge: "border-l-[#a78bfa]",
+};
+
+// Estados de la pantalla de Mancato Pagamento (con Observado).
+export const MANCATO_ESTADOS_PAGAMENTO = [MANCATO_ESTADOS[0], MANCATO_ESTADOS[1], MANCATO_OBSERVADO, MANCATO_ESTADOS[2]];
+
+export const MANCATO_ESTADO_BY_VALUE = Object.fromEntries(MANCATO_ESTADOS_PAGAMENTO.map((e) => [e.value, e]));
 
 // Dias despues de la fecha del aviso hasta los que se puede pagar (el aviso dice "entro il
 // 15° giorno successivo alla data del transito"): vencimiento = fecha + 15.
