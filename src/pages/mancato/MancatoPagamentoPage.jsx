@@ -30,7 +30,14 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
-import { ASIGNACION_FILTER_OPTIONS, MANCATO_ESTADOS, asignacionInfo, sitioWebHref } from "../../lib/mancato";
+import {
+  ASIGNACION_FILTER_OPTIONS,
+  MANCATO_ESTADOS_PAGAMENTO,
+  addDaysToDay,
+  asignacionInfo,
+  romeToday,
+  sitioWebHref,
+} from "../../lib/mancato";
 import {
   getMancatoMesesRequest,
   getMancatoStatsRequest,
@@ -55,11 +62,51 @@ const EMPTY_FILTERS = {
   orden: "",
 };
 
+// "vencen" no es un orden sino un atajo: muestra solo los que vencen hoy o mañana (sin pagar).
+const VENCEN_HOY_MANANA = "vencen";
 const ORDEN_OPTIONS = [
   { value: "", label: "Mas urgentes" },
+  { value: VENCEN_HOY_MANANA, label: "Vencen hoy y mañana" },
   { value: "recientes", label: "Mas recientes" },
   { value: "antiguos", label: "Mas antiguos" },
   { value: "monto", label: "Mayor monto" },
+];
+
+// Atajos de fecha (sobre la fecha del aviso). La semana va de lunes a domingo.
+const weekStart = (day) => {
+  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 = domingo
+  return addDaysToDay(day, -((weekday + 6) % 7));
+};
+const periodoRange = (periodo) => {
+  const today = romeToday();
+  const monthStart = `${today.slice(0, 7)}-01`;
+  switch (periodo) {
+    case "hoy":
+      return { from: today, to: today };
+    case "semana":
+      return { from: weekStart(today), to: addDaysToDay(weekStart(today), 6) };
+    case "semana_pasada":
+      return { from: addDaysToDay(weekStart(today), -7), to: addDaysToDay(weekStart(today), -1) };
+    case "mes": {
+      const [year, month] = today.split("-").map(Number);
+      const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      return { from: monthStart, to: `${today.slice(0, 7)}-${String(last).padStart(2, "0")}` };
+    }
+    case "mes_pasado": {
+      const to = addDaysToDay(monthStart, -1);
+      return { from: `${to.slice(0, 7)}-01`, to };
+    }
+    default:
+      return { from: "", to: "" };
+  }
+};
+const PERIODO_OPTIONS = [
+  { value: "", label: "Todas las fechas" },
+  { value: "hoy", label: "Hoy" },
+  { value: "semana", label: "Esta semana" },
+  { value: "semana_pasada", label: "Semana pasada" },
+  { value: "mes", label: "Este mes" },
+  { value: "mes_pasado", label: "Mes pasado" },
 ];
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
@@ -127,10 +174,10 @@ const RowMenu = ({ mancato, isPrivileged, location, onChanged }) => {
     };
   }, [open]);
 
-  const togglePagado = async () => {
+  const update = async (fields) => {
     setBusy(true);
     try {
-      await updateMancatoRequest(mancato.id, { pagado: String(!mancato.pagado) });
+      await updateMancatoRequest(mancato.id, fields);
       onChanged();
     } catch {
       // El detalle muestra el error con mas contexto; aca solo se cierra el menu.
@@ -139,6 +186,8 @@ const RowMenu = ({ mancato, isPrivileged, location, onChanged }) => {
       setOpen(false);
     }
   };
+  const togglePagado = () => update({ pagado: String(!mancato.pagado) });
+  const toggleObservado = () => update({ observado: String(!mancato.observado) });
 
   const itemClass =
     "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-ink-50 transition-colors hover:bg-line/10";
@@ -173,6 +222,11 @@ const RowMenu = ({ mancato, isPrivileged, location, onChanged }) => {
               {mancato.pagado ? "Reabrir (marcar pendiente)" : "Marcar como pagado"}
             </button>
           )}
+          {isPrivileged && !mancato.pagado && (
+            <button type="button" onClick={toggleObservado} disabled={busy} className={itemClass}>
+              {mancato.observado ? "Quitar observado" : "Marcar como observado"}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -191,7 +245,7 @@ const ServicioTag = ({ mancato }) => {
 };
 
 const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onChanged }) => {
-  const estado = MANCATO_ESTADOS.find((e) => e.value === mancato.estado);
+  const estado = MANCATO_ESTADOS_PAGAMENTO.find((e) => e.value === mancato.estado) ?? MANCATO_ESTADOS_PAGAMENTO[0];
   const plazo = plazoParts(mancato);
   const driverName = mancato.driver ? `${mancato.driver.nombre} ${mancato.driver.apellido}` : "Sin chofer";
 
@@ -227,20 +281,25 @@ const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onCh
               {mancato.fueraDePlazo && (
                 <span className="block text-[11px] font-medium text-danger-500">Fuera de plazo</span>
               )}
+              <ServicioTag mancato={mancato} />
             </div>
           </div>
         )}
 
-        {/* Vehiculo */}
-        <div className="min-w-0">
-          <span className="block truncate text-[13px] text-ink-50">{vehicle?.modelo ?? "-"}</span>
-          <span className="block text-[12px] text-ink-400 underline decoration-ink-500/50 underline-offset-2">
-            {mancato.targa}
+        {/* Mancato: numero, sitio de pago (como texto, sin enlace) y targa */}
+        <div className="min-w-0" title={vehicle?.modelo ?? undefined}>
+          <span className="block truncate text-[13px] font-medium text-ink-50">N. {mancato.numero}</span>
+          <span
+            className={clsx("block truncate text-[12px]", mancato.sitioWeb ? "text-ink-300" : "text-ink-500")}
+            title={mancato.sitioWeb ?? undefined}
+          >
+            {mancato.sitioWeb?.trim() || "Sin sitio de pago"}
           </span>
+          <span className="block truncate text-[12px] font-medium tracking-wide text-ink-400">{mancato.targa}</span>
           {!showDriver && mancato.fueraDePlazo && (
             <span className="block text-[11px] font-medium text-danger-500">Fuera de plazo</span>
           )}
-          <ServicioTag mancato={mancato} />
+          {!showDriver && <ServicioTag mancato={mancato} />}
         </div>
 
         {/* Monto */}
@@ -351,10 +410,10 @@ const GrupoAccordion = ({
         <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", dotClass)} />
         <span className="text-[16px] font-semibold text-ink-50">{title}</span>
         <span className={clsx("rounded-full px-2.5 py-0.5 text-[12px] font-semibold", pillClass)}>{count}</span>
+        <span className="text-[15px] font-semibold text-ink-50">{formatCurrency(total)}</span>
         {headerExtra}
-        <span className="ml-auto text-[15px] font-semibold text-ink-50">{formatCurrency(total)}</span>
         <ChevronDownIcon
-          className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
+          className={clsx("ml-auto h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
         />
       </button>
 
@@ -375,7 +434,7 @@ const GrupoAccordion = ({
               <div className={clsx("hidden gap-3 px-4 py-2 lg:grid", gridCols(showDriver))}>
                 <span className={headerClass}>Fecha</span>
                 {showDriver && <span className={headerClass}>Chofer</span>}
-                <span className={headerClass}>Vehiculo</span>
+                <span className={headerClass}>Mancato / Pago / Targa</span>
                 <span className={clsx(headerClass, "lg:pr-3 text-right")}>Monto</span>
                 <span className={headerClass}>Estado</span>
                 <span className={headerClass}>Plazo</span>
@@ -421,7 +480,7 @@ const GrupoAccordion = ({
 
 // Acordeon de un estado (pendientes / vencidos / pagados).
 const EstadoAccordion = ({ estado, summary, params, ...rest }) => {
-  const info = MANCATO_ESTADOS.find((e) => e.value === estado);
+  const info = MANCATO_ESTADOS_PAGAMENTO.find((e) => e.value === estado);
   return (
     <GrupoAccordion
       title={info.plural}
@@ -474,6 +533,7 @@ const MesAccordion = ({ mes, params, filters, ...rest }) => {
         <>
           <EstadoMini count={mes.VENCIDO.count} label="vencidos" tone="bg-danger-500/15 text-danger-500" />
           <EstadoMini count={mes.PENDIENTE.count} label="pendientes" tone="bg-warning-500/15 text-warning-500" />
+          <EstadoMini count={mes.OBSERVADO?.count ?? 0} label="observados" tone="bg-[#a78bfa]/15 text-[#a78bfa]" />
           <EstadoMini count={mes.PAGADO.count} label="pagados" tone="bg-success-500/15 text-success-500" />
         </>
       }
@@ -538,15 +598,18 @@ const MancatoOficinaPage = () => {
       to: filters.to || undefined,
       fueraDePlazo: filters.fueraDePlazo ? "true" : undefined,
       asignacion: filters.asignacion || undefined,
+      vence: filters.orden === VENCEN_HOY_MANANA ? "HOY_MANANA" : undefined,
     }),
-    [filters.q, filters.driverId, filters.targa, filters.from, filters.to, filters.fueraDePlazo, filters.asignacion]
+    [filters.q, filters.driverId, filters.targa, filters.from, filters.to, filters.fueraDePlazo, filters.asignacion, filters.orden]
   );
   const params = useDebounced(rawParams, 350);
   const paramsKey = JSON.stringify(params);
-  const listParams = useMemo(() => ({ ...params, orden: filters.orden || undefined }), [params, filters.orden]);
+  const ordenParam = filters.orden && filters.orden !== VENCEN_HOY_MANANA ? filters.orden : undefined;
+  const listParams = useMemo(() => ({ ...params, orden: ordenParam }), [params, ordenParam]);
 
+  // "vence" ya cuenta como filtro dentro de params.
   const activeFilterCount =
-    Object.values(params).filter(Boolean).length + (filters.estado ? 1 : 0) + (filters.orden ? 1 : 0);
+    Object.values(params).filter(Boolean).length + (filters.estado ? 1 : 0) + (ordenParam ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   useEffect(() => {
@@ -600,19 +663,34 @@ const MancatoOficinaPage = () => {
     // mesesKey resume mesesParams (ver arriba).
   }, [grupo, mesesKey, version]);
 
+  const periodoSeleccionado = useMemo(() => {
+    if (!filters.from && !filters.to) return "";
+    const match = PERIODO_OPTIONS.find((o) => {
+      if (!o.value) return false;
+      const range = periodoRange(o.value);
+      return range.from === filters.from && range.to === filters.to;
+    });
+    return match ? match.value : "personalizado";
+  }, [filters.from, filters.to]);
+  const setPeriodo = (periodo) => {
+    if (periodo === "personalizado") return;
+    setFilters((prev) => ({ ...prev, ...periodoRange(periodo) }));
+  };
+
   const setMes = (mes) =>
     setFilters((prev) => ({ ...prev, from: mes ? mesStart(mes) : "", to: mes ? mesEnd(mes) : "" }));
 
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
-  const visibleEstados = MANCATO_ESTADOS.filter((e) => !filters.estado || e.value === filters.estado);
+  const visibleEstados = MANCATO_ESTADOS_PAGAMENTO.filter((e) => !filters.estado || e.value === filters.estado);
+  const sinResumen = { count: 0, total: 0 };
   const driverOptions = [
     { value: "", label: "Todos" },
     ...drivers.map((d) => ({ value: d.id, label: `${d.nombre} ${d.apellido}` })),
   ];
   const estadoOptions = [
     { value: "", label: "Todos" },
-    ...MANCATO_ESTADOS.map((e) => ({ value: e.value, label: e.label })),
+    ...MANCATO_ESTADOS_PAGAMENTO.map((e) => ({ value: e.value, label: e.label })),
   ];
 
   const antiguedad = stats ? Math.round(stats.antiguedadMediaDias) : 0;
@@ -799,6 +877,20 @@ const MancatoOficinaPage = () => {
                     ))}
                   </datalist>
                 </div>
+                <div className="min-w-[160px] flex-[1_1_160px]">
+                  <Select
+                    id="filtro-periodo"
+                    label="Fecha"
+                    options={[
+                      ...PERIODO_OPTIONS,
+                      ...(periodoSeleccionado === "personalizado"
+                        ? [{ value: "personalizado", label: "Rango personalizado" }]
+                        : []),
+                    ]}
+                    value={periodoSeleccionado}
+                    onChange={(e) => setPeriodo(e.target.value)}
+                  />
+                </div>
                 {isPrivileged && (
                   <div className="min-w-[170px] flex-[1_1_170px]">
                     <Select
@@ -830,6 +922,20 @@ const MancatoOficinaPage = () => {
                 </label>
               </div>
             </div>
+
+            {/* Atajo "Vencen hoy y mañana": cuantos son y cuanto suman */}
+            {filters.orden === VENCEN_HOY_MANANA && (
+              <div className="glass-surface-sm flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-l-4 border-l-warning-500 px-5 py-4">
+                <ClockIcon className="h-5 w-5 shrink-0 text-warning-500" />
+                <span className="text-[15px] font-semibold text-ink-50">Vencen hoy y mañana</span>
+                <span className="rounded-full bg-warning-500/20 px-2.5 py-0.5 text-[12px] font-semibold text-warning-500">
+                  {summary.PENDIENTE?.count ?? 0}
+                </span>
+                <span className="ml-auto text-[18px] font-semibold text-ink-50">
+                  {formatCurrency(summary.PENDIENTE?.total ?? 0)}
+                </span>
+              </div>
+            )}
 
             {/* Agrupar por mes (con selector) o por estado */}
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -889,11 +995,11 @@ const MancatoOficinaPage = () => {
                     // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
                     key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
                     estado={estado.value}
-                    summary={summary[estado.value]}
+                    summary={summary[estado.value] ?? sinResumen}
                     params={listParams}
                     version={version}
                     defaultOpen={
-                      summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")
+                      (summary[estado.value]?.count ?? 0) > 0 && (hasActiveFilters || estado.value !== "PAGADO")
                     }
                     showDriver={isPrivileged}
                     vehiclesByTarga={vehiclesByTarga}
