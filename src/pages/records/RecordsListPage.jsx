@@ -13,7 +13,6 @@ import {
   ClockIcon,
   DownloadIcon,
   PlusIcon,
-  RefreshIcon,
   RouteIcon,
   SearchIcon,
 } from "../../components/ui/icons";
@@ -34,7 +33,7 @@ import {
   RECORD_STATUS_OPTIONS,
   TERMINADOS_STATUSES,
 } from "../../lib/constants";
-import { formatDate, formatDateTime, formatTimeRemaining } from "../../lib/format";
+import { formatDate, formatTimeRemaining } from "../../lib/format";
 import { userAreaKeys } from "../../lib/roles";
 import { AREA_ALL, AREAS_BY_KEY, RECORD_AREAS, classifyRecord } from "../../lib/recordAreas";
 import { CompactarModal } from "../../components/records/CompactarModal";
@@ -49,10 +48,8 @@ import {
   searchRecordsRequest,
   updateRecordRequest,
 } from "../../lib/records.api";
-import { getAppsheetSyncStatusRequest, runAppsheetSyncRequest } from "../../lib/sync.api";
 import { kmRecorrido } from "../../lib/km";
 
-const SYNC_ERROR_PREVIEW = 5;
 
 const TAB_OPTIONS = [
   { value: "en_proceso", label: "En proceso" },
@@ -449,39 +446,8 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("en_proceso");
 
-  // Sincronizacion manual con AppSheet (antes vivia en Mi perfil) - solo
-  // OWNER/ADMIN, un boton chico redondo arriba de la lista en vez de una seccion
-  // aparte.
-  const [syncState, setSyncState] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState(null);
-  const [syncError, setSyncError] = useState("");
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCompactar, setShowCompactar] = useState(false);
-
-  useEffect(() => {
-    if (!isPrivileged) return;
-    getAppsheetSyncStatusRequest()
-      .then(setSyncState)
-      .catch(() => {});
-  }, [isPrivileged]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncError("");
-    setSyncResult(null);
-    try {
-      const result = await runAppsheetSyncRequest();
-      setSyncResult(result);
-      if (result.created > 0) refreshRecords();
-      const state = await getAppsheetSyncStatusRequest();
-      setSyncState(state);
-    } catch (err) {
-      setSyncError(parseApiError(err).message);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   // --- Vista OWNER/ADMIN: navega mes a mes, trae solo un resumen liviano del mes
   // y recien pide los registros completos del dia cuando se despliega ese dia. ---
@@ -809,37 +775,6 @@ export const RecordsListPage = ({ section: sectionHint }) => {
         })}
       </div>
 
-      {isPrivileged && (syncError || syncResult) && (
-        <div className="flex flex-col gap-2">
-          <Alert>{syncError}</Alert>
-          {syncResult && (
-            <div className="rounded-xl glass-surface-sm px-4 py-3 text-[13px] text-ink-200">
-              <p>
-                <span className="text-success-500">{syncResult.created} creados</span>
-                {" · "}
-                <span className="text-ink-400">{syncResult.skipped} ya sincronizados</span>
-                {" · "}
-                <span className={syncResult.errors.length ? "text-danger-500" : "text-ink-400"}>
-                  {syncResult.errors.length} con error
-                </span>
-              </p>
-              {syncResult.errors.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1 text-ink-300">
-                  {syncResult.errors.slice(0, SYNC_ERROR_PREVIEW).map((e) => (
-                    <li key={`${e.row}-${e.id}`}>
-                      Fila {e.row} ({e.id}): {e.reason}
-                    </li>
-                  ))}
-                  {syncResult.errors.length > SYNC_ERROR_PREVIEW && (
-                    <li>...y {syncResult.errors.length - SYNC_ERROR_PREVIEW} mas.</li>
-                  )}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       {isPrivileged && (
         <div className="glass-surface flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl p-3">
           <TextField
@@ -1060,20 +995,6 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                 >
                   <DownloadIcon className="h-[18px] w-[18px] text-ink-300" />
                   Exportar registros a CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSync}
-                  disabled={syncing}
-                  title={
-                    syncState?.lastSyncedAt
-                      ? `Ultima sincronizacion: ${formatDateTime(syncState.lastSyncedAt)}`
-                      : "Todavia no se sincronizo nunca"
-                  }
-                  className="flex items-center gap-3 rounded-xl border border-line/10 px-3.5 py-2.5 text-left text-[13px] text-ink-100 transition-colors hover:bg-line/[0.05] disabled:opacity-60"
-                >
-                  <RefreshIcon className={`h-[18px] w-[18px] text-ink-300 ${syncing ? "animate-spin" : ""}`} />
-                  Sincronizar con AppSheet
                 </button>
                 <button
                   type="button"
