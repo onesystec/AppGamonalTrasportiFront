@@ -251,9 +251,10 @@ export const TAGLIANDO_STATUS_LABELS = {
 };
 
 // De donde sale un servicio cuando no se escribe una "Salida" (igual que defaultSalidaFor del backend): AB Service retira en AB
-// Service, DHL Roma en su deposito y todo lo demas en el deposito de DHL Milano.
+// Service (Milano), todo lo de zona Roma (DHL, AB Service y Extras Piazza) en el deposito de DHL Roma y lo demas en el
+// deposito de DHL Milano.
 export const salidaPorDefectoLabel = (spedizzione, zona) => {
+  if (zona === "ROMA" && (spedizzione === "DHL" || spedizzione === "AB_SERVICE" || spedizzione === "EXTRA_PIAZZA")) return "DHL Roma";
   if (spedizzione === "AB_SERVICE") return "AB Service";
-  if (spedizzione === "DHL" && zona === "ROMA") return "DHL Roma";
   return "Via Walter Tobagi, 8 (DHL Milano)";
 };
