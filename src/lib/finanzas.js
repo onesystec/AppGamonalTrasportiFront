@@ -50,6 +50,7 @@ export const payCalcText = (item, reglas) => {
     if (item.horasNoche > 0) horas.push(`${nf(item.horasNoche)} h noche x ${nf(reglas.horaNocheEur)} EUR`);
     parts.push(horas.join(" + "));
   } else if (item.kmFuente === "SIN_DATO") parts.push("sin kilometros cargados");
+  else if (item.kmFuente === "VIAJE_SIN_CIRCUITO") parts.push("viaje sin circuito calculado: no se paga la suma de sus servicios");
   else if (item.kmFuente === "TRASPASO_SIN_KM") parts.push("servicio con traspaso: sin horas ni km reales no se paga por los km del servicio");
   else {
     const eur = item.franja === "NOCHE" ? reglas.kmBloqueNocheEur : reglas.kmBloqueDiaEur;

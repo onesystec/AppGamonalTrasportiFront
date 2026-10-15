@@ -164,7 +164,7 @@ const TraspasoOfService = ({ record, isChofer, onChanged }) => {
         <p className="mt-1.5 text-[14px] text-ink-100">
           Lo termino <b>{name(relevo.chofer)}</b>
           {relevo.traspasoHora
-            ? `, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)} (Roma).`
+            ? `${relevo.lugar ? `, en ${relevo.lugar}` : ""}, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)} (Roma).`
             : ". Todavia no indico a que hora recibio el paquete: su parte queda pendiente."}{" "}
           <Link to={`/records/${relevo.recordId}`} className="font-medium text-accent-400 hover:text-accent-300">
             Ver su servicio &rarr;
@@ -178,7 +178,7 @@ const TraspasoOfService = ({ record, isChofer, onChanged }) => {
             <Link to={`/records/${origen.recordId}`} className="font-medium text-accent-400 hover:text-accent-300">
               {origen.codigo}
             </Link>
-            ).{" "}
+            ){origen.lugar ? ` en ${origen.lugar}` : ""}.{" "}
             {record.traspasoHora
               ? `Recibio el paquete el ${formatRomeDateTime(record.traspasoHora)} (Roma).`
               : "Falta indicar a que hora se recibio el paquete."}
@@ -430,6 +430,7 @@ const toFormState = (record) => ({
   // Traspaso: otro chofer termino el servicio (ver Record.servicioOrigenId en el backend).
   otroChoferTermino: Boolean(record.relevo),
   choferRelevoId: record.relevo?.driverId ?? "",
+  traspasoLugar: record.relevo?.lugar ?? "",
   vehicleId: record.vehicle?.id ?? "",
   salida: {
     direccion: record.salida?.direccion ?? "",
@@ -715,6 +716,9 @@ export const RecordDetailPage = () => {
       }
       const wanted = form.otroChoferTermino ? form.choferRelevoId : null;
       if (wanted !== (record.relevo?.driverId ?? null)) payload.choferRelevoId = wanted;
+      // Donde se paso el paquete: con eso se calcula el circuito (y las horas de manejo) de cada chofer.
+      const lugar = form.traspasoLugar.trim();
+      if (wanted && lugar !== (record.relevo?.lugar ?? "")) payload.traspasoLugar = lugar || null;
     }
 
     // Fecha retiro: solo la oficina; "" la borra, asi que se manda aunque este vacia (pero
@@ -1377,6 +1381,19 @@ const RecordEditForm = ({
                           Al guardar, a ese chofer le llega un aviso y tiene que indicar a que hora recibio el
                           paquete. Hasta entonces su parte queda pendiente.
                         </p>
+                        <div className="mt-3">
+                          <TextField
+                            id="traspasoLugar"
+                            label="Lugar del traspaso"
+                            placeholder="Ciudad o direccion donde se paso el paquete (ej: Firenze)"
+                            value={form.traspasoLugar}
+                            onChange={handleChange("traspasoLugar")}
+                          />
+                          <p className="mt-1.5 text-[12px] text-ink-400">
+                            Con el lugar se calcula el circuito de cada chofer desde la base de su zona. Sin el, ninguno
+                            de los dos tiene km para el pago.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </>

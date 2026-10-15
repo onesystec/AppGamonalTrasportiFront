@@ -76,6 +76,9 @@ const ServiceList = ({ servicios, reglas, location }) =>
             {s.kmFuente === "TRASPASO_SIN_KM" && (
               <span className="ml-1.5 text-warning-500">revisar: traspaso sin horas ni km reales del chofer</span>
             )}
+            {s.kmFuente === "VIAJE_SIN_CIRCUITO" && (
+              <span className="ml-1.5 text-warning-500">revisar: viaje sin circuito (paradas sin ubicar); se calcula solo al reabrir</span>
+            )}
             {s.kmFuente === "SIN_DATO" && (
               <span className="ml-1.5 text-warning-500">revisar: el servicio no tiene km ni horas</span>
             )}
