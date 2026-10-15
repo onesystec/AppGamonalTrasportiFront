@@ -14,7 +14,6 @@ import { Select } from "../../components/ui/Select";
 import { Spinner } from "../../components/ui/Spinner";
 import { TextField } from "../../components/ui/TextField";
 import {
-  CalendarIcon,
   ChevronDownIcon,
   ClockIcon,
   DotsIcon,
@@ -373,19 +372,34 @@ const GrupoAccordion = ({
   const open = userOpen ?? defaultOpen;
   const [list, setList] = useState({ items: null, total: 0, page: 1, loading: false, error: "" });
   const paramsKey = JSON.stringify(listParams);
+  // Cuantas paginas ("Ver mas") hay abiertas y con que filtros. Si solo cambian los datos
+  // (ej. se marco uno como pagado), se vuelven a pedir todas esas paginas para no perder lo
+  // que ya se estaba viendo. Si cambian los filtros, se vuelve a la primera pagina.
+  const loadedRef = useRef({ key: paramsKey, pages: 1 });
 
   useEffect(() => {
     if (!open) {
       setList((prev) => (prev.items ? { ...prev, items: null } : prev));
+      loadedRef.current = { key: paramsKey, pages: 1 };
       return undefined;
     }
     let cancelled = false;
+    const pages = loadedRef.current.key === paramsKey ? loadedRef.current.pages : 1;
+    loadedRef.current = { key: paramsKey, pages };
     setList((prev) => ({ ...prev, loading: true, error: "" }));
-    listMancatosRequest({ ...listParams, page: 1, pageSize: PAGE_SIZE })
-      .then((data) => {
-        if (!cancelled) {
-          setList({ items: data.items, total: data.total, page: 1, loading: false, error: "" });
-        }
+    Promise.all(
+      Array.from({ length: pages }, (_, i) =>
+        listMancatosRequest({ ...listParams, page: i + 1, pageSize: PAGE_SIZE })
+      )
+    )
+      .then((results) => {
+        if (cancelled) return;
+        const seen = new Set();
+        const items = results
+          .flatMap((data) => data.items)
+          .filter((m) => (seen.has(m.id) ? false : seen.add(m.id)));
+        const total = results[results.length - 1].total;
+        setList({ items, total, page: pages, loading: false, error: "" });
       })
       .catch((err) => {
         if (!cancelled) setList((prev) => ({ ...prev, loading: false, error: parseApiError(err).message }));
@@ -401,6 +415,7 @@ const GrupoAccordion = ({
     setList((prev) => ({ ...prev, loading: true, error: "" }));
     try {
       const data = await listMancatosRequest({ ...listParams, page: nextPage, pageSize: PAGE_SIZE });
+      loadedRef.current = { key: paramsKey, pages: nextPage };
       setList((prev) => ({
         items: [...(prev.items ?? []), ...data.items],
         total: data.total,
@@ -727,26 +742,6 @@ const MancatoOficinaPage = () => {
             </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="glass-surface-sm flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-ink-300">
-            <CalendarIcon className="h-4 w-4 shrink-0" />
-            <input
-              type="date"
-              aria-label="Fecha desde"
-              value={filters.from}
-              max={filters.to || undefined}
-              onChange={(e) => setFilter("from", e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-ink-50 outline-none"
-            />
-            <span>-</span>
-            <input
-              type="date"
-              aria-label="Fecha hasta"
-              value={filters.to}
-              min={filters.from || undefined}
-              onChange={(e) => setFilter("to", e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-ink-50 outline-none"
-            />
-          </div>
           <Link to="/finanzas/mancato/new" state={{ backgroundLocation: location }}>
             <Button className="w-full sm:w-auto sm:px-6">
               <PlusIcon className="h-4 w-4" />
@@ -912,6 +907,26 @@ const MancatoOficinaPage = () => {
                     onChange={(e) => setPeriodo(e.target.value)}
                   />
                 </div>
+                {/* Rango de fechas a mano (sobre la fecha del aviso). Sirve para un solo dia
+                    (mismo dia en las dos) o para un rango; se puede dejar uno vacio. */}
+                <TextField
+                  id="filtro-desde"
+                  label="Desde"
+                  type="date"
+                  value={filters.from}
+                  max={filters.to || undefined}
+                  onChange={(e) => setFilter("from", e.target.value)}
+                  className="min-w-[150px] flex-[1_1_150px]"
+                />
+                <TextField
+                  id="filtro-hasta"
+                  label="Hasta"
+                  type="date"
+                  value={filters.to}
+                  min={filters.from || undefined}
+                  onChange={(e) => setFilter("to", e.target.value)}
+                  className="min-w-[150px] flex-[1_1_150px]"
+                />
                 {isPrivileged && (
                   <div className="min-w-[170px] flex-[1_1_170px]">
                     <Select
