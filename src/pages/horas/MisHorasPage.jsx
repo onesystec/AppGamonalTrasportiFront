@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { CerrarServicioModal } from "../../components/horas/CerrarServicioModal";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
+import { useAuth } from "../../context/AuthContext";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -91,6 +92,8 @@ const ServiceCard = ({ service, onLoadHours, loading }) => {
 
 // "Mis horas" (chofer): lo trabajado en el mes, lo que falta cargar y el estado de cada servicio. No muestra dinero.
 export const MisHorasPage = () => {
+  const { user } = useAuth();
+  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -99,10 +102,11 @@ export const MisHorasPage = () => {
 
   const load = useCallback(() => {
     setError("");
-    return getPagosChoferesRequest({ month })
+    // Un Admin/Responsable que manejo ve solo sus propios servicios (el servidor, para la oficina, devuelve todos los choferes).
+    return getPagosChoferesRequest({ month, ...(isPrivileged ? { driverId: user.id } : {}) })
       .then((pagos) => setData(pagos))
       .catch((err) => setError(parseApiError(err).message));
-  }, [month]);
+  }, [month, isPrivileged, user?.id]);
 
   useEffect(() => {
     setData(null);

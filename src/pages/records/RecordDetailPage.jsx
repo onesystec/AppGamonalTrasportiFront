@@ -60,6 +60,7 @@ import { listVehiclesRequest } from "../../lib/vehicles.api";
 
 // Jornada declarada por el chofer (inicio/fin, espera, pausa) y su estado de aprobacion. El chofer
 // puede cargarla o corregirla mientras no este aprobada; la oficina las revisa en Finanzas > Horas.
+// "isChofer" aqui es quien declara las horas: el chofer, o un Admin/Responsable que manejo este servicio.
 const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
   const location = useLocation();
   const viaje = record.compactado;
@@ -888,6 +889,7 @@ export const RecordDetailPage = () => {
           files={files}
           isChofer={isChofer}
           isPrivileged={isPrivileged}
+          isMine={isPrivileged && record.driver?.id === user?.id}
           onEdit={() => {
             setSaveSuccess(false);
             setIsEditing(true);
@@ -956,6 +958,7 @@ const RecordSummaryView = ({
   files,
   isChofer,
   isPrivileged,
+  isMine,
   onEdit,
   onDeleteClick,
   uploading,
@@ -1100,7 +1103,7 @@ const RecordSummaryView = ({
 
       <ViajeCompactoCard record={record} isChofer={isChofer} onChanged={onReload} />
 
-      <JornadaOfService record={record} isChofer={isChofer} onOpenHours={onOpenHours} />
+      <JornadaOfService record={record} isChofer={isChofer || isMine} onOpenHours={onOpenHours} />
 
       <FaltantesCard record={record} onReload={onReload} />
 
