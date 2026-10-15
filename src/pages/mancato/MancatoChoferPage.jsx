@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
+import { CopyButton } from "../../components/ui/CopyButton";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
 import { ChevronRightIcon, PlusIcon, ReceiptIcon } from "../../components/ui/icons";
@@ -121,9 +122,12 @@ export const MancatoChoferPage = () => {
                         </span>
                       )}
                     </span>
-                    <span className="block truncate text-[12px] text-ink-400">
-                      #{m.numero} · {m.targa} · {formatCurrency(m.costo)}
-                      {m.sitioWeb ? ` · ${m.sitioWeb}` : ""}
+                    <span className="flex min-w-0 items-center gap-1 text-[12px] text-ink-400">
+                      <span className="truncate">
+                        #{m.numero} · {m.targa} · {formatCurrency(m.costo)}
+                        {m.sitioWeb ? ` · ${m.sitioWeb}` : ""}
+                      </span>
+                      <CopyButton value={m.numero} label="Copiar numero" />
                     </span>
                   </span>
                   <span className="shrink-0 rounded-full bg-success-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-success-500">

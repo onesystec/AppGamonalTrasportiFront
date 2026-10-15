@@ -7,6 +7,7 @@ import { MancatoForm } from "../../components/mancato/MancatoForm";
 import { MancatoServicioCard } from "../../components/mancato/MancatoServicioCard";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
+import { CopyButton } from "../../components/ui/CopyButton";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -200,7 +201,10 @@ export const MancatoDetailPage = () => {
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="break-words text-[24px] font-semibold text-ink-50">N. {mancato.numero}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="break-words text-[24px] font-semibold text-ink-50">N. {mancato.numero}</h1>
+              <CopyButton value={mancato.numero} label="Copiar numero" iconClassName="h-5 w-5" className="p-1.5" />
+            </div>
             <p className="mt-1 text-[14px] text-ink-300">
               {mancato.targa}
               {mancato.driver && ` - ${mancato.driver.nombre} ${mancato.driver.apellido}`}

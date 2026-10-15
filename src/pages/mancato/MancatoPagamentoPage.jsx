@@ -7,6 +7,7 @@ import { MancatoSidebar } from "../../components/mancato/MancatoSidebar";
 import { MancatoTotalAnual } from "../../components/mancato/MancatoTotalAnual";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
+import { CopyButton } from "../../components/ui/CopyButton";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Select } from "../../components/ui/Select";
@@ -305,7 +306,10 @@ const MancatoRow = ({ mancato, showDriver, vehicle, location, isPrivileged, onCh
 
         {/* Mancato: numero, sitio de pago (como texto, sin enlace) y targa */}
         <div className="min-w-0" title={vehicle?.modelo ?? undefined}>
-          <span className="block truncate text-[13px] font-medium text-ink-50">N. {mancato.numero}</span>
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="truncate text-[13px] font-medium text-ink-50">N. {mancato.numero}</span>
+            <CopyButton value={mancato.numero} label="Copiar numero" />
+          </span>
           <span
             className={clsx("block truncate text-[12px]", mancato.sitioWeb ? "text-ink-300" : "text-ink-500")}
             title={mancato.sitioWeb ?? undefined}
