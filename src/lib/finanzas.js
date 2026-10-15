@@ -1,3 +1,5 @@
+import { formatHours } from "./horas";
+
 // Mes en curso de Roma como "AAAA-MM" (el mismo criterio que usa el backend).
 export const currentMonth = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
@@ -52,7 +54,7 @@ export const payCalcText = (item, reglas) => {
   else {
     const eur = item.franja === "NOCHE" ? reglas.kmBloqueNocheEur : reglas.kmBloqueDiaEur;
     parts.push(
-      `${nf(item.km)} km x ${nf(eur)} EUR cada ${nf(reglas.kmBloque)} km${item.franja === "NOCHE" ? " (noche)" : ""}${item.horasManejo > 0 ? ` (${nf(item.horasManejo)} h de manejo)` : ""}`
+      `${nf(item.km)} km x ${nf(eur)} EUR cada ${nf(reglas.kmBloque)} km${item.franja === "NOCHE" ? " (noche)" : ""}${item.horasManejo > 0 ? ` (${formatHours(item.horasManejo)} de manejo)` : ""}`
     );
   }
   if (item.esperaHoras > 0) parts.push(`+ ${nf(item.esperaHoras)} h de espera x ${nf(reglas.esperaHoraEur)} EUR`);

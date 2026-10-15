@@ -21,7 +21,7 @@ import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../li
 import { getPagosChoferesRequest } from "../../lib/finanzas.api";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
-import { pagaPorKm } from "../../lib/horas";
+import { formatHours, pagaPorKm } from "../../lib/horas";
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
 const avatarColor = (name) =>
@@ -131,7 +131,7 @@ const DriverRow = ({ driver, month, reglas, location }) => {
           <span className="block text-[12px] text-ink-400">
             {driver.servicios} {driver.servicios === 1 ? "servicio" : "servicios"}
             {driver.km > 0 && ` - ${formatKm(driver.km)}`}
-            {driver.horasManejo > 0 && ` - ${nf(driver.horasManejo)} h de manejo (km ÷ 85)`}
+            {driver.horasManejo > 0 && ` - ${formatHours(driver.horasManejo)} de manejo (km ÷ 85)`}
             {driver.horas > 0 && ` - ${nf(driver.horas)} h`}
             {driver.esperaHoras > 0 && ` - ${nf(driver.esperaHoras)} h de espera`}
             {driver.salidasReperibilidad > 0 &&

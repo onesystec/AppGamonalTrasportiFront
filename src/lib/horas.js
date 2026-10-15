@@ -71,9 +71,14 @@ export const previewShift = ({ inicio, fin, esperaMin = 0, pausaMin = 0 }, rates
   return { error: "", totalMin: total, horasDia, horasNoche, esperaHoras, reperibilidad, pago };
 };
 
-// Horas con un decimal y coma: 1,5 h.
-export const formatHours = (value) =>
-  `${Number(value ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 2 })} h`;
+// Horas en formato de tiempo: 1,8 -> "1 h 48 min", 0,5 -> "30 min", 2 -> "2 h".
+export const formatHours = (value) => {
+  const totalMin = Math.round(Math.max(0, Number(value) || 0) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+};
 
 // Desde el 1/10/2026 (hora de Roma) el chofer no declara horas: se le paga por km (km / 85 = horas de manejo) y solo declara
 // su espera. Debe coincidir con la tarifa "pagoPorKm" del servidor (config/payRates.js).
