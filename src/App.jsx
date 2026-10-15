@@ -70,6 +70,9 @@ const VehicleDetailPage = lazy(() =>
 const MancatoPagamentoPage = lazy(() =>
   import("./pages/mancato/MancatoPagamentoPage").then((m) => ({ default: m.MancatoPagamentoPage })),
 );
+const SollecitiPage = lazy(() =>
+  import("./pages/sollecito/SollecitiPage").then((m) => ({ default: m.SollecitiPage })),
+);
 const NewMancatoPage = lazy(() =>
   import("./pages/mancato/NewMancatoPage").then((m) => ({ default: m.NewMancatoPage })),
 );
@@ -298,6 +301,7 @@ function App() {
                 <Route path="mancato" element={<MancatoPagamentoPage />} />
                 <Route path="mancato/new" element={<NewMancatoPage />} />
                 <Route path="mancato/:id" element={<MancatoDetailPage />} />
+                <Route path="solicitos" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><SollecitiPage /></RoleOnly>} />
                 {/* Las multas son de la oficina: el chofer solo ve Combustible y Mancato Pagamento. */}
                 <Route path="multas" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultasPage /></RoleOnly>} />
                 <Route path="multas/new" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />

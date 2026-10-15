@@ -146,6 +146,11 @@ export const FinanzasLayout = () => {
         <NavLink to="/finanzas/mancato" className={tabClass}>
           Mancato Pagamento
         </NavLink>
+        {isPrivileged && (
+          <NavLink to="/finanzas/solicitos" className={tabClass}>
+            Solicitos
+          </NavLink>
+        )}
         <NavLink to="/finanzas/multas" className={tabClass}>
           Multas
         </NavLink>
