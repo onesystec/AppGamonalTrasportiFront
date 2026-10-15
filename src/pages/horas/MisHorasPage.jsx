@@ -45,7 +45,7 @@ const ServiceCard = ({ service }) => {
         <p className="mt-2 text-[12px] text-ink-300">
           {service.km > 0 ? (
             <>
-              {formatKm(service.km)} &middot; {formatHours(service.horasManejo)} de manejo (km ÷ 85)
+              {formatKm(service.km)} &middot; {formatHours(service.horasManejo)} de manejo
             </>
           ) : (
             "Sin km cargados todavia."
@@ -110,7 +110,7 @@ export const MisHorasPage = () => {
         <div>
           <h1 className="text-[26px] font-semibold leading-tight text-ink-50">Mis horas</h1>
           <p className="mt-0.5 max-w-xl text-[14px] text-ink-300">
-            Tus horas de manejo salen de los km de cada servicio (km ÷ 85 km/h). Solo declaras tu espera al terminar.
+            Lo que trabajaste este mes.
           </p>
         </div>
         <MonthSelector month={month} onChange={setMonth} />
@@ -136,7 +136,7 @@ export const MisHorasPage = () => {
               icon={ClockIcon}
               label="Horas de manejo"
               value={formatHours((me?.horas ?? 0) + (me?.horasManejo ?? 0))}
-              detail={`${formatKm(me?.km ?? 0)} ÷ 85 km/h${me?.adicionales?.count ? ` - ${formatHours(me.adicionales.horas)} adicionales` : ""}`}
+              detail={`${formatKm(me?.km ?? 0)} recorridos${me?.adicionales?.count ? ` - ${formatHours(me.adicionales.horas)} adicionales` : ""}`}
               color="#2f8dff"
             />
             <MancatoKpi

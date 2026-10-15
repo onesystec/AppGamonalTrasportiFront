@@ -141,7 +141,7 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
             <CheckCircleIcon className="h-12 w-12 text-success-500" />
             <h2 className="text-[19px] font-semibold text-ink-50">Servicio terminado</h2>
             <p className="text-[14px] text-ink-300">
-              Tus horas de manejo se calculan solas con los km del servicio. Tu espera quedó registrada.
+              Tu espera quedó registrada.
             </p>
             <div className="mt-2 w-full rounded-2xl bg-warning-500/10 px-4 py-3 text-left">
               <p className="text-[14px] font-medium text-ink-50">¿Pasaste por algun peaje sin pagar?</p>
@@ -177,11 +177,6 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
             )}
 
             <Alert>{error}</Alert>
-
-            <p className="rounded-xl bg-line/[0.05] px-4 py-3 text-[13px] text-ink-200">
-              Ya no cargas tus horas: las de manejo salen solas de los km del servicio. Solo declara tu espera y sube las
-              fotos que se piden.
-            </p>
 
             <MinutesField
               id="cierre-espera"
