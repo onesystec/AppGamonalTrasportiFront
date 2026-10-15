@@ -49,9 +49,9 @@ export const MANCATO_ESTADOS_PAGAMENTO = [MANCATO_ESTADOS[0], MANCATO_ESTADOS[1]
 
 export const MANCATO_ESTADO_BY_VALUE = Object.fromEntries(MANCATO_ESTADOS_PAGAMENTO.map((e) => [e.value, e]));
 
-// Dias despues de la fecha del aviso hasta los que se puede pagar (el aviso dice "entro il
-// 15° giorno successivo alla data del transito"): vencimiento = fecha + 15.
-export const MANCATO_PLAZO_DIAS = 15;
+// Regla de la empresa: vencimiento = fecha del aviso + 13 dias (el aviso da hasta el dia 15
+// posterior; la empresa paga con dos dias de margen). Debe coincidir con el servidor.
+export const MANCATO_PLAZO_DIAS = 13;
 
 // Dia calendario de Roma (YYYY-MM-DD), el mismo criterio que usa el backend.
 export const romeToday = () =>

@@ -233,7 +233,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
             />
             <span className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-400">
               <ClockIcon className="h-3.5 w-3.5 shrink-0" />
-              La calcula el sistema: se puede pagar hasta el dia {MANCATO_PLAZO_DIAS} posterior a la fecha.
+              La calcula el sistema: fecha del aviso + {MANCATO_PLAZO_DIAS} dias.
             </span>
           </div>
         )}

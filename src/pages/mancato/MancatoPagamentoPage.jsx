@@ -737,8 +737,8 @@ const MancatoOficinaPage = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <p className="max-w-xl text-[14px] text-ink-300">
               {isPrivileged
-                ? "Controla los avisos de pago omitido de toda la flota. Cada uno se puede pagar hasta el dia 15 posterior a su fecha."
-                : "Tus avisos de pago omitido. Cada uno se puede pagar hasta el dia 15 posterior a su fecha."}
+                ? "Controla los avisos de pago omitido de toda la flota. Cada uno vence 13 dias despues de la fecha del aviso."
+                : "Tus avisos de pago omitido. Cada uno vence 13 dias despues de la fecha del aviso."}
             </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -56,7 +56,7 @@ export const NewMancatoPage = () => {
           </h1>
           <p className="mt-1 text-[14px] text-ink-300">
             {isPrivileged
-              ? "Se puede pagar hasta el dia 15 posterior a la fecha, como dice el aviso."
+              ? "Vence 13 dias despues de la fecha del aviso."
               : "Sube la foto del aviso y copia sus datos. De lo demas se encarga la empresa."}
           </p>
         </div>
