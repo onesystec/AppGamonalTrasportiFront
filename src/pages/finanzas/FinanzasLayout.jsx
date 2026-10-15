@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { TruckArt } from "../../components/chofer/illustrations";
-import { FuelIcon, ReceiptIcon, ShieldIcon, WalletIcon } from "../../components/ui/icons";
+import { FuelIcon, ReceiptIcon, WalletIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { listHorasPendientesRequest } from "../../lib/horas.api";
 
@@ -42,7 +42,7 @@ const ChoferHeader = () => (
         <div>
           <h1 className="text-[28px] font-semibold leading-tight text-ink-50">Mis cargos</h1>
           <p className="mt-0.5 max-w-sm text-[14px] text-ink-200">
-            Consulta tus multas, cargos de combustible, pagos de peajes y mas.
+            Consulta tus cargas de combustible y tus avisos de mancato pagamento.
           </p>
         </div>
       </div>
@@ -60,10 +60,6 @@ const ChoferHeader = () => (
         <ReceiptIcon className="h-[18px] w-[18px]" />
         <span className="sm:hidden">Mancato</span>
         <span className="hidden sm:inline">Mancato Pagamento</span>
-      </NavLink>
-      <NavLink to="/finanzas/multas" className={choferTabClass}>
-        <ShieldIcon className="h-[18px] w-[18px]" />
-        Multas
       </NavLink>
     </nav>
   </div>
@@ -107,7 +103,7 @@ export const FinanzasLayout = () => {
           <p className="mt-0.5 text-[14px] text-ink-300">
             {isPrivileged
               ? "Lo que se debe, lo que se gasta y lo que se paga a los choferes, en un solo lugar."
-              : "Tus multas, mancato pagamento y cargas de combustible."}
+              : "Tu mancato pagamento y tus cargas de combustible."}
           </p>
         </div>
       </div>

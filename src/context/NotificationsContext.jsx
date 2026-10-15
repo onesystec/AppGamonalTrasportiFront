@@ -84,7 +84,7 @@ const isDismissed = (alert, dismissed) => {
   return SEVERITY_ORDER[alert.severity] >= SEVERITY_ORDER[dismissedSeverity];
 };
 
-// Alertas del chofer: solo lo que le pertenece en su trabajo (sus servicios, sus horas, su multa, su exceso de velocidad, sus documentos).
+// Alertas del chofer: solo lo que le pertenece en su trabajo (sus servicios, sus horas, su exceso de velocidad, sus documentos).
 // Los avisos de gestion de la flota (tagliando, documentos de vehiculos, Area C...) son de la oficina y no le llegan.
 const buildChoferAlerts = async (user) => {
   const records = await listRecordsRequest();
@@ -159,9 +159,6 @@ const buildChoferAlerts = async (user) => {
       });
     }
   });
-
-  // Multas que el chofer tiene que pagar el mismo (las "a descontar" las paga la empresa).
-  list.push(...computeMultaAlerts(await listMultaAlertsRequest().catch(() => null), false));
 
   // Excesos de velocidad del propio chofer (el aviso le llega solo a quien iba al volante).
   list.push(...computeMySpeedingAlerts(await listMySpeedingEventsRequest().catch(() => [])));
