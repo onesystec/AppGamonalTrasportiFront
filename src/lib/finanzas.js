@@ -31,7 +31,7 @@ export const COSTO_COLORS = {
   combustible: "#22e093",
 };
 
-const KM_SOURCE_LABELS = { REAL: "km reales", SERVICIO: "km del servicio", RUTA: "km de la ruta", SIN_DATO: "sin km", VIAJE: "km del viaje", TRASPASO_SIN_KM: "sin km" };
+const KM_SOURCE_LABELS = { REAL: "km reales", SERVICIO: "km del servicio", CIRCUITO: "km del circuito", RUTA: "km de la ruta", SIN_DATO: "sin km", VIAJE: "km del viaje", TRASPASO_SIN_KM: "sin km" };
 export const kmSourceLabel = (source) => KM_SOURCE_LABELS[source] ?? "";
 
 const nf = (value) => Number(value).toLocaleString("es-AR", { maximumFractionDigits: 2 });
