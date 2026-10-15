@@ -98,15 +98,15 @@ const buildChoferAlerts = async (user) => {
     });
   });
 
-  // Servicios que otro chofer no pudo terminar y se le asignaron: falta la hora de recepcion.
+  // Servicios que otro chofer no pudo terminar y se le asignaron: aviso mientras siguen abiertos (ya no se indica la hora de recepcion).
   records
-    .filter((r) => r.origen && !r.traspasoHora && r.estado !== "ANNULLATO" && desdeCorte(r.fechaServicio))
+    .filter((r) => r.origen && ["IN_SOSPESO", "IN_CONSEGNA"].includes(r.estado) && desdeCorte(r.fechaServicio))
     .forEach((record) => {
       const from = record.origen.chofer ? `${record.origen.chofer.nombre} ${record.origen.chofer.apellido}` : "otro chofer";
       list.push({
         id: `traspaso-${record.id}`,
-        severity: "urgent",
-        message: `Se te asigno el servicio ${record.origen.codigo} que dejo ${from}. Indica a que hora recibiste el paquete: hasta entonces queda pendiente.`,
+        severity: "warning",
+        message: `Se te asigno el servicio ${record.origen.codigo} que dejo ${from}.${record.origen.lugar ? ` Recoge el paquete en ${record.origen.lugar}.` : ""}`,
         link: `/records/${record.id}`,
       });
     });

@@ -6,7 +6,6 @@ import { useCloseOverlay } from "../../hooks/useCloseOverlay";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { CerrarServicioModal } from "../../components/horas/CerrarServicioModal";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
-import { RecepcionPaqueteCard } from "../../components/horas/RecepcionPaqueteCard";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ClientAutocomplete } from "../../components/ui/ClientAutocomplete";
@@ -150,9 +149,9 @@ const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
   );
 };
 
-// Traspaso entre choferes: quien termino el servicio (si el chofer asignado no pudo) o de quien se
-// recibio. Mientras falta la hora de recepcion, el chofer (o la oficina) puede completarla desde aca.
-const TraspasoOfService = ({ record, isChofer, onChanged }) => {
+// Traspaso entre choferes: quien termino el servicio (si el chofer asignado no pudo) o de quien se recibio, y donde se paso
+// el paquete. El chofer que recibe ya no indica ninguna hora: su servicio arranca solo.
+const TraspasoOfService = ({ record, isChofer }) => {
   const { relevo, origen } = record;
   if (!relevo && !origen) return null;
   const name = (p) => (p ? `${p.nombre} ${p.apellido}` : "otro chofer");
@@ -163,9 +162,8 @@ const TraspasoOfService = ({ record, isChofer, onChanged }) => {
       {relevo && (
         <p className="mt-1.5 text-[14px] text-ink-100">
           Lo termino <b>{name(relevo.chofer)}</b>
-          {relevo.traspasoHora
-            ? `${relevo.lugar ? `, en ${relevo.lugar}` : ""}, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)} (Roma).`
-            : ". Todavia no indico a que hora recibio el paquete: su parte queda pendiente."}{" "}
+          {relevo.lugar ? `, en ${relevo.lugar}` : ""}
+          {relevo.traspasoHora ? `, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)} (Roma)` : ""}.{" "}
           <Link to={`/records/${relevo.recordId}`} className="font-medium text-accent-400 hover:text-accent-300">
             Ver su servicio &rarr;
           </Link>
@@ -179,17 +177,8 @@ const TraspasoOfService = ({ record, isChofer, onChanged }) => {
               {origen.codigo}
             </Link>
             ){origen.lugar ? ` en ${origen.lugar}` : ""}.{" "}
-            {record.traspasoHora
-              ? `Recibio el paquete el ${formatRomeDateTime(record.traspasoHora)} (Roma).`
-              : "Falta indicar a que hora se recibio el paquete."}
+            {record.traspasoHora && `Recibio el paquete el ${formatRomeDateTime(record.traspasoHora)} (Roma).`}
           </p>
-          {!record.traspasoHora && (
-            <RecepcionPaqueteCard
-              record={record}
-              onDone={onChanged}
-              className="mt-3 border-t border-line/10 pt-3"
-            />
-          )}
         </>
       )}
       {isChofer && relevo && (
@@ -1074,7 +1063,7 @@ const RecordSummaryView = ({
         )}
       </div>
 
-      <TraspasoOfService record={record} isChofer={isChofer} onChanged={onReload} />
+      <TraspasoOfService record={record} isChofer={isChofer} />
       <ReprogramacionOfService record={record} isChofer={isChofer} onChanged={onReload} />
 
       <MancatosOfService mancatos={record.mancatos} />

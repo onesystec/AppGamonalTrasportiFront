@@ -62,7 +62,6 @@ export const ServicioPendienteRow = ({ service, opening, uploading, error, onClo
   const location = useLocation();
   const items = pendingItems(service);
   const action = primaryAction(items);
-  const waitingReception = Boolean(service.origen) && !service.traspasoHora;
   const enProceso = items.some((i) => i.key === "terminar");
   const viaje = service.compactado?.principal ? service.compactado : null;
 
@@ -121,7 +120,7 @@ export const ServicioPendienteRow = ({ service, opening, uploading, error, onClo
         <button
           type="button"
           onClick={onClose}
-          disabled={opening || waitingReception}
+          disabled={opening}
           className={clsx(
             buttonClass,
             enProceso
@@ -144,7 +143,8 @@ export const ServicioPendienteRow = ({ service, opening, uploading, error, onClo
             <p className="text-[12px] font-medium text-accent-400">
               Recibido de{" "}
               {service.origen.chofer ? `${service.origen.chofer.nombre} ${service.origen.chofer.apellido}` : "otro chofer"}
-              {service.traspasoHora ? ` a las ${formatDateTime(service.traspasoHora)}` : " - falta indicar la hora de recepcion"}
+              {service.origen.lugar ? ` en ${service.origen.lugar}` : ""}
+              {service.traspasoHora ? ` a las ${formatDateTime(service.traspasoHora)}` : ""}
             </p>
           )}
           {service.relevo && (
