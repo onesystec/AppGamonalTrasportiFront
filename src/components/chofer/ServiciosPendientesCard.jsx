@@ -168,7 +168,7 @@ export const ServicioPendienteRow = ({ service, opening, uploading, error, onClo
             {enProceso && (
               <label className="flex cursor-pointer items-center gap-2 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
                 {uploading ? <Spinner className="h-4 w-4" /> : <FileTextIcon className="h-4 w-4" />}
-                Subir evidencia
+                Subir bolla
                 <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onUpload} disabled={uploading} />
               </label>
             )}

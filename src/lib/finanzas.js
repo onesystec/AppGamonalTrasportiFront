@@ -51,7 +51,9 @@ export const payCalcText = (item, reglas) => {
   else if (item.kmFuente === "TRASPASO_SIN_KM") parts.push("servicio con traspaso: sin horas ni km reales no se paga por los km del servicio");
   else {
     const eur = item.franja === "NOCHE" ? reglas.kmBloqueNocheEur : reglas.kmBloqueDiaEur;
-    parts.push(`${nf(item.km)} km x ${nf(eur)} EUR cada ${nf(reglas.kmBloque)} km${item.franja === "NOCHE" ? " (noche)" : ""}`);
+    parts.push(
+      `${nf(item.km)} km x ${nf(eur)} EUR cada ${nf(reglas.kmBloque)} km${item.franja === "NOCHE" ? " (noche)" : ""}${item.horasManejo > 0 ? ` (${nf(item.horasManejo)} h de manejo)` : ""}`
+    );
   }
   if (item.esperaHoras > 0) parts.push(`+ ${nf(item.esperaHoras)} h de espera x ${nf(reglas.esperaHoraEur)} EUR`);
   if (item.reperibilidad) {

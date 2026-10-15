@@ -15,8 +15,6 @@ import {
   computeVehicleMaintenanceAlerts,
 } from "../lib/dashboardStats";
 import { listDocumentsRequest } from "../lib/documents.api";
-import { currentMonth } from "../lib/finanzas";
-import { getPagosChoferesRequest } from "../lib/finanzas.api";
 import { formatDate } from "../lib/format";
 import { desdeCorte } from "../lib/fechasCorte";
 import { cancelIdle, scheduleIdle } from "../lib/idle";
@@ -152,7 +150,7 @@ const buildChoferAlerts = async (user) => {
   );
 
   recentDelivered.forEach((record, idx) => {
-    const hasEvidence = filesByRecord[idx].some((f) => f.tipoArchivo === "FOTO_ENTREGA");
+    const hasEvidence = filesByRecord[idx].some((f) => f.tipoArchivo === "FOTO_ENTREGA" || f.tipoArchivo === "BOLLA");
     if (!hasEvidence) {
       list.push({
         id: `evidence-${record.id}`,
@@ -191,7 +189,6 @@ const buildOwnerAlerts = async ({ user }) => {
     ,
     seguimiento,
     scope,
-    misHoras,
   ] =
     await Promise.all([
       listPendingRecordsRequest(),
@@ -216,12 +213,7 @@ const buildOwnerAlerts = async ({ user }) => {
       listSeguimientoRequest().catch(() => null),
       // A que vehiculos y choferes se refiere lo suyo (el Admin ve todo).
       getNotificationScopeRequest(user.id).catch(() => ({ todo: true })),
-      // Si el Admin/Responsable manejo algun servicio del mes, sus horas se cargan como las de un chofer ("Mis horas").
-      getPagosChoferesRequest({ month: currentMonth(), driverId: user.id }).catch(() => null),
     ]);
-  const horasPorCargar = (misHoras?.servicios ?? []).filter(
-    (s) => !s.incluidoEnViaje && (!s.horasEstado || s.horasEstado === "DEVUELTAS")
-  ).length;
 
   // Un Responsable solo recibe avisos de su asignacion: sus vehiculos y sus choferes.
   const vehicles = allVehicles.filter((v) => vehicleInScope(scope, v.id));
@@ -237,16 +229,6 @@ const buildOwnerAlerts = async ({ user }) => {
     ...computeBirthdayAlerts(users),
     ...computeAreaCAlerts(areaCEntries),
     ...computeMultaAlerts(multaAlerts, true),
-    ...(horasPorCargar
-      ? [
-          {
-            id: "mis-horas-por-cargar",
-            severity: "warning",
-            message: `Manejaste ${horasPorCargar} ${horasPorCargar === 1 ? "servicio" : "servicios"} este mes con las horas por cargar o corregir.`,
-            link: "/mis-horas",
-          },
-        ]
-      : []),
     // El GPS de toda la flota no es de ningun area: lo ven el Admin y todos los Responsables.
     ...(isGpsFailing(gpsEstado)
       ? [

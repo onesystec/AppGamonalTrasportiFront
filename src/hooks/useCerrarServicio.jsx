@@ -33,7 +33,7 @@ export const useCerrarServicio = (reload) => {
     setUploadingId(recordId);
     setError(recordId, "");
     try {
-      await uploadRecordFileRequest(recordId, file, "FOTO_ENTREGA");
+      await uploadRecordFileRequest(recordId, file, "BOLLA");
       reload();
     } catch (err) {
       setError(recordId, parseApiError(err).message);

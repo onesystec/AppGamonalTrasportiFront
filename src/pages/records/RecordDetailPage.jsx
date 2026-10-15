@@ -54,7 +54,7 @@ import {
   updateRecordRequest,
   uploadRecordFileRequest,
 } from "../../lib/records.api";
-import { formatHours } from "../../lib/horas";
+import { formatHours, pagaPorKm } from "../../lib/horas";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
@@ -93,6 +93,26 @@ const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
     );
   }
   const j = record.jornada ?? {};
+  // Desde el pago por km no hay horas declaradas: se muestra el cierre del servicio (espera y bolla).
+  if (pagaPorKm(record)) {
+    const finished = ["CONSEGNATO", "RITIRATO"].includes(record.estado);
+    const canClose = isChofer && !["ANNULLATO", "RISCHEDULATO"].includes(record.estado);
+    return (
+      <div className="mt-6 border-t border-line/10 pt-6">
+        <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-400">Cierre del servicio</h3>
+        <p className="mt-2 text-[13px] text-ink-300">
+          {finished
+            ? `Espera declarada: ${j.esperaMin ?? 0} min. Las horas de manejo salen de los km (km ÷ 85).`
+            : "Las horas de manejo salen de los km (km ÷ 85): el chofer solo declara su espera y sube la bolla."}
+        </p>
+        {canClose && (
+          <Button className="mt-3 sm:w-auto sm:px-5 sm:py-2 sm:text-[13px]" onClick={onOpenHours}>
+            {finished ? "Espera y bolla de trabajo" : "Terminar servicio"}
+          </Button>
+        )}
+      </div>
+    );
+  }
   // Un servicio reprogramado por la oficina tambien se carga: el chofer manejo hasta ahi y se le paga.
   const delivered = ["CONSEGNATO", "RITIRATO", "IN_CONSEGNA"].includes(record.estado) || (record.estado === "RISCHEDULATO" && Boolean(record.reprogramado));
   const canLoad = isChofer && delivered && j.estado !== "APROBADAS" && j.estado !== "PENDIENTE";

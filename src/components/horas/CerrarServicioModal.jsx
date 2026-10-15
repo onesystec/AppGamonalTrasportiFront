@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
-import { CheckCircleIcon } from "../ui/icons";
+import { CameraIcon, CheckCircleIcon } from "../ui/icons";
 import { TextField } from "../ui/TextField";
 import { Textarea } from "../ui/Textarea";
 import { parseApiError } from "../../lib/api";
-import { formatRomeDateTime, toRomeDateTimeInputValue } from "../../lib/format";
-import { extraEsGrande, formatKmValue, repartirKm } from "../../lib/compactado";
-import { formatHours, previewShift } from "../../lib/horas";
-import { submitHorasRequest } from "../../lib/horas.api";
-import { updateDeclaracionesRequest } from "../../lib/records.api";
+import { cierreServicioRequest } from "../../lib/horas.api";
+import { listRecordFilesRequest, updateDeclaracionesRequest, uploadRecordFileRequest } from "../../lib/records.api";
 import { ViajeStops } from "../chofer/ViajeStops";
 import { FaltantesSwitches } from "../records/FaltantesPanel";
 
@@ -48,40 +45,24 @@ const MinutesField = ({ id, label, hint, value, onChange }) => (
   </div>
 );
 
-// Cierre de un servicio por el chofer: hora de inicio y fin de su jornada, espera y pausa. El
-// sistema reparte lo trabajado entre horas de dia y de noche (no hay que calcularlo a mano). Al
-// enviar, el servicio queda entregado y las horas esperan la aprobacion del responsable.
-// "reglas": tarifas vigentes (GET /finanzas/pagos) para la estimacion; si no estan, se muestran
-// solo las horas.
-export const CerrarServicioModal = ({ record, reglas, onClose, onDone }) => {
-  const jornada = record.jornada ?? {};
-  // En un servicio recibido de otro chofer la jornada arranca, por defecto, cuando recibio el paquete.
-  const [inicio, setInicio] = useState(
-    toRomeDateTimeInputValue(
-      jornada.inicio ?? (record.origen ? record.traspasoHora : null) ?? record.fechaRetiro ?? record.fechaServicio
-    )
-  );
-  const [fin, setFin] = useState(toRomeDateTimeInputValue(jornada.fin ?? new Date()));
-  const [esperaMin, setEsperaMin] = useState(String(jornada.esperaMin ?? 0));
-  const [pausaMin, setPausaMin] = useState(String(jornada.pausaMin ?? 0));
-  // Viaje compacto: los km reales son los de TODO el viaje y el sistema los reparte entre sus servicios.
-  const viajeKm = record.compactado?.principal ? record.compactado.km : null;
-  const [km, setKm] = useState(viajeKm ? (viajeKm.real ?? "") : (record.kilometrosReales ?? ""));
-  // Con km de mas, en que servicios fueron (si marca varios se reparten) y por que.
-  const [extraIds, setExtraIds] = useState(viajeKm?.reparto?.origen === "CHOFER" ? (viajeKm.reparto.servicioIds ?? []) : []);
-  const [extraNota, setExtraNota] = useState(viajeKm?.reparto?.origen === "CHOFER" ? (viajeKm.reparto.nota ?? "") : "");
+// Cierre de un servicio por el chofer. Ya no declara horas: las horas de manejo salen de los km del sistema (km / 85). Solo:
+// la espera del servicio, la foto de la bolla de trabajo (opcional por ahora; puede ser mas de una) y las declaraciones de
+// peajes y carburante (con sus fotos de mancato pagamento y de carburante). Al enviar, el servicio queda entregado.
+export const CerrarServicioModal = ({ record, onClose, onDone }) => {
+  const [esperaMin, setEsperaMin] = useState(String(record.jornada?.esperaMin ?? 0));
   const [comentarios, setComentarios] = useState(record.comentarios ?? "");
-  // Termino sin pasar por el lugar de espera (por ejemplo fue directo a casa): su fin es la hora de llegada.
-  const [finFueraDeBase, setFinFueraDeBase] = useState(Boolean(jornada.finFueraDeBase));
+  const [bollas, setBollas] = useState([]);
+  const [bollasGuardadas, setBollasGuardadas] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
   // Lo que el chofer declara sobre peajes y carburante de este servicio.
   const [declared, setDeclared] = useState(() => ({
     sinPeajeIda: Boolean(record.faltantes?.declarado?.sinPeajeIda),
     sinPeajeVuelta: Boolean(record.faltantes?.declarado?.sinPeajeVuelta),
     sinCombustible: Boolean(record.faltantes?.declarado?.sinCombustible),
   }));
-  const [sent, setSent] = useState(false);
+  const viaje = record.compactado?.principal ? record.compactado : null;
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -91,61 +72,46 @@ export const CerrarServicioModal = ({ record, reglas, onClose, onDone }) => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [saving, onClose]);
 
-  const preview = useMemo(
-    () => previewShift({ inicio, fin, esperaMin, pausaMin }, reglas ?? { banda: { diaInicio: "06:30", nocheInicio: "22:00" } }),
-    [inicio, fin, esperaMin, pausaMin, reglas]
-  );
-  // Coherencia con el traspaso: quien recibe empieza a mas tardar cuando recibio el paquete; quien lo
-  // entrego termina a partir de la entrega (vuelve al lugar de espera).
-  const handover = record.origen ? record.traspasoHora : record.relevo?.traspasoHora;
-  const handoverValue = handover ? toRomeDateTimeInputValue(handover) : null;
-  let handoverError = "";
-  if (handoverValue && inicio && fin) {
-    if (record.origen && inicio > handoverValue) {
-      handoverError = "Tu jornada tiene que empezar a la hora en que recibiste el paquete, o antes.";
-    }
-    if (record.relevo && fin < handoverValue) {
-      handoverError = "Tu jornada no puede terminar antes de entregar el paquete: termina cuando vuelves al lugar de espera.";
-    }
-  }
-  // Km de mas del viaje: reales anotados menos planificados de todos sus servicios.
-  const kmNum = km !== "" ? Number(km) : null;
-  const kmExtra = viajeKm && kmNum != null ? Math.round((kmNum - viajeKm.planificado) * 10) / 10 : null;
-  const kmExtraGrande = kmExtra != null && kmExtra > 0 && extraEsGrande(kmExtra, viajeKm.planificado);
-  const kmReparto =
-    viajeKm && kmNum != null
-      ? repartirKm({
-          total: kmNum,
-          servicios: record.compactado.servicios.map((s) => ({ id: s.id, plan: s.kmPlan ?? 0 })),
-          extraIds: kmExtra > 0 ? extraIds : [],
-        })
-      : null;
-  const toggleExtra = (id) => setExtraIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  // Inicio declarado muy lejos de la salida planificada (mas de 3 horas): queda para revision, con el motivo en comentarios.
-  const salidaPlanificada = record.fechaRetiro ? toRomeDateTimeInputValue(record.fechaRetiro) : null;
-  const salidaLejos =
-    Boolean(inicio && salidaPlanificada) && Math.abs(Date.parse(inicio) - Date.parse(salidaPlanificada)) > 3 * 60 * 60 * 1000;
-  const canSubmit = preview.totalMin != null && !preview.error && !handoverError;
+  // Bollas que ya se subieron antes (por ejemplo desde otra sesion).
+  useEffect(() => {
+    let cancelled = false;
+    listRecordFilesRequest(record.id)
+      .then((files) => {
+        if (!cancelled) setBollasGuardadas(files.filter((f) => f.tipoArchivo === "BOLLA").length);
+      })
+      .catch(() => {
+        if (!cancelled) setBollasGuardadas(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [record.id]);
+
+  const totalBollas = (bollasGuardadas ?? 0) + bollas.length;
+
+  const addBollas = (e) => {
+    const picked = [...(e.target.files ?? [])];
+    e.target.value = "";
+    if (picked.length) setBollas((prev) => [...prev, ...picked]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!canSubmit) return;
     setSaving(true);
     setError("");
     try {
-      await submitHorasRequest(record.id, {
-        inicio,
-        fin,
+      await cierreServicioRequest(record.id, {
         esperaMin: Number(esperaMin) || 0,
-        pausaMin: Number(pausaMin) || 0,
-        ...(km !== "" ? { kilometrosReales: Number(km) } : {}),
-        ...(viajeKm && kmExtra > 0 && (extraIds.length > 0 || extraNota.trim())
-          ? { kmExtra: { servicioIds: extraIds, ...(extraNota.trim() ? { nota: extraNota.trim() } : {}) } }
-          : {}),
         ...(comentarios.trim() ? { comentarios: comentarios.trim() } : {}),
-        entregado: true,
-        finFueraDeBase,
       });
+      // Las fotos de la bolla, una por una; las que se suban bien no se vuelven a mandar si algo falla despues.
+      let remaining = bollas;
+      while (remaining.length > 0) {
+        await uploadRecordFileRequest(record.id, remaining[0], "BOLLA");
+        remaining = remaining.slice(1);
+        setBollas(remaining);
+        setBollasGuardadas((n) => (n ?? 0) + 1);
+      }
       // Declaraciones de peajes y carburante, si el chofer las cambio.
       const changed = Object.fromEntries(
         Object.entries(declared).filter(([field, value]) => value !== Boolean(record.faltantes?.declarado?.[field]))
@@ -173,16 +139,13 @@ export const CerrarServicioModal = ({ record, reglas, onClose, onDone }) => {
         {sent ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <CheckCircleIcon className="h-12 w-12 text-success-500" />
-            <h2 className="text-[19px] font-semibold text-ink-50">Servicio enviado</h2>
+            <h2 className="text-[19px] font-semibold text-ink-50">Servicio terminado</h2>
             <p className="text-[14px] text-ink-300">
-              Tus horas quedaron en revision. Si todo está dentro de lo planificado (horas y km), se aprueban solas en unos
-              minutos; si no, las revisa el responsable.
+              Tus horas de manejo se calculan solas con los km del servicio. Tu espera quedó registrada.
             </p>
             <div className="mt-2 w-full rounded-2xl bg-warning-500/10 px-4 py-3 text-left">
               <p className="text-[14px] font-medium text-ink-50">¿Pasaste por algun peaje sin pagar?</p>
-              <p className="mt-0.5 text-[13px] text-ink-300">
-                Sube el aviso de mancato pagamento ahora para no olvidarte.
-              </p>
+              <p className="mt-0.5 text-[13px] text-ink-300">Sube el aviso de mancato pagamento ahora para no olvidarte.</p>
               <Link
                 to="/finanzas/mancato/new"
                 className="mt-2 inline-block text-[13px] font-semibold text-accent-400 hover:text-accent-300"
@@ -197,219 +160,71 @@ export const CerrarServicioModal = ({ record, reglas, onClose, onDone }) => {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div>
-              <h2 className="text-[19px] font-semibold text-ink-50">
-                {record.compactado?.principal ? "Terminar viaje" : "Terminar servicio"}
-              </h2>
+              <h2 className="text-[19px] font-semibold text-ink-50">{viaje ? "Terminar viaje" : "Terminar servicio"}</h2>
               <p className="mt-0.5 text-[13px] text-ink-300">
                 {record.codigo} &middot; {record.destinazione}
               </p>
             </div>
 
-            {record.compactado?.principal && (
+            {viaje && (
               <div className="rounded-xl bg-accent-500/10 px-4 py-3">
                 <p className="mb-2 text-[13px] text-ink-200">
-                  <b className="text-accent-300">Viaje compacto de {record.compactado.total} servicios.</b> Carga una sola
-                  jornada: desde que sales a la primera parada hasta que terminas la última. Al enviar, todos los
-                  servicios del viaje quedan entregados.
+                  <b className="text-accent-300">Viaje compacto de {viaje.total} servicios.</b> Al enviar, todos los
+                  servicios del viaje quedan entregados. La espera y la bolla son las de todo el viaje.
                 </p>
-                <ViajeStops compactado={record.compactado} />
+                <ViajeStops compactado={viaje} />
               </div>
             )}
 
-            {jornada.estado === "DEVUELTAS" && jornada.nota && (
-              <div className="rounded-xl bg-danger-500/10 px-4 py-3 text-[13px] text-ink-100">
-                <b className="text-danger-500">Devuelto por el responsable:</b> {jornada.nota}
-              </div>
-            )}
+            <Alert>{error}</Alert>
 
-            {handoverValue && (
-              <div className="rounded-xl bg-accent-500/10 px-4 py-3 text-[13px] text-ink-200">
-                {record.origen
-                  ? `Recibiste el paquete a las ${formatRomeDateTime(record.traspasoHora)}. Si saliste antes para encontrarte con el otro chofer, pon tu hora de salida.`
-                  : `Le diste el paquete a ${record.relevo.chofer.nombre} a las ${formatRomeDateTime(record.traspasoHora ?? record.relevo.traspasoHora)}. Tu jornada sigue hasta que vuelves al lugar de espera.`}
-              </div>
-            )}
+            <p className="rounded-xl bg-line/[0.05] px-4 py-3 text-[13px] text-ink-200">
+              Ya no cargas tus horas: las de manejo salen solas de los km del servicio. Solo declara tu espera y sube las
+              fotos que se piden.
+            </p>
 
-            {record.retiroPaqueteAt && (
-              <div className="rounded-xl bg-accent-500/10 px-4 py-3 text-[13px] text-ink-200">
-                Retiraste el paquete el <b className="text-ink-50">{formatRomeDateTime(record.retiroPaqueteAt)}</b>
-                {record.fechaRetiro && (
-                  <>
-                    {" "}y sales a entregarlo el <b className="text-ink-50">{formatRomeDateTime(record.fechaRetiro)}</b>
-                  </>
-                )}
-                . Tus horas empiezan cuando saliste a entregar, no cuando retiraste el paquete.
-              </div>
-            )}
-
-            {salidaLejos && (
-              <div className="rounded-xl bg-warning-500/10 px-4 py-3 text-[13px] text-ink-200">
-                Tu inicio es muy distinto de la salida planificada ({formatRomeDateTime(record.fechaRetiro)}). Si saliste en
-                otro horario, explica el motivo en los comentarios: el responsable va a revisar estas horas.
-              </div>
-            )}
-
-            <Alert>{error || handoverError}</Alert>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <TextField
-                id="horas-inicio"
-                label="Inicio de tu jornada"
-                type="datetime-local"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-                required
-              />
-              <TextField
-                id="horas-fin"
-                label="Fin de tu jornada"
-                type="datetime-local"
-                value={fin}
-                onChange={(e) => setFin(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="flex items-start gap-2.5 text-[14px] text-ink-100">
-                <input
-                  type="checkbox"
-                  checked={finFueraDeBase}
-                  onChange={(e) => setFinFueraDeBase(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-line/20 bg-transparent accent-accent-500"
-                />
-                ¿Terminaste sin pasar por el lugar de espera (por ejemplo, fuiste a casa)?
-              </label>
-              {finFueraDeBase && (
-                <p className="mt-1.5 pl-6.5 text-[12px] text-ink-400">
-                  Pon como fin la hora en que llegaste. Se te paga hasta que llegas, con un maximo igual a lo
-                  que habrias tardado en volver al lugar de espera desde tu ultima entrega.
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <MinutesField
-                id="horas-espera"
-                label="Espera (minutos)"
-                hint="Tiempo esperando al cliente dentro de tu jornada. Se paga aparte."
-                value={esperaMin}
-                onChange={setEsperaMin}
-              />
-              <MinutesField
-                id="horas-pausa"
-                label="Pausa no trabajada (minutos)"
-                hint="Comida u otra parada que no fue trabajo. No se paga."
-                value={pausaMin}
-                onChange={setPausaMin}
-              />
-            </div>
-
-            <div>
-              <TextField
-                id="horas-km"
-                label={viajeKm ? "Km reales de todo el viaje (opcional)" : "Km reales (opcional)"}
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.1"
-                value={km}
-                onChange={(e) => setKm(e.target.value)}
-              />
-              {viajeKm && (
-                <div className="mt-2 text-[12px] text-ink-300">
-                  {viajeKm.circuito ? "Circuito planificado del viaje" : "Planificado del viaje"}:{" "}
-                  <b className="text-ink-100">{formatKmValue(viajeKm.planificado)}</b>
-                  {viajeKm.circuito
-                    ? " (lugar de espera, retiro, todas las paradas en orden y vuelta al lugar de espera)"
-                    : record.compactado.servicios.length > 1 &&
-                      ` (${record.compactado.servicios.map((s) => formatKmValue(s.kmPlan).replace(" km", "")).join(" + ")})`}
-                  . Anota los km de todo el viaje: el sistema los reparte entre los servicios.
-                </div>
-              )}
-
-              {!viajeKm && record.circuito?.km > 0 && (
-                <div className="mt-2 text-[12px] text-ink-300">
-                  Circuito planificado: <b className="text-ink-100">{formatKmValue(record.circuito.km)}</b> (lugar de espera,
-                  retiro, entrega y vuelta al lugar de espera).
-                </div>
-              )}
-
-              {viajeKm && kmNum != null && kmExtra > 0 && !kmExtraGrande && (
-                <p className="mt-2 text-[12px] text-ink-400">
-                  Hiciste {formatKmValue(kmExtra)} más de lo planificado: se reparten solos entre los servicios.
-                </p>
-              )}
-
-              {viajeKm && kmExtraGrande && (
-                <div className="mt-3 rounded-xl bg-warning-500/10 px-4 py-3">
-                  <p className="text-[13px] font-medium text-ink-50">
-                    Hiciste {formatKmValue(kmExtra)} más de lo planificado. ¿En qué servicio fue?
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-ink-300">
-                    Marca el que tuvo los km de más (si marcas varios, se reparten entre ellos). Si no sabes, déjalo sin
-                    marcar y se reparten proporcional.
-                  </p>
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {record.compactado.servicios.map((s) => (
-                      <label key={s.id} className="flex items-center gap-2.5 text-[13px] text-ink-100">
-                        <input
-                          type="checkbox"
-                          checked={extraIds.includes(s.id)}
-                          onChange={() => toggleExtra(s.id)}
-                          className="h-4 w-4 shrink-0 rounded border-line/20 bg-transparent accent-accent-500"
-                        />
-                        <span className="min-w-0 truncate">
-                          {s.codigo} · {s.destinazione}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="mt-3">
-                    <Textarea
-                      id="horas-km-extra-nota"
-                      label="¿Por qué? (opcional)"
-                      rows={2}
-                      value={extraNota}
-                      onChange={(e) => setExtraNota(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {kmReparto && record.compactado.servicios.length > 1 && (
-                <p className="mt-2 text-[12px] text-ink-300">
-                  Quedaría:{" "}
-                  {record.compactado.servicios
-                    .map((s) => `${s.codigo.split("-").pop()} ${formatKmValue(kmReparto.km.find((r) => r.id === s.id)?.km)}`)
-                    .join(" · ")}
-                </p>
-              )}
-            </div>
-            <Textarea
-              id="horas-comentarios"
-              label="Comentarios (opcional)"
-              rows={2}
-              value={comentarios}
-              onChange={(e) => setComentarios(e.target.value)}
+            <MinutesField
+              id="cierre-espera"
+              label="Espera (minutos)"
+              hint="Tiempo que esperaste al cliente en este servicio. Se paga aparte."
+              value={esperaMin}
+              onChange={setEsperaMin}
             />
 
-            <div className="rounded-2xl glass-surface-sm px-4 py-3">
-              {preview.error ? (
-                <p className="text-[13px] text-danger-500">{preview.error}</p>
-              ) : canSubmit ? (
-                <>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-[13px] text-ink-300">
-                      Dia <b className="text-ink-50">{formatHours(preview.horasDia)}</b> &middot; Noche{" "}
-                      <b className="text-ink-50">{formatHours(preview.horasNoche)}</b> &middot; Espera{" "}
-                      <b className="text-ink-50">{formatHours(preview.esperaHoras)}</b>
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <p className="text-[13px] text-ink-400">Completa inicio y fin para ver tus horas.</p>
+            <div className="rounded-2xl border border-line/10 bg-line/[0.03] p-4">
+              <h3 className="text-[14px] font-semibold text-ink-50">Foto de la bolla de trabajo</h3>
+              <p className="mt-0.5 text-[12px] text-ink-400">
+                Súbela si la tienes. Puedes subir más de una foto (si la bolla tiene varias hojas, o hay más de una bolla).
+              </p>
+              <p className="mt-2 text-[13px] text-ink-200">
+                {bollasGuardadas === null
+                  ? "Revisando las que ya subiste..."
+                  : totalBollas === 0
+                    ? "Todavía no hay ninguna foto."
+                    : `${totalBollas} ${totalBollas === 1 ? "foto" : "fotos"} de bolla${bollasGuardadas > 0 ? ` (${bollasGuardadas} ya ${bollasGuardadas === 1 ? "subida" : "subidas"})` : ""}.`}
+              </p>
+              {bollas.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1.5">
+                  {bollas.map((file, index) => (
+                    <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-2 text-[13px] text-ink-100">
+                      <span className="min-w-0 truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setBollas((prev) => prev.filter((_, i) => i !== index))}
+                        className="shrink-0 text-[12px] font-medium text-danger-500 hover:brightness-110"
+                      >
+                        Quitar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
+              <label className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
+                <CameraIcon className="h-4 w-4" />
+                {totalBollas > 0 ? "Agregar otra foto" : "Tomar o elegir foto"}
+                <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={addBollas} disabled={saving} />
+              </label>
             </div>
 
             <div className="rounded-2xl border border-line/10 bg-line/[0.03] p-4">
@@ -423,12 +238,20 @@ export const CerrarServicioModal = ({ record, reglas, onClose, onDone }) => {
               />
             </div>
 
+            <Textarea
+              id="cierre-comentarios"
+              label="Comentarios (opcional)"
+              rows={2}
+              value={comentarios}
+              onChange={(e) => setComentarios(e.target.value)}
+            />
+
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button variant="ghost" className="sm:w-auto sm:px-6" disabled={saving} onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" className="sm:w-auto sm:px-6" loading={saving} disabled={!canSubmit}>
-                Enviar horas
+              <Button type="submit" className="sm:w-auto sm:px-6" loading={saving}>
+                Terminar servicio
               </Button>
             </div>
           </form>

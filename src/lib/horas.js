@@ -75,8 +75,14 @@ export const previewShift = ({ inicio, fin, esperaMin = 0, pausaMin = 0 }, rates
 export const formatHours = (value) =>
   `${Number(value ?? 0).toLocaleString("es-AR", { maximumFractionDigits: 2 })} h`;
 
-// Un servicio entregado/retirado al que el chofer todavia tiene que cargarle horas.
+// Desde el 1/10/2026 (hora de Roma) el chofer no declara horas: se le paga por km (km / 85 = horas de manejo) y solo declara
+// su espera. Debe coincidir con la tarifa "pagoPorKm" del servidor (config/payRates.js).
+const PAGO_POR_KM_DESDE = new Date("2026-09-30T22:00:00Z");
+export const pagaPorKm = (record) => new Date(record.fechaServicio).getTime() >= PAGO_POR_KM_DESDE.getTime();
+
+// Un servicio entregado/retirado al que el chofer todavia tiene que cargarle horas (solo servicios anteriores al pago por km).
 export const needsHours = (record) =>
+  !pagaPorKm(record) &&
   // En un viaje compacto las horas se cargan una sola vez, en el servicio principal.
   !(record.compactado && !record.compactado.principal) &&
   // Un servicio reprogramado por la oficina tambien: el chofer manejo hasta ahi y se le paga.

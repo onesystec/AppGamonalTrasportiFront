@@ -21,6 +21,7 @@ import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../li
 import { getPagosChoferesRequest } from "../../lib/finanzas.api";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
+import { pagaPorKm } from "../../lib/horas";
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
 const avatarColor = (name) =>
@@ -65,7 +66,7 @@ const ServiceList = ({ servicios, reglas, location }) =>
             </span>
           </div>
           <div className="min-w-0 text-[12px] text-ink-300">
-            <HorasEstadoChip estado={s.horasEstado} className="mr-1.5" />
+            {!pagaPorKm({ fechaServicio: s.fecha }) && <HorasEstadoChip estado={s.horasEstado} className="mr-1.5" />}
             {payCalcText(s, reglas)}
             {s.modo === "KM" && s.kmFuente !== "SIN_DATO" && s.kmFuente !== "TRASPASO_SIN_KM" && (
               <span className="ml-1.5 rounded bg-line/10 px-1.5 py-0.5 text-[10px] text-ink-400">
@@ -130,6 +131,7 @@ const DriverRow = ({ driver, month, reglas, location }) => {
           <span className="block text-[12px] text-ink-400">
             {driver.servicios} {driver.servicios === 1 ? "servicio" : "servicios"}
             {driver.km > 0 && ` - ${formatKm(driver.km)}`}
+            {driver.horasManejo > 0 && ` - ${nf(driver.horasManejo)} h de manejo (km ÷ 85)`}
             {driver.horas > 0 && ` - ${nf(driver.horas)} h`}
             {driver.esperaHoras > 0 && ` - ${nf(driver.esperaHoras)} h de espera`}
             {driver.salidasReperibilidad > 0 &&

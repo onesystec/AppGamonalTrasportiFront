@@ -7,6 +7,11 @@ const BASE = "/horas";
 export const submitHorasRequest = (recordId, body) =>
   api.post(`${BASE}/${recordId}`, body).then((res) => res.data.data);
 
+// Pago por km: el chofer termina el servicio (queda entregado) y declara solo su espera.
+// body: { esperaMin, comentarios? }. Devuelve { estado, esperaMin, pago }.
+export const cierreServicioRequest = (recordId, body) =>
+  api.post(`${BASE}/${recordId}/cierre`, body).then((res) => res.data.data);
+
 // body: { accion: "APROBAR" | "DEVOLVER", nota?, inicio?, fin?, esperaMin?, pausaMin? }.
 export const reviewHorasRequest = (recordId, body) =>
   api.post(`${BASE}/${recordId}/revision`, body).then((res) => res.data.data);
