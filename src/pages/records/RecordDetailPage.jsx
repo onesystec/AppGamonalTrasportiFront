@@ -420,6 +420,8 @@ const toFormState = (record) => ({
   otroChoferTermino: Boolean(record.relevo),
   choferRelevoId: record.relevo?.driverId ?? "",
   traspasoLugar: record.relevo?.lugar ?? "",
+  cambioFurgon: Boolean(record.vehiculoFinal),
+  vehiculoFinalId: record.vehiculoFinal?.id ?? "",
   vehicleId: record.vehicle?.id ?? "",
   salida: {
     direccion: record.salida?.direccion ?? "",
@@ -695,6 +697,16 @@ export const RecordDetailPage = () => {
         next.direccion.trim() !== (saved?.direccion ?? "") || next.lat !== (saved?.lat ?? null) || next.lng !== (saved?.lng ?? null);
       if (changed) payload.salida = buildSalidaPayload(next) ?? null;
       if (form.pasaPorBrennero !== Boolean(record.pasaPorBrennero)) payload.pasaPorBrennero = form.pasaPorBrennero;
+    }
+
+    // Cambio de furgon (el mismo chofer termino con otro furgon): solo si cambio respecto de lo guardado.
+    if (!isChofer) {
+      if (form.cambioFurgon && !form.vehiculoFinalId) {
+        setSaveError("Selecciona el furgon con el que termino el servicio");
+        return null;
+      }
+      const finalWanted = form.cambioFurgon ? form.vehiculoFinalId : null;
+      if (finalWanted !== (record.vehiculoFinal?.id ?? null)) payload.vehiculoFinalId = finalWanted;
     }
 
     // Traspaso: solo si cambio respecto de lo guardado.
@@ -1046,6 +1058,12 @@ const RecordSummaryView = ({
           label="Vehiculo"
           value={`${record.vehicle?.targa ?? "-"} - ${record.vehicle?.modelo ?? ""}`}
         />
+        {record.vehiculoFinal && (
+          <InfoRow
+            label="Cambio de furgon"
+            value={`Termino con ${record.vehiculoFinal.targa}${record.vehiculoFinal.modelo ? ` - ${record.vehiculoFinal.modelo}` : ""}`}
+          />
+        )}
         <InfoRow label="Cliente" value={record.client?.nombre} />
         {record.ciudad && <InfoRow label="Ciudad" value={record.ciudad} />}
         {record.extrasPiazzaZona && (
@@ -1367,8 +1385,7 @@ const RecordEditForm = ({
                           onChange={(v) => setField("choferRelevoId", v)}
                         />
                         <p className="mt-1.5 text-[12px] text-ink-400">
-                          Al guardar, a ese chofer le llega un aviso y tiene que indicar a que hora recibio el
-                          paquete. Hasta entonces su parte queda pendiente.
+                          Al guardar, a ese chofer le llega un aviso con el lugar donde recoger el paquete.
                         </p>
                         <div className="mt-3">
                           <TextField
@@ -1388,14 +1405,44 @@ const RecordEditForm = ({
                   </>
                 )}
               </div>
-              <SearchableSelect
-                id="vehicleId"
-                label="Vehiculo"
-                placeholder="Escribe para buscar un vehiculo"
-                options={vehicleOptions}
-                value={form.vehicleId}
-                onChange={(v) => setField("vehicleId", v)}
-              />
+              <div className="flex flex-col gap-2">
+                <SearchableSelect
+                  id="vehicleId"
+                  label="Vehiculo"
+                  placeholder="Escribe para buscar un vehiculo"
+                  options={vehicleOptions}
+                  value={form.vehicleId}
+                  onChange={(v) => setField("vehicleId", v)}
+                />
+                <label className="flex w-fit items-center gap-2 text-[14px] text-ink-200">
+                  <input
+                    type="checkbox"
+                    checked={form.cambioFurgon}
+                    onChange={(e) => {
+                      setField("cambioFurgon", e.target.checked);
+                      if (!e.target.checked) setField("vehiculoFinalId", "");
+                    }}
+                    className="h-4 w-4 rounded border-line/20 bg-transparent accent-accent-500"
+                  />
+                  ¿Cambio de furgon para terminar el servicio?
+                </label>
+                {form.cambioFurgon && (
+                  <div>
+                    <SearchableSelect
+                      id="vehiculoFinalId"
+                      label="Furgon con el que termino el servicio"
+                      placeholder="Escribe para buscar un vehiculo"
+                      options={vehicleOptions.filter((o) => o.value !== form.vehicleId)}
+                      value={form.vehiculoFinalId}
+                      onChange={(v) => setField("vehiculoFinalId", v)}
+                    />
+                    <p className="mt-1.5 text-[12px] text-ink-400">
+                      Queda registrado con que furgon se termino. El chofer y el pago no cambian, y los peajes y el combustible de los
+                      dos furgones se asignan a este servicio.
+                    </p>
+                  </div>
+                )}
+              </div>
               {!isExtrasStefania && (
                 <SearchableSelect
                   id="extrasPiazzaZona"
