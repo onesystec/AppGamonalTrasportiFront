@@ -52,7 +52,11 @@ export const payCalcText = (item, reglas) => {
   } else if (item.kmFuente === "SIN_DATO") parts.push("sin kilometros cargados");
   else if (item.kmFuente === "VIAJE_SIN_CIRCUITO") parts.push("viaje sin circuito calculado: no se paga la suma de sus servicios");
   else if (item.kmFuente === "TRASPASO_SIN_KM") parts.push("servicio con traspaso: sin horas ni km reales no se paga por los km del servicio");
-  else {
+  else if (item.tiempoRuta) {
+    // Servicio corto: se paga el tiempo de ruta del circuito (ida + vuelta) a la tarifa por hora.
+    const eur = item.franja === "NOCHE" ? reglas.horaNocheEur : reglas.horaDiaEur;
+    parts.push(`${formatHours(item.horasManejo)} de ruta (${nf(item.km)} km) x ${nf(eur)} EUR${item.franja === "NOCHE" ? " (noche)" : ""}`);
+  } else {
     const eur = item.franja === "NOCHE" ? reglas.kmBloqueNocheEur : reglas.kmBloqueDiaEur;
     parts.push(
       `${nf(item.km)} km x ${nf(eur)} EUR cada ${nf(reglas.kmBloque)} km${item.franja === "NOCHE" ? " (noche)" : ""}${item.horasManejo > 0 ? ` (${formatHours(item.horasManejo)} de manejo)` : ""}`
