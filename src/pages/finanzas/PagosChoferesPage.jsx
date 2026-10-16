@@ -110,8 +110,6 @@ const DriverRow = ({ driver, month, reglas, location }) => {
     };
   }, [open, month, driver.driverId, detail.servicios]);
 
-  const hasDeduction = driver.aDescontar.total > 0;
-
   return (
     <section className="glass-surface relative rounded-2xl">
       <button
@@ -153,19 +151,9 @@ const DriverRow = ({ driver, month, reglas, location }) => {
             </span>
           )}
         </div>
-        {hasDeduction && (
-          <span className="text-right text-[12px] text-ink-400">
-            Multas a descontar
-            <span className="block text-[14px] font-semibold text-warning-500">
-              - {formatCurrency(driver.aDescontar.total)}
-            </span>
-          </span>
-        )}
         <span className="text-right text-[12px] text-ink-400">
-          {hasDeduction ? "Neto estimado" : "A pagar"}
-          <span className="block text-[17px] font-semibold text-ink-50">
-            {formatCurrency(hasDeduction ? driver.neto : driver.total)}
-          </span>
+          A pagar
+          <span className="block text-[17px] font-semibold text-ink-50">{formatCurrency(driver.total)}</span>
         </span>
         <ChevronDownIcon
           className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
