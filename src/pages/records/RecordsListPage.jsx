@@ -38,6 +38,7 @@ import { userAreaKeys } from "../../lib/roles";
 import { AREA_ALL, AREAS_BY_KEY, RECORD_AREAS, classifyRecord } from "../../lib/recordAreas";
 import { CompactarModal } from "../../components/records/CompactarModal";
 import { FaltantesChips, hasFaltantes } from "../../components/records/FaltantesPanel";
+import { EMPTY_RECORD_FILTERS, RecordFilters, countActiveFilters } from "../../components/records/RecordFilters";
 import { ViajeChip } from "../../components/records/ViajeChip";
 import {
   listPendingRecordsRequest,
@@ -45,7 +46,7 @@ import {
   listRecordsByMonthRequest,
   listRecordsRequest,
   listRecordsSummaryByMonthRequest,
-  searchRecordsRequest,
+  searchRecordsFilteredRequest,
   updateRecordRequest,
 } from "../../lib/records.api";
 import { kmRecorrido } from "../../lib/km";
@@ -473,7 +474,11 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   // Precarga con ?q= (buscador de la barra superior del AppShell).
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
   const [searchResults, setSearchResults] = useState(null);
+  const [searchTotal, setSearchTotal] = useState(0);
   const [searching, setSearching] = useState(false);
+  // Filtros (chofer, vehiculo, cliente, estado, tipo, fechas): se combinan con el texto y buscan en todo el historico.
+  const [filters, setFilters] = useState(EMPTY_RECORD_FILTERS);
+  const activeFilters = countActiveFilters(filters);
 
   // Filtro "Solo sin cobrar": igual que el buscador, reemplaza el acordeon mientras
   // esta activo, pero acotado al mes que se esta navegando (no todo el historico,
@@ -524,13 +529,14 @@ export const RecordsListPage = ({ section: sectionHint }) => {
     };
   }, [isPrivileged, version]);
 
-  // Debounce: espera a que se deje de tipear antes de pegarle al backend. Menos de 2
-  // caracteres limpia los resultados en vez de buscar (ver SEARCH_MIN_LENGTH del backend).
+  // Debounce: espera a que se deje de tipear antes de pegarle al backend. Sin texto (menos de 2
+  // caracteres) y sin filtros limpia los resultados en vez de buscar (ver SEARCH_MIN_LENGTH del backend).
   useEffect(() => {
     if (!isPrivileged) return;
     const query = searchQuery.trim();
-    if (query.length < 2) {
+    if (query.length < 2 && activeFilters === 0) {
       setSearchResults(null);
+      setSearchTotal(0);
       setSearching(false);
       return;
     }
@@ -538,9 +544,23 @@ export const RecordsListPage = ({ section: sectionHint }) => {
     setSearching(true);
     let cancelled = false;
     const timeoutId = setTimeout(() => {
-      searchRecordsRequest(query)
+      // Si las fechas quedaron al reves se invierten (desde siempre es la mas antigua).
+      const [from, to] = filters.from && filters.to && filters.from > filters.to ? [filters.to, filters.from] : [filters.from, filters.to];
+      searchRecordsFilteredRequest({
+        ...(query.length >= 2 ? { q: query } : {}),
+        ...(filters.driverId ? { driverId: filters.driverId } : {}),
+        ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
+        ...(filters.clientId ? { clientId: filters.clientId } : {}),
+        ...(filters.estado ? { estado: filters.estado } : {}),
+        ...(filters.spedizzione ? { spedizzione: filters.spedizzione } : {}),
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      })
         .then((data) => {
-          if (!cancelled) setSearchResults(data);
+          if (!cancelled) {
+            setSearchResults(data.records);
+            setSearchTotal(data.total);
+          }
         })
         .catch((err) => {
           if (!cancelled) setError(parseApiError(err).message);
@@ -554,7 +574,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [isPrivileged, searchQuery]);
+  }, [isPrivileged, searchQuery, filters, activeFilters]);
 
   const handleChangeEstado = async (recordId, estado) => {
     setUpdatingId(recordId);
@@ -795,6 +815,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
             />
             Solo sin cobrar
           </label>
+          <RecordFilters filters={filters} onChange={setFilters} total={searchResults !== null ? searchTotal : null} />
         </div>
       )}
 
@@ -816,10 +837,20 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                 <>
                   <h2 className="text-[15px] font-semibold text-ink-50">
                     Resultados de busqueda{searching && " - buscando..."}
+                    {!searching && (
+                      <span className="ml-2 text-[12px] font-normal text-ink-400">
+                        {searchTotal > searchResults.length
+                          ? `mostrando los ${searchResults.length} mas recientes de ${searchTotal}: afina los filtros`
+                          : `${searchTotal} servicio${searchTotal === 1 ? "" : "s"}`}
+                      </span>
+                    )}
                   </h2>
                   <button
                     type="button"
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilters(EMPTY_RECORD_FILTERS);
+                    }}
                     className="text-[13px] font-medium text-accent-400 hover:text-accent-300"
                   >
                     Volver al mes
@@ -841,7 +872,9 @@ export const RecordsListPage = ({ section: sectionHint }) => {
               <div className="border-t border-line/10 px-2 pb-4 pt-3">
                 {searchResults.filter(matchesArea).length === 0 ? (
                   <p className="py-4 text-center text-[14px] text-ink-300">
-                    Sin resultados para "{searchQuery.trim()}"
+                    Sin resultados
+                    {searchQuery.trim() && ` para "${searchQuery.trim()}"`}
+                    {activeFilters > 0 && ` con esos filtros`}
                     {areaKey !== AREA_ALL && ` en ${AREAS_BY_KEY[areaKey].label}`}.
                   </p>
                 ) : (
