@@ -219,7 +219,6 @@ export const PagosChoferesPage = () => {
   if (!isPrivileged) return <Navigate to="/mis-horas" replace />;
 
   const sinDato = data ? data.porChofer.reduce((sum, c) => sum + c.serviciosSinDato, 0) : 0;
-  const me = data && !isPrivileged ? data.porChofer[0] : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -252,23 +251,13 @@ export const PagosChoferesPage = () => {
               detail="Entregados o retirados"
               color="#2f8dff"
             />
-            {isPrivileged ? (
-              <MancatoKpi
-                icon={UsersIcon}
-                label="Choferes con pago"
-                value={data.total.choferes}
-                detail="Con al menos un servicio"
-                color="#ff8a1a"
-              />
-            ) : (
-              <MancatoKpi
-                icon={UsersIcon}
-                label="Multas a descontar"
-                value={formatCurrency(me?.aDescontar.total ?? 0)}
-                detail={`Neto estimado ${formatCurrency(me?.neto ?? data.total.total)}`}
-                color="#ff8a1a"
-              />
-            )}
+            <MancatoKpi
+              icon={UsersIcon}
+              label="Choferes con pago"
+              value={data.total.choferes}
+              detail="Con al menos un servicio"
+              color="#ff8a1a"
+            />
             <MancatoKpi
               icon={ClockIcon}
               label="Pago por espera"
@@ -305,10 +294,6 @@ export const PagosChoferesPage = () => {
                   location={location}
                 />
               ))}
-              <p className="px-1 text-[12px] text-ink-400">
-                El neto estimado resta las multas que la empresa pago y todavia no se descontaron. El
-                descuento definitivo se marca desde la pestaña Multas.
-              </p>
             </div>
           ) : (
             data.servicios && (
