@@ -23,7 +23,7 @@ const emptyForm = (s) => ({
   comentarios: s?.comentarios ?? "",
 });
 
-// Alta y edicion de un solicito: datos de la carta, el PDF y (si ya se pago) el comprobante.
+// Alta y edicion de un sollecito: datos de la carta, el PDF y (si ya se pago) el comprobante.
 export const SollecitoFormModal = ({ open, sollecito, onClose, onSaved }) => {
   const [form, setForm] = useState(() => emptyForm(sollecito));
   const [archivo, setArchivo] = useState(null);
@@ -90,7 +90,7 @@ export const SollecitoFormModal = ({ open, sollecito, onClose, onSaved }) => {
         onSubmit={onSubmit}
         className="glass-surface relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-3xl bg-background p-5 sm:rounded-3xl sm:p-6"
       >
-        <h2 className="text-[18px] font-semibold text-ink-50">{sollecito ? "Editar solicito" : "Nuevo solicito"}</h2>
+        <h2 className="text-[18px] font-semibold text-ink-50">{sollecito ? "Editar sollecito" : "Nuevo sollecito"}</h2>
         <Alert>{error}</Alert>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -173,7 +173,7 @@ export const SollecitoFormModal = ({ open, sollecito, onClose, onSaved }) => {
           </div>
           <FileField
             id="sol-archivo"
-            label="PDF del solicito"
+            label="PDF del sollecito"
             hint="PDF o foto, hasta 15 MB"
             file={archivo}
             onChange={setArchivo}

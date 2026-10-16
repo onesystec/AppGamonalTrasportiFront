@@ -301,7 +301,8 @@ function App() {
                 <Route path="mancato" element={<MancatoPagamentoPage />} />
                 <Route path="mancato/new" element={<NewMancatoPage />} />
                 <Route path="mancato/:id" element={<MancatoDetailPage />} />
-                <Route path="solicitos" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><SollecitiPage /></RoleOnly>} />
+                <Route path="sollecitos" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><SollecitiPage /></RoleOnly>} />
+                <Route path="solicitos" element={<Navigate to="/finanzas/sollecitos" replace />} />
                 {/* Las multas son de la oficina: el chofer solo ve Combustible y Mancato Pagamento. */}
                 <Route path="multas" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultasPage /></RoleOnly>} />
                 <Route path="multas/new" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
