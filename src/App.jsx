@@ -182,7 +182,8 @@ const OverlayRoutes = () => (
 // Cuando el Admin le cambia el cargo a alguien con la app abierta, AuthContext lo detecta y la vista (menu, inicio,
 // permisos) se rearma sola. Aqui se lleva a la persona a su nueva pantalla de inicio y se le avisa.
 const RoleChangeNotice = () => {
-  const { user } = useAuth();
+  // El cargo real, no el de la vista: el switch de modo chofer del Admin no es un cambio de cargo.
+  const { realUser: user } = useAuth();
   const navigate = useNavigate();
   const lastRef = useRef({ id: null, cargo: null });
   const [notice, setNotice] = useState("");

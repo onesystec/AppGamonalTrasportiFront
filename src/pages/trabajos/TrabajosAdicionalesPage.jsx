@@ -96,10 +96,11 @@ const ChoferView = () => {
   const [notice, setNotice] = useState("");
 
   const load = useCallback(() => {
-    listTrabajosAdicionalesRequest()
+    // driverId: el Admin en modo chofer solo ve los suyos (para un chofer el servidor ya filtra igual).
+    listTrabajosAdicionalesRequest({ driverId: user?.id })
       .then((d) => setItems(d.items))
       .catch((err) => setError(parseApiError(err).message));
-  }, []);
+  }, [user?.id]);
   useEffect(load, [load]);
 
   const handleSubmit = async (fields, foto) => {

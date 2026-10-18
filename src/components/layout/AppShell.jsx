@@ -14,6 +14,7 @@ import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
 import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, WalletIcon } from "../ui/icons";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { DriverModeSwitch } from "./DriverModeSwitch";
 import { NotificationsBell } from "./NotificationsBell";
 import { UpdateBanner } from "./UpdateBanner";
 
@@ -264,8 +265,10 @@ const UpdateDot = () => {
 };
 
 const AppShellContent = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, canUseDriverMode, driverMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  // En modo chofer el Admin/Owner ve la vista de chofer, pero conserva arriba el switch para volver.
+  const showDriverBar = canUseDriverMode && driverMode;
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   // Recursos Humanos: solo Choferes, Vehiculos y Busta paga.
   const isRrhh = user?.cargo === "RRHH";
@@ -321,6 +324,7 @@ const AppShellContent = () => {
           </form>
 
           <div className="flex items-center gap-3">
+            <DriverModeSwitch />
             <NotificationsBell />
             <Link
               to="/profile"
@@ -337,6 +341,12 @@ const AppShellContent = () => {
               <ChevronDownIcon className="hidden h-4 w-4 text-ink-400 lg:block" />
             </Link>
           </div>
+        </header>
+      )}
+
+      {showDriverBar && (
+        <header className="fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-end gap-3 border-b border-line/10 bg-background px-6 sm:left-60 sm:flex">
+          <DriverModeSwitch />
         </header>
       )}
 
@@ -460,6 +470,7 @@ const AppShellContent = () => {
             </button>
 
             <div className="flex items-center gap-2">
+              <DriverModeSwitch />
               <NavLink
                 to="/profile"
                 aria-label="Ver mi perfil"
@@ -483,7 +494,7 @@ const AppShellContent = () => {
           <main
             className={clsx(
               "px-4 pb-28 sm:px-6 sm:pb-10",
-              isPrivileged ? "sm:pt-24" : "sm:pt-10"
+              isPrivileged || showDriverBar ? "sm:pt-24" : "sm:pt-10"
             )}
           >
             <UpdateBanner />

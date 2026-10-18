@@ -12,8 +12,17 @@ const REFRESH_MIN_GAP_MS = 15_000;
 const ACCESS_FIELDS = ["cargo", "estado", "responsableTipo", "area", "nivelChofer", "areasPermitidas", "vehiculoAsignadoId"];
 const accessChanged = (a, b) => ACCESS_FIELDS.some((key) => JSON.stringify(a?.[key]) !== JSON.stringify(b?.[key]));
 
+const DRIVER_MODE_KEY = "gamonal-driver-mode";
+const readDriverModePref = () => {
+  try {
+    return localStorage.getItem(DRIVER_MODE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [realUser, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
   const hydrate = useCallback(async () => {
@@ -77,7 +86,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return undefined;
+    if (!realUser?.id) return undefined;
     const onVisible = () => {
       if (document.visibilityState === "visible") refreshUser();
     };
@@ -89,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [user?.id, refreshUser]);
+  }, [realUser?.id, refreshUser]);
 
   useEffect(() => {
     const handleForcedLogout = () => setUser(null);
@@ -124,10 +133,37 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  // Modo chofer: solo OWNER y ADMIN. Con el switch activo ven la app exactamente como un chofer (menu, inicio,
+  // permisos). El cambio es siempre manual y se recuerda en este dispositivo. El usuario real no se toca: el
+  // servidor sigue viendo su cargo de siempre.
+  const canUseDriverMode = realUser?.cargo === "OWNER" || realUser?.cargo === "ADMIN";
+  const [driverModePref, setDriverModePref] = useState(readDriverModePref);
+  const driverMode = canUseDriverMode && driverModePref;
+
+  const setDriverMode = useCallback((next) => {
+    setDriverModePref(Boolean(next));
+    try {
+      if (next) localStorage.setItem(DRIVER_MODE_KEY, "1");
+      else localStorage.removeItem(DRIVER_MODE_KEY);
+    } catch {
+      // Sin almacenamiento (navegacion privada): el modo vale solo mientras la app esta abierta.
+    }
+  }, []);
+
+  // Lo que ve el resto de la app: el usuario real, o el mismo usuario como CHOFER mientras el modo esta activo.
+  const user = useMemo(
+    () => (driverMode && realUser ? { ...realUser, cargo: "CHOFER", areasPermitidas: [], responsableTipo: null } : realUser),
+    [driverMode, realUser]
+  );
+
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      realUser,
+      canUseDriverMode,
+      driverMode,
+      setDriverMode,
+      isAuthenticated: Boolean(realUser),
       initializing,
       login,
       register,
@@ -135,7 +171,7 @@ export const AuthProvider = ({ children }) => {
       setUser,
       refreshUser,
     }),
-    [user, initializing, login, register, logout, refreshUser]
+    [user, realUser, canUseDriverMode, driverMode, setDriverMode, initializing, login, register, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
