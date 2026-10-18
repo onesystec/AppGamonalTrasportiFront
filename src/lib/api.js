@@ -8,7 +8,18 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
+// Modo chofer del Admin/Owner: cada pedido lo avisa al servidor, que entonces responde como si fuera un chofer (solo sus
+// servicios, horas y cargos). Para cualquier otro cargo el servidor ignora el aviso.
+let driverModeOn = false;
+export const setApiDriverMode = (on) => {
+  if (driverModeOn === Boolean(on)) return;
+  driverModeOn = Boolean(on);
+  // Lo guardado de la vista anterior (listas compartidas) no vale para la nueva.
+  clearSharedRequests();
+};
+
 api.interceptors.request.use((config) => {
+  if (driverModeOn) config.headers["X-Modo-Chofer"] = "1";
   // Una escritura puede cambiar lo que devuelven las lecturas compartidas (ver sharedRequest.js): se descartan.
   if (config.method && config.method.toLowerCase() !== "get") clearSharedRequests();
   const token = getToken();

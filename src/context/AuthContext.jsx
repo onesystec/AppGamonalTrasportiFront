@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AUTH_LOGOUT_EVENT, parseApiError } from "../lib/api";
+import { AUTH_LOGOUT_EVENT, parseApiError, setApiDriverMode } from "../lib/api";
 import { loginRequest, meRequest, registerRequest, ssoLoginRequest } from "../lib/auth.api";
 import { clearToken, getToken, setToken } from "../lib/token";
 
@@ -20,6 +20,8 @@ const readDriverModePref = () => {
     return false;
   }
 };
+// Antes del primer pedido: el servidor ya responde en modo chofer desde la primera carga (si no es Admin/Owner lo ignora).
+setApiDriverMode(readDriverModePref());
 
 export const AuthProvider = ({ children }) => {
   const [realUser, setUser] = useState(null);
@@ -141,6 +143,7 @@ export const AuthProvider = ({ children }) => {
   const driverMode = canUseDriverMode && driverModePref;
 
   const setDriverMode = useCallback((next) => {
+    setApiDriverMode(next);
     setDriverModePref(Boolean(next));
     try {
       if (next) localStorage.setItem(DRIVER_MODE_KEY, "1");
