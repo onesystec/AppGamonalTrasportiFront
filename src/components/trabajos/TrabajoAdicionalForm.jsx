@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
-import { FileField } from "../ui/FileField";
+import { FilesField } from "../ui/FilesField";
 import { Select } from "../ui/Select";
 import { Switch } from "../ui/Switch";
 import { TextField } from "../ui/TextField";
@@ -35,7 +35,8 @@ const durationText = (inicio, fin, pausa) => {
 export const TrabajoAdicionalForm = ({ trabajo, defaultTarga, onSubmit, onCancel, submitting, error, fieldErrors }) => {
   const [vehicles, setVehicles] = useState([]);
   const [localErrors, setLocalErrors] = useState({});
-  const [foto, setFoto] = useState(null);
+  const [fotos, setFotos] = useState([]);
+  const [fotosQuitadas, setFotosQuitadas] = useState([]);
   const [form, setForm] = useState(() => ({
     areaTipo: trabajo?.areaTipo ?? "",
     zona: trabajo?.zona ?? "",
@@ -88,7 +89,8 @@ export const TrabajoAdicionalForm = ({ trabajo, defaultTarga, onSubmit, onCancel
         targa: form.sinVehiculo ? "" : form.targa,
         km: form.sinVehiculo ? "" : form.km,
       },
-      foto
+      fotos,
+      fotosQuitadas
     );
   };
 
@@ -147,7 +149,17 @@ export const TrabajoAdicionalForm = ({ trabajo, defaultTarga, onSubmit, onCancel
       )}
 
       <TextField id="solicitadoPor" label="¿Quien te lo pidio? (opcional)" value={form.solicitadoPor} onChange={(e) => setField("solicitadoPor", e.target.value)} />
-      <FileField id="foto" label="Foto o comprobante (opcional)" hint="Ticket, parte firmado o foto del trabajo" file={foto} onChange={setFoto} existing={trabajo?.foto ?? null} />
+      <FilesField
+        id="fotos"
+        label="Fotos o comprobantes (opcional)"
+        hint="Ticket, parte firmado o fotos del trabajo. Puedes subir varias."
+        files={fotos}
+        onChange={setFotos}
+        existing={trabajo?.fotos ?? []}
+        removed={fotosQuitadas}
+        onRemoveExisting={(id) => setFotosQuitadas((prev) => [...prev, id])}
+        disabled={submitting}
+      />
 
       <p className="text-[12px] text-ink-400">
         Tu responsable lo revisa antes de que cuente en tus horas. La fecha de carga se guarda sola y no se puede cambiar.

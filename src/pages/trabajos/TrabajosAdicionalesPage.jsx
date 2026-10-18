@@ -67,10 +67,15 @@ const Detalle = ({ t, showDriver }) => (
         El chofer declaro {formatRomeDateTime(t.inicioDeclarado)} a {formatRomeDateTime(t.finDeclarado)}; se ajusto al revisar.
       </p>
     )}
-    {t.foto && (
-      <a href={t.foto.url} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
-        Ver {t.foto.esPdf ? "PDF" : "foto"} adjunta
-      </a>
+    {t.fotos?.length > 0 && (
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {t.fotos.map((f, index) => (
+          <a key={f.id ?? index} href={f.url} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+            Ver {f.esPdf ? "PDF" : "foto"}
+            {t.fotos.length > 1 ? ` ${index + 1}` : " adjunta"}
+          </a>
+        ))}
+      </div>
     )}
     {t.avisos?.map((a) => (
       <p key={a} className="rounded-lg bg-warning-500/15 px-3 py-2 text-[12px] text-warning-500">{a}</p>
@@ -103,12 +108,12 @@ const ChoferView = () => {
   }, [user?.id]);
   useEffect(load, [load]);
 
-  const handleSubmit = async (fields, foto) => {
+  const handleSubmit = async (fields, fotos, fotosQuitadas) => {
     setSaving(true);
     setSaveError("");
     setFieldErrors({});
     try {
-      const saved = editing === "new" ? await createTrabajoAdicionalRequest(fields, foto) : await updateTrabajoAdicionalRequest(editing.id, fields, foto);
+      const saved = editing === "new" ? await createTrabajoAdicionalRequest(fields, fotos) : await updateTrabajoAdicionalRequest(editing.id, fields, fotos, fotosQuitadas);
       setNotice(saved.avisos?.length ? `Enviado. ${saved.avisos.join(" ")}` : "Enviado: tu responsable lo va a revisar.");
       setEditing(null);
       load();
