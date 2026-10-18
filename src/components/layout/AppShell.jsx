@@ -252,6 +252,9 @@ const DRAWER_NAV_ITEMS = [
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
 ];
 
+// Lo mismo para el chofer (y el Admin/Owner en su modo chofer): lo que no entra en su nav inferior.
+const CHOFER_DRAWER_NAV_ITEMS = [{ to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }];
+
 // Placeholder de la barra superior en las paginas de lista donde filtra en vivo.
 const LIST_SEARCH_PLACEHOLDERS = {
   "/vehiculos": "Buscar vehículo, matrícula, conductor o centro...",
@@ -531,7 +534,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? DRAWER_NAV_ITEMS : []}
+        items={isPrivileged ? DRAWER_NAV_ITEMS : isRrhh ? [] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}
