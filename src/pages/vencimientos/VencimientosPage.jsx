@@ -156,7 +156,7 @@ export const VencimientosPage = () => {
   const scoped = items.filter((item) => {
     if (zona !== "" && (item.grupo ?? "") !== zona) return false;
     if (!text) return true;
-    const haystack = isChoferes ? item.nombre : `${item.targa} ${item.modelo} ${item.choferes.join(" ")}`;
+    const haystack = isChoferes ? item.nombre : `${item.targa} ${item.modelo}`;
     return haystack.toLowerCase().includes(text);
   });
 
@@ -179,12 +179,11 @@ export const VencimientosPage = () => {
       ]);
       downloadCsv(`Vencimientos_choferes_${today}.csv`, toCsv([header, ...lines]));
     } else {
-      const header = ["Zona", "Targa", "Modelo", "Chofer", "Seguro", "Revision tecnica", "Tagliando (km restantes)"];
+      const header = ["Zona", "Targa", "Modelo", "Seguro", "Revision tecnica", "Tagliando (km restantes)"];
       const lines = rows.map((v) => [
         zoneLabel(v.grupo),
         v.targa,
         v.modelo,
-        v.choferes.join(", "),
         longDate(v.seguro.fecha),
         longDate(v.revision.fecha),
         v.tagliando.restante ?? "",
@@ -193,7 +192,7 @@ export const VencimientosPage = () => {
     }
   };
 
-  const colSpan = isChoferes ? 2 + data?.documentos.length : 6;
+  const colSpan = isChoferes ? 2 + data?.documentos.length : 5;
 
   return (
     <div className="flex flex-col gap-5">
@@ -246,7 +245,7 @@ export const VencimientosPage = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={isChoferes ? "Buscar chofer" : "Buscar targa, modelo o chofer"}
+                placeholder={isChoferes ? "Buscar chofer" : "Buscar targa o modelo"}
                 className="w-full bg-transparent text-[14px] text-ink-50 outline-none placeholder:text-ink-400"
               />
             </label>
@@ -347,12 +346,11 @@ export const VencimientosPage = () => {
                   </tbody>
                 </table>
               ) : (
-                <table className="w-full min-w-[640px] border-collapse text-[13px]">
+                <table className="w-full min-w-[560px] border-collapse text-[13px]">
                   <thead>
                     <tr className="border-b border-line/10">
                       <Th className="!text-left pl-4">Targa</Th>
                       <Th className="!text-left">Modelo</Th>
-                      <Th className="!text-left">Chofer</Th>
                       <Th>Seguro</Th>
                       <Th>Revision</Th>
                       <Th>Tagliando</Th>
@@ -369,7 +367,6 @@ export const VencimientosPage = () => {
                               </Link>
                             </td>
                             <td className="px-2 py-2 text-ink-300">{v.modelo}</td>
-                            <td className="px-2 py-2 text-ink-300">{v.choferes.join(", ") || "—"}</td>
                             <td className="px-1 py-2 text-center">
                               <DateChip cell={v.seguro} />
                             </td>
