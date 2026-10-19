@@ -21,7 +21,7 @@ import { useAuth } from "../../context/AuthContext";
 import { PayRulesCard } from "../../components/horas/PayRulesCard";
 import { parseApiError } from "../../lib/api";
 import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../lib/finanzas";
-import { downloadPresenciasRequest, getPagosChoferesRequest } from "../../lib/finanzas.api";
+import { downloadPresenciasRequest, getPagosChoferesRequest, setVelocidadPagoRequest } from "../../lib/finanzas.api";
 import { downloadBlob } from "../../lib/csv";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
@@ -122,9 +122,16 @@ const ServiceList = ({ servicios, reglas, location }) =>
   );
 
 // Fila de un chofer (OWNER/ADMIN): resumen del mes y, al abrirla, sus servicios.
-const DriverRow = ({ driver, month, reglas, location }) => {
+const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad }) => {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState({ servicios: null, loading: false, error: "" });
+  // Km/h con los que se calcula su pago: al cambiarlos, el detalle ya abierto se vuelve a pedir.
+  const kmh = driver.kmhPago?.valor ?? reglas.kmBloque;
+  const [lastKmh, setLastKmh] = useState(kmh);
+  if (kmh !== lastKmh) {
+    setLastKmh(kmh);
+    setDetail({ servicios: null, loading: false, error: "" });
+  }
 
   useEffect(() => {
     if (!open || detail.servicios) return undefined;
@@ -164,7 +171,7 @@ const DriverRow = ({ driver, month, reglas, location }) => {
           <span className="block text-[12px] text-ink-400">
             {driver.servicios} {driver.servicios === 1 ? "servicio" : "servicios"}
             {driver.km > 0 && ` - ${formatKm(driver.km)}`}
-            {driver.horasManejo > 0 && ` - ${formatHours(driver.horasManejo)} de manejo (km ÷ 85)`}
+            {driver.horasManejo > 0 && ` - ${formatHours(driver.horasManejo)} de manejo (km ÷ ${kmh})`}
             {driver.horas > 0 && ` - ${nf(driver.horas)} h`}
             {driver.esperaHoras > 0 && ` - ${nf(driver.esperaHoras)} h de espera`}
             {driver.salidasReperibilidad > 0 &&
@@ -192,6 +199,25 @@ const DriverRow = ({ driver, month, reglas, location }) => {
         />
       </button>
 
+      {velocidades.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/10 px-5 py-2.5">
+          <span className="text-[12px] text-ink-300">Velocidad de pago (km/h)</span>
+          <SegmentedControl
+            options={velocidades.map((v) => ({ value: v, label: String(v) }))}
+            value={kmh}
+            onChange={(value) => value !== kmh && onVelocidad(driver.driverId, value)}
+            className={clsx(savingVelocidad && "pointer-events-none opacity-60")}
+          />
+          <span className="text-[12px] text-ink-400">
+            {savingVelocidad
+              ? "Guardando..."
+              : driver.kmhPago?.propio
+                ? "Elegida para este mes; rige tambien los siguientes"
+                : "Heredada: rige desde un mes anterior (o la normal de 85)"}
+          </span>
+        </div>
+      )}
+
       {open && (
         <div className="border-t border-line/10 px-2 pb-3 pt-1 sm:px-3">
           <Alert>{detail.error}</Alert>
@@ -200,7 +226,9 @@ const DriverRow = ({ driver, month, reglas, location }) => {
               <Spinner />
             </div>
           )}
-          {detail.servicios && <ServiceList servicios={detail.servicios} reglas={reglas} location={location} />}
+          {detail.servicios && (
+            <ServiceList servicios={detail.servicios} reglas={{ ...reglas, kmBloque: kmh }} location={location} />
+          )}
         </div>
       )}
     </section>
@@ -217,6 +245,21 @@ export const PagosChoferesPage = () => {
   const [error, setError] = useState("");
   const [formato, setFormato] = useState(readFormato);
   const [downloading, setDownloading] = useState(false);
+  const [savingVelocidad, setSavingVelocidad] = useState(null);
+
+  // Velocidad de pago de un chofer en el mes mostrado: se guarda y se vuelve a pedir el pago con el valor nuevo.
+  const changeVelocidad = async (driverId, kmh) => {
+    setSavingVelocidad(driverId);
+    setError("");
+    try {
+      await setVelocidadPagoRequest({ driverId, month, kmh });
+      setData(await getPagosChoferesRequest({ month }));
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setSavingVelocidad(null);
+    }
+  };
 
   const changeFormato = (value) => {
     setFormato(value);
@@ -354,6 +397,9 @@ export const PagosChoferesPage = () => {
                   month={month}
                   reglas={data.reglas}
                   location={location}
+                  velocidades={data.velocidadesPago ?? []}
+                  onVelocidad={changeVelocidad}
+                  savingVelocidad={savingVelocidad === driver.driverId}
                 />
               ))}
             </div>

@@ -11,6 +11,10 @@ export const getFinanzasResumenRequest = (month) =>
 export const getPagosChoferesRequest = (params) =>
   api.get(`${BASE}/pagos`, { params }).then((res) => res.data.data.pagos);
 
+// Velocidad de pago de un chofer (85, 90 o 95 km/h) desde un mes ("AAAA-MM"); se hereda en los meses siguientes. Solo OWNER/ADMIN.
+export const setVelocidadPagoRequest = ({ driverId, month, kmh }) =>
+  api.put(`${BASE}/velocidad-pago`, { driverId, month, kmh }).then((res) => res.data.data.velocidadPago);
+
 // Planilla de presencias del mes (Excel, una plaza por chofer). formato: "decimal" (6,68) o "hhmm" (6:41). Solo OWNER/ADMIN.
 export const downloadPresenciasRequest = ({ month, formato }) =>
   api.get(`${BASE}/presencias`, { params: { month, formato }, responseType: "blob" }).then((res) => res.data);

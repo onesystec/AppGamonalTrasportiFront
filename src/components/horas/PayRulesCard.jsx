@@ -36,7 +36,7 @@ export const PayRulesCard = ({ reglas, title = "Como se calcula" }) => {
         Espera: <b className="text-ink-50">{formatCurrency(reglas.esperaHoraEur)}</b>/h, se suma
       </span>
       <span>
-        Sin horas aprobadas: {km} cada {nf(reglas.kmBloque)} km
+        Sin horas aprobadas: {km} cada {nf(reglas.kmBloque)} km{reglas.pagoPorKm ? " (85, 90 o 95 segun el chofer)" : ""}
       </span>
       {reglas.reperibilidad && (
         <span>
