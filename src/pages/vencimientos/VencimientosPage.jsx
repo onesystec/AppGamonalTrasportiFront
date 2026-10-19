@@ -107,8 +107,26 @@ const groupByZone = (items) => {
       const ib = ZONE_ORDER.indexOf(b);
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     })
-    .map(([grupo, rows]) => ({ grupo: grupo || null, rows }));
+    .map(([grupo, rows]) => ({ key: grupo || "none", label: zoneLabel(grupo || null), rows }));
 };
+
+// Vehiculos: del mas urgente al menos. Cada vehiculo va en el grupo de su peor fecha (seguro, revision o tagliando) y, dentro
+// del grupo, primero el que antes vence (o lleva mas tiempo vencido).
+const URGENCIA = [
+  { estado: "VENCIDO", label: "Con algo vencido" },
+  { estado: "PRONTO", label: "Vencen pronto" },
+  { estado: "SIN_FECHA", label: "Sin fecha cargada" },
+  { estado: "VIGENTE", label: "Al dia" },
+];
+const soonestDays = (v) => Math.min(v.seguro.dias ?? Infinity, v.revision.dias ?? Infinity);
+const groupByUrgency = (items) =>
+  URGENCIA.map(({ estado, label }) => ({
+    key: estado,
+    label,
+    rows: items
+      .filter((v) => URGENCIA.find((u) => vehiculoCells(v).some((c) => c.estado === u.estado)).estado === estado)
+      .sort((a, b) => soonestDays(a) - soonestDays(b) || a.targa.localeCompare(b.targa)),
+  })).filter((group) => group.rows.length > 0);
 
 const Th = ({ children, className }) => (
   <th className={clsx("px-2 py-2.5 text-center text-[11px] font-medium uppercase tracking-wide text-ink-400", className)}>
@@ -116,10 +134,10 @@ const Th = ({ children, className }) => (
   </th>
 );
 
-const ZoneRow = ({ grupo, count, colSpan }) => (
+const GroupHeader = ({ label, count, colSpan }) => (
   <tr>
     <td colSpan={colSpan} className="bg-line/[0.06] px-4 py-1.5 text-[12px] font-semibold text-ink-300">
-      {zoneLabel(grupo)} <span className="ml-1 font-normal text-ink-400">{count}</span>
+      {label} <span className="ml-1 font-normal text-ink-400">{count}</span>
     </td>
   </tr>
 );
@@ -165,7 +183,7 @@ export const VencimientosPage = () => {
   if (data) for (const item of scoped) for (const cell of cellsOf(item)) counts[cell.estado] += 1;
 
   const rows = estado ? scoped.filter((item) => cellsOf(item).some((cell) => cell.estado === estado)) : scoped;
-  const groups = groupByZone(rows);
+  const groups = isChoferes ? groupByZone(rows) : groupByUrgency(rows);
 
   const exportCsv = () => {
     const today = data.hoy;
@@ -192,7 +210,7 @@ export const VencimientosPage = () => {
     }
   };
 
-  const colSpan = isChoferes ? 2 + data?.documentos.length : 5;
+  const colSpan = isChoferes ? 2 + data?.documentos.length : 6;
 
   return (
     <div className="flex flex-col gap-5">
@@ -312,7 +330,7 @@ export const VencimientosPage = () => {
                   </thead>
                   <tbody>
                     {groups.map((group) => (
-                      <GroupRows key={group.grupo ?? "none"} group={group} colSpan={colSpan}>
+                      <GroupRows key={group.key} group={group} colSpan={colSpan}>
                         {(c) => {
                           const cumple = daysToBirthday(c.fechaNacimiento, data.hoy);
                           return (
@@ -346,11 +364,12 @@ export const VencimientosPage = () => {
                   </tbody>
                 </table>
               ) : (
-                <table className="w-full min-w-[560px] border-collapse text-[13px]">
+                <table className="w-full min-w-[620px] border-collapse text-[13px]">
                   <thead>
                     <tr className="border-b border-line/10">
                       <Th className="!text-left pl-4">Targa</Th>
                       <Th className="!text-left">Modelo</Th>
+                      <Th className="!text-left">Zona</Th>
                       <Th>Seguro</Th>
                       <Th>Revision</Th>
                       <Th>Tagliando</Th>
@@ -358,7 +377,7 @@ export const VencimientosPage = () => {
                   </thead>
                   <tbody>
                     {groups.map((group) => (
-                      <GroupRows key={group.grupo ?? "none"} group={group} colSpan={colSpan}>
+                      <GroupRows key={group.key} group={group} colSpan={colSpan}>
                         {(v) => (
                           <tr key={v.id} className="border-b border-line/[0.07] last:border-b-0 hover:bg-line/[0.04]">
                             <td className="py-2 pl-4 pr-2">
@@ -367,6 +386,7 @@ export const VencimientosPage = () => {
                               </Link>
                             </td>
                             <td className="px-2 py-2 text-ink-300">{v.modelo}</td>
+                            <td className="px-2 py-2 text-ink-400">{zoneLabel(v.grupo)}</td>
                             <td className="px-1 py-2 text-center">
                               <DateChip cell={v.seguro} />
                             </td>
@@ -394,7 +414,7 @@ export const VencimientosPage = () => {
 // Fila de zona y las filas de esa zona.
 const GroupRows = ({ group, colSpan, children }) => (
   <>
-    <ZoneRow grupo={group.grupo} count={group.rows.length} colSpan={colSpan} />
+    <GroupHeader label={group.label} count={group.rows.length} colSpan={colSpan} />
     {group.rows.map((item) => children(item))}
   </>
 );
