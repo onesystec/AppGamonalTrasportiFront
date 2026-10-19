@@ -4,12 +4,15 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { Alert } from "../../components/ui/Alert";
+import { Button } from "../../components/ui/Button";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
 import {
   AlertTriangleIcon,
   ChevronDownIcon,
   ClockIcon,
+  DownloadIcon,
   EuroIcon,
   RouteIcon,
   UsersIcon,
@@ -18,10 +21,39 @@ import { useAuth } from "../../context/AuthContext";
 import { PayRulesCard } from "../../components/horas/PayRulesCard";
 import { parseApiError } from "../../lib/api";
 import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../lib/finanzas";
-import { getPagosChoferesRequest } from "../../lib/finanzas.api";
+import { downloadPresenciasRequest, getPagosChoferesRequest } from "../../lib/finanzas.api";
+import { downloadBlob } from "../../lib/csv";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
 import { formatHours, pagaPorKm } from "../../lib/horas";
+
+const FORMATO_KEY = "gamonal-presencias-formato";
+const FORMATOS = [
+  { value: "decimal", label: "Decimal (6,68)" },
+  { value: "hhmm", label: "Horas:min (6:41)" },
+];
+const readFormato = () => {
+  try {
+    const saved = localStorage.getItem(FORMATO_KEY);
+    return FORMATOS.some((f) => f.value === saved) ? saved : "decimal";
+  } catch {
+    return "decimal";
+  }
+};
+
+// El error de una descarga llega como Blob: se lee el mensaje que mando el servidor.
+const downloadErrorMessage = async (err) => {
+  const data = err?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const message = JSON.parse(await data.text())?.message;
+      if (message) return message;
+    } catch {
+      // sin cuerpo legible
+    }
+  }
+  return parseApiError(err).message;
+};
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
 const avatarColor = (name) =>
@@ -183,6 +215,30 @@ export const PagosChoferesPage = () => {
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [formato, setFormato] = useState(readFormato);
+  const [downloading, setDownloading] = useState(false);
+
+  const changeFormato = (value) => {
+    setFormato(value);
+    try {
+      localStorage.setItem(FORMATO_KEY, value);
+    } catch {
+      // sin almacenamiento: queda solo en esta pantalla
+    }
+  };
+
+  const downloadPresencias = async () => {
+    setDownloading(true);
+    setError("");
+    try {
+      const blob = await downloadPresenciasRequest({ month, formato });
+      downloadBlob(`Presencias_${month}.xlsx`, blob);
+    } catch (err) {
+      setError(await downloadErrorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isPrivileged) return undefined;
@@ -218,6 +274,24 @@ export const PagosChoferesPage = () => {
         </p>
         <MonthSelector month={month} onChange={setMonth} />
       </div>
+
+      {isPrivileged && (
+        <div className="glass-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+          <div className="min-w-0 max-w-xl">
+            <p className="text-[14px] font-medium text-ink-50">Planilla de presencias</p>
+            <p className="text-[13px] text-ink-300">
+              Excel del mes elegido con las horas de cada chofer por dia, en el formato del comercialista.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentedControl options={FORMATOS} value={formato} onChange={changeFormato} />
+            <Button variant="ghost" className="w-auto!" loading={downloading} onClick={downloadPresencias}>
+              {!downloading && <DownloadIcon className="h-4 w-4" />}
+              Descargar presencias
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Alert>{error}</Alert>
       {!data && !error && <PageLoader />}

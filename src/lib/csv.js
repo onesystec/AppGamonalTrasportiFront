@@ -10,8 +10,7 @@ const escapeCsvField = (value) => {
   return /[";\r\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
-export const downloadCsv = (filename, csvContent) => {
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+export const downloadBlob = (filename, blob) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -21,6 +20,9 @@ export const downloadCsv = (filename, csvContent) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+export const downloadCsv = (filename, csvContent) =>
+  downloadBlob(filename, new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
 
 // CSV del export completo: el servidor manda las columnas y las filas ya escritas como texto.
 export const buildFullCsv = ({ columnas, filas }) => {

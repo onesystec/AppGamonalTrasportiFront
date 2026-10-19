@@ -11,6 +11,10 @@ export const getFinanzasResumenRequest = (month) =>
 export const getPagosChoferesRequest = (params) =>
   api.get(`${BASE}/pagos`, { params }).then((res) => res.data.data.pagos);
 
+// Planilla de presencias del mes (Excel, una plaza por chofer). formato: "decimal" (6,68) o "hhmm" (6:41). Solo OWNER/ADMIN.
+export const downloadPresenciasRequest = ({ month, formato }) =>
+  api.get(`${BASE}/presencias`, { params: { month, formato }, responseType: "blob" }).then((res) => res.data);
+
 // Gastos cargados en los servicios del mes (peajes, Area C, hotel...). Solo OWNER/ADMIN.
 export const getGastosServiciosRequest = (month) =>
   api.get(`${BASE}/gastos-servicios`, { params: { month } }).then((res) => res.data.data.gastos);
