@@ -12,7 +12,7 @@ import { useGpsRespaldo } from "../../hooks/useGpsRespaldo";
 import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
-import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, WalletIcon } from "../ui/icons";
+import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, ShieldIcon, WalletIcon } from "../ui/icons";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { DriverModeSwitch } from "./DriverModeSwitch";
 import { NotificationsBell } from "./NotificationsBell";
@@ -248,6 +248,7 @@ const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
+  { to: "/vencimientos", label: "Vencimientos", icon: ShieldIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
 ];
@@ -391,6 +392,7 @@ const AppShellContent = () => {
               {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
+              {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} />}
               {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} />}
               {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} />}
             </nav>
@@ -529,6 +531,7 @@ const AppShellContent = () => {
         )}
         {(isPrivileged || isRrhh) && <BottomNavTab to="/choferes" label="Choferes" icon={UsersIcon} />}
         {(isPrivileged || isRrhh) && <BottomNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
+        {isRrhh && <BottomNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} />}
       </nav>
 
       <MobileNavDrawer

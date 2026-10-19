@@ -107,6 +107,9 @@ const MiCalendarioPage = lazy(() =>
 const PermisosChoferPage = lazy(() =>
   import("./pages/calendario/PermisosChoferPage").then((m) => ({ default: m.PermisosChoferPage })),
 );
+const VencimientosPage = lazy(() =>
+  import("./pages/vencimientos/VencimientosPage").then((m) => ({ default: m.VencimientosPage })),
+);
 const PermisosPage = lazy(() =>
   import("./pages/calendario/PermisosPage").then((m) => ({ default: m.PermisosPage })),
 );
@@ -146,7 +149,7 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
 
 // Recursos Humanos solo usa Choferes, Vehiculos, Busta paga y su perfil; cualquier otra direccion lo lleva a
 // Busta paga (el servidor ademas le niega todo lo demas).
-const RRHH_PATHS = ["/busta-paga", "/choferes", "/vehiculos", "/profile"];
+const RRHH_PATHS = ["/busta-paga", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
 const RrhhGuard = () => {
   const { user } = useAuth();
   const { pathname } = useLocation();
@@ -286,6 +289,7 @@ function App() {
               <Route path="/records/extras-stefania" element={<RecordsListPage section="extras-stefania" />} />
               <Route path="/records/extras-stefania/new" element={<NewExtrasStefaniaRecordPage />} />
               <Route path="/records/:id" element={<RecordDetailPage />} />
+              <Route path="/vencimientos" element={<RoleOnly privileged allowRrhh><VencimientosPage /></RoleOnly>} />
               <Route path="/choferes" element={<RoleOnly privileged allowRrhh><DriversPage /></RoleOnly>} />
               <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
               <Route path="/choferes/:id" element={<RoleOnly privileged allowRrhh><DriverDetailPage /></RoleOnly>} />
