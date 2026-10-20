@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 import { Alert } from "../ui/Alert";
+import { CameraPickButton } from "../ui/CameraPickButton";
 import { Spinner } from "../ui/Spinner";
 import { CameraIcon, FileTextIcon } from "../ui/icons";
 import { parseApiError } from "../../lib/api";
@@ -108,24 +109,31 @@ export const MultaChoferCard = ({ multa, onChanged }) => {
           </a>
         )}
         {canUpload && (
-          <label
-            className={clsx(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition",
-              multa.comprobantePendiente
-                ? "border border-line/20 text-ink-50 hover:bg-line/10"
-                : "bg-brand text-brand-foreground hover:brightness-105"
-            )}
-          >
-            {uploading ? <Spinner className="h-4 w-4" /> : <CameraIcon className="h-4 w-4" />}
-            {multa.comprobantePendiente ? "Reemplazar comprobante" : "Subir comprobante de pago"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              className="hidden"
+          <span className="flex flex-wrap items-center gap-2">
+            <CameraPickButton
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line/20 px-4 py-2 text-[13px] font-semibold text-ink-50 transition hover:bg-line/10"
               onChange={handleUpload}
               disabled={uploading}
             />
-          </label>
+            <label
+              className={clsx(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition",
+                multa.comprobantePendiente
+                  ? "border border-line/20 text-ink-50 hover:bg-line/10"
+                  : "bg-brand text-brand-foreground hover:brightness-105"
+              )}
+            >
+              {uploading ? <Spinner className="h-4 w-4" /> : <CameraIcon className="h-4 w-4" />}
+              {multa.comprobantePendiente ? "Reemplazar comprobante" : "Subir comprobante de pago"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
+            </label>
+          </span>
         )}
       </div>
     </div>

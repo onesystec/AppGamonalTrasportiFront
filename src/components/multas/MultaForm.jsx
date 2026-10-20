@@ -422,6 +422,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           id="multa"
           label="Foto o PDF de la multa"
           hint="Imagen o PDF, hasta 15 MB"
+          camera
           required={!isEdit}
           file={archivoMulta}
           onChange={setArchivoMulta}
@@ -433,6 +434,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           id="comprobante"
           label="Comprobante de pago"
           hint="Al subirlo queda como Pagado"
+          camera
           file={comprobante}
           onChange={setComprobante}
           existing={multa?.comprobante}

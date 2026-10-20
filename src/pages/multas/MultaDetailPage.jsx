@@ -12,6 +12,7 @@ import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
+import { CameraPickButton } from "../../components/ui/CameraPickButton";
 import { Spinner } from "../../components/ui/Spinner";
 import {
   AlertTriangleIcon,
@@ -314,17 +315,24 @@ const MultaOficinaDetail = () => {
                   emptyText="Todavia no se subio el comprobante"
                   action={
                     isPrivileged && (
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full glass-input px-3 py-1 text-[12px] font-medium text-ink-50 hover:bg-line/10">
-                        {busy ? <Spinner className="h-3.5 w-3.5" /> : <CameraIcon className="h-3.5 w-3.5" />}
-                        {multa.comprobante ? "Reemplazar" : "Subir comprobante"}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
-                          className="hidden"
+                      <span className="flex flex-wrap items-center gap-2">
+                        <CameraPickButton
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full glass-input px-3 py-1 text-[12px] font-medium text-ink-50 hover:bg-line/10"
                           onChange={handleComprobante}
                           disabled={busy}
                         />
-                      </label>
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full glass-input px-3 py-1 text-[12px] font-medium text-ink-50 hover:bg-line/10">
+                          {busy ? <Spinner className="h-3.5 w-3.5" /> : <CameraIcon className="h-3.5 w-3.5" />}
+                          {multa.comprobante ? "Reemplazar" : "Subir comprobante"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            className="hidden"
+                            onChange={handleComprobante}
+                            disabled={busy}
+                          />
+                        </label>
+                      </span>
                     )
                   }
                 />

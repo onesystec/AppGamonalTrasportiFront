@@ -223,6 +223,7 @@ export const CombustibleForm = ({
             id="comprobante"
             label="Comprobante de pago"
             hint="Foto del ticket o PDF, hasta 15 MB"
+            camera
             required={!isEdit}
             file={comprobante}
             onChange={setComprobante}
