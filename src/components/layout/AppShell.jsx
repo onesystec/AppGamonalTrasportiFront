@@ -359,15 +359,16 @@ const AppShellContent = () => {
             header + nav inferior de abajo. Navy fijo (no cambia con el tema),
             igual que el sidebar del style pack. */}
         <aside className="hidden sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-60 sm:shrink-0 sm:flex-col sm:justify-between sm:border-r sm:border-sidebar-border sm:bg-sidebar sm:px-4 sm:py-6">
-          <div>
-            <Link to="/" className="flex items-center gap-3 px-2">
+          {/* Arriba: logo fijo y menu con scroll propio. Abajo (mas abajo): perfil, ajustes y cerrar sesion, siempre a la vista. */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <Link to="/" className="flex shrink-0 items-center gap-3 px-2">
               <img src={logo} alt="Gamonal Driver 2.0" className="h-10 w-10 shrink-0 rounded-full" />
               <span className="text-[16px] font-semibold text-sidebar-foreground">
                 Gamonal <span className="text-sidebar-active">Driver 2.0</span>
               </span>
             </Link>
 
-            <nav className="mt-8 flex flex-col gap-1">
+            <nav className="-mx-4 mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-2 [scrollbar-width:thin]">
               {isPrivileged ? (
                 <>
                   <SidebarNavTab to="/" label="Inicio" icon={HomeIcon} />
@@ -398,7 +399,7 @@ const AppShellContent = () => {
             </nav>
           </div>
 
-          <div className="flex flex-col gap-1 border-t border-sidebar-border pt-3">
+          <div className="flex shrink-0 flex-col gap-1 border-t border-sidebar-border pt-3">
             <NavLink
               to="/profile"
               className={({ isActive }) =>
