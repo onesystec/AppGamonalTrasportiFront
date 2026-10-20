@@ -269,6 +269,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
           id="foto"
           label="Foto del mancato pagamento"
           hint="Imagen o PDF, hasta 15 MB"
+          camera
           required={!isEdit}
           file={foto}
           onChange={setFoto}
@@ -281,6 +282,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
             id="comprobante"
             label="Comprobante de pago"
             hint="Al subirlo queda como Pagado"
+            camera
             file={comprobante}
             onChange={setComprobante}
             existing={mancato?.comprobante}

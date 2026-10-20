@@ -31,6 +31,10 @@
 	<string>Gamonal Driver 2.0 necesita tu ubicacion para mostrar tu posicion en el mapa mientras tenes un servicio en camino.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Gamonal Driver 2.0 necesita compartir tu ubicacion en segundo plano durante tu horario laboral, aunque la pantalla este bloqueada o la app minimizada.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Gamonal Driver 2.0 usa la camara para que saques fotos de los mancatos pagamento, bollas, comprobantes y otros documentos del servicio.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gamonal Driver 2.0 necesita acceso a tus fotos para que puedas adjuntar imagenes de documentos y comprobantes.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
