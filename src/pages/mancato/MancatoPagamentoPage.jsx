@@ -755,8 +755,10 @@ const MancatoOficinaPage = () => {
       {!summary && !error && <PageLoader />}
 
       {summary && stats && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex min-w-0 flex-col gap-6">
+        // En laptop (menos de 1800px) la columna derecha pasa arriba de la lista, en 3 paneles
+        // en fila, para que la tabla use todo el ancho. En monitor grande queda a la derecha.
+        <div className="grid grid-cols-1 gap-6 min-[1800px]:grid-cols-[minmax(0,1fr)_340px] min-[1800px]:grid-rows-[auto_1fr]">
+          <div className="flex min-w-0 flex-col gap-6 min-[1800px]:col-start-1 min-[1800px]:row-start-1">
             {/* Total del año (y del mes elegido) */}
             {stats.totales && (
               <MancatoTotalAnual
@@ -998,7 +1000,17 @@ const MancatoOficinaPage = () => {
                 </div>
               )}
             </div>
+          </div>
 
+          <MancatoSidebar
+            stats={stats}
+            summary={summary}
+            isPrivileged={isPrivileged}
+            onSeeDetails={(estado) => setFilter("estado", estado)}
+            className="order-last xl:order-none xl:grid xl:grid-cols-3 xl:items-start min-[1800px]:col-start-2 min-[1800px]:row-span-2 min-[1800px]:row-start-1 min-[1800px]:flex"
+          />
+
+          <div className="flex min-w-0 flex-col gap-6 min-[1800px]:col-start-1 min-[1800px]:row-start-2">
             {grupo === "mes" ? (
               <div className="flex flex-col gap-4">
                 {meses === null && <PageLoader />}
@@ -1048,13 +1060,6 @@ const MancatoOficinaPage = () => {
 
             )}
           </div>
-
-          <MancatoSidebar
-            stats={stats}
-            summary={summary}
-            isPrivileged={isPrivileged}
-            onSeeDetails={(estado) => setFilter("estado", estado)}
-          />
         </div>
       )}
     </div>

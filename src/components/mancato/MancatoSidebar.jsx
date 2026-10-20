@@ -184,7 +184,7 @@ const Recommendation = ({ data, onSeeDetails }) => {
 };
 
 // Columna derecha de Mancato Pagamento: deuda por chofer, evolucion y recomendacion.
-export const MancatoSidebar = ({ stats, summary, isPrivileged, onSeeDetails }) => {
+export const MancatoSidebar = ({ stats, summary, isPrivileged, onSeeDetails, className }) => {
   if (!stats) return null;
 
   // OWNER/ADMIN ven la deuda abierta por chofer; el chofer la ve por estado.
@@ -202,7 +202,7 @@ export const MancatoSidebar = ({ stats, summary, isPrivileged, onSeeDetails }) =
       ].filter((r) => r.count > 0);
 
   return (
-    <aside className="flex flex-col gap-5">
+    <aside className={clsx("flex flex-col gap-5", className)}>
       <DebtSummary rows={rows} total={stats.totalPorPagar} />
       <Evolution serie={stats.serie} deltaPct={stats.serieDeltaPct} />
       <Recommendation data={stats.recomendacion} onSeeDetails={onSeeDetails} />
