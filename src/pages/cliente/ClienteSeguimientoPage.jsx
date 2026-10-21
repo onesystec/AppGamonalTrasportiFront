@@ -141,12 +141,11 @@ export const ClienteSeguimientoPage = () => {
   const hayMapa = verMapa && isLoaded;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-[24px] font-semibold text-ink-50">Tus servicios en camino</h1>
-          <p className="mt-1 text-[14px] text-ink-300">Se actualiza solo cada 30 segundos.</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-[22px] font-semibold text-ink-50">
+          Tus servicios en camino <span className="ml-2 text-[13px] font-normal text-ink-400">Se actualiza solo cada 30 segundos</span>
+        </h1>
         {data && <span className="text-[12px] text-ink-400">Actualizado a las {horaRoma(data.generadoAt)}</span>}
       </div>
 
@@ -154,7 +153,7 @@ export const ClienteSeguimientoPage = () => {
       {!data && !error && <PageLoader />}
 
       {data && (
-        <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,380px)_1fr]")}>
+        <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,380px)_1fr] 2xl:grid-cols-[minmax(0,440px)_1fr]")}>
           {verLista && (
             <div className="order-2 flex flex-col gap-3 lg:order-1">
               {enCamino.length === 0 && (
@@ -183,7 +182,7 @@ export const ClienteSeguimientoPage = () => {
 
           {verMapa && (
             <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2")}>
-              <div className="h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-13rem)]">
+              <div className="h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
                 {!hayMapa ? (
                   <div className="flex h-full items-center justify-center">
                     <Spinner className="h-6 w-6 border-line/20 border-t-line" />

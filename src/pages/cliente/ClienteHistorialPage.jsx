@@ -138,7 +138,7 @@ export const ClienteHistorialPage = () => {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[24px] font-semibold text-ink-50">Historial de servicios</h1>

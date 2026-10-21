@@ -35,7 +35,7 @@ const ClienteShell = () => {
   return (
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+        <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
           <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 basis-40">
             <span className="block truncate text-[15px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
@@ -68,7 +68,7 @@ const ClienteShell = () => {
           </button>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-5">
+      <main className="w-full px-4 py-4 lg:px-6">
         <Suspense fallback={<PageLoader />}>
           <Outlet />
         </Suspense>
