@@ -5,6 +5,9 @@ export const getClienteMeRequest = () => api.get("/cliente/me").then((res) => re
 
 export const getClienteSeguimientoRequest = () => api.get("/cliente/seguimiento").then((res) => res.data.data.seguimiento);
 
+// Recorrido que le falta a la furgoneta hasta la parada del cliente (null si ya llego o no hay posicion).
+export const getClienteRutaRequest = (id) => api.get(`/cliente/seguimiento/${id}/ruta`).then((res) => res.data.data.ruta);
+
 export const getClienteServiciosRequest = (month) => api.get("/cliente/servicios", { params: { month } }).then((res) => res.data.data);
 
 export const exportClienteServiciosRequest = (month) => api.get("/cliente/exportar", { params: { month } }).then((res) => res.data.data);

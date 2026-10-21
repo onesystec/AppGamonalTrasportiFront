@@ -1,4 +1,4 @@
-import { GoogleMap, Marker, OverlayView, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, Marker, OverlayView, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "../../components/ui/Alert";
@@ -7,7 +7,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { parseApiError } from "../../lib/api";
-import { getClienteSeguimientoRequest } from "../../lib/cliente.api";
+import { getClienteRutaRequest, getClienteSeguimientoRequest } from "../../lib/cliente.api";
 import { HIDE_POI_STYLES, NIGHT_MODE_STYLES } from "../../lib/mapStyles";
 import { startVisibleInterval } from "../../lib/polling";
 import { horaRoma, minutosTexto } from "../../lib/seguimiento";
@@ -35,7 +35,7 @@ const puntualidadTexto = (s) => {
   return "A tiempo";
 };
 
-const ServicioCard = ({ s, selected, onSelect, verLista, verMapa }) => {
+const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta }) => {
   const estado = ESTADO[s.estado];
   return (
     <button
@@ -70,6 +70,11 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa }) => {
         </span>
       )}
       {s.sinSenal && verMapa && <span className="text-[12px] text-warning-500">Sin senal del vehiculo por ahora</span>}
+      {selected && ruta && (
+        <span className="text-[12px] font-medium text-accent-300">
+          {ruta.aproximada ? `A unos ${String(ruta.distanciaKm).replace(".", ",")} km en linea recta` : `Le faltan ${String(ruta.distanciaKm).replace(".", ",")} km por carretera`}
+        </span>
+      )}
     </button>
   );
 };
@@ -86,7 +91,9 @@ export const ClienteSeguimientoPage = () => {
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [map, setMap] = useState(null);
+  const [ruta, setRuta] = useState(null);
   const fittedRef = useRef("");
+  const fittedRutaRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,7 +134,14 @@ export const ClienteSeguimientoPage = () => {
     });
   }, [map, fitKey, vehiculos, destinos]);
 
+  const selected = useMemo(() => enCamino.find((s) => s.id === selectedId) ?? null, [enCamino, selectedId]);
+
+  // Tocar un servicio muestra el recorrido que le falta hasta su parada; tocarlo otra vez lo quita.
   const select = (id) => {
+    if (id === selectedId) {
+      setSelectedId(null);
+      return;
+    }
     setSelectedId(id);
     const s = enCamino.find((x) => x.id === id);
     const point = s?.posicion ?? s?.destinoCoords;
@@ -136,6 +150,33 @@ export const ClienteSeguimientoPage = () => {
       if ((map.getZoom() ?? 0) < 13) map.setZoom(13);
     }
   };
+
+  // Recorrido del servicio elegido: se pide al elegirlo y de nuevo cuando la furgoneta se mueve (el servidor lo guarda un minuto).
+  const posKey = selected?.posicion ? `${selected.posicion.lat.toFixed(3)},${selected.posicion.lng.toFixed(3)}` : null;
+  useEffect(() => {
+    if (!verMapa || !selectedId || !posKey) {
+      setRuta(null);
+      return undefined;
+    }
+    let cancelled = false;
+    getClienteRutaRequest(selectedId)
+      .then((r) => !cancelled && setRuta(r))
+      .catch(() => !cancelled && setRuta(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [verMapa, selectedId, posKey]);
+
+  // Encuadra el mapa en el recorrido la primera vez que llega para el servicio elegido.
+  useEffect(() => {
+    if (!map || !window.google || !ruta?.geometria?.coordinates?.length || fittedRutaRef.current === selectedId) return;
+    fittedRutaRef.current = selectedId;
+    const bounds = new window.google.maps.LatLngBounds();
+    ruta.geometria.coordinates.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
+    map.fitBounds(bounds, 70);
+  }, [map, ruta, selectedId]);
+
+  const rutaPath = useMemo(() => (ruta?.geometria?.coordinates ?? []).map(([lng, lat]) => ({ lat, lng })), [ruta]);
 
   const programados = data?.programados ?? [];
   const hayMapa = verMapa && isLoaded;
@@ -159,8 +200,9 @@ export const ClienteSeguimientoPage = () => {
               {enCamino.length === 0 && (
                 <p className="glass-surface rounded-2xl px-5 py-6 text-[14px] text-ink-300">No tienes servicios en camino ahora mismo.</p>
               )}
+              {verMapa && enCamino.some((s) => s.posicion) && <p className="px-1 text-[12px] text-ink-400">Toca un servicio para ver el recorrido que le falta hasta tu parada.</p>}
               {enCamino.map((s) => (
-                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} />
+                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} ruta={selectedId === s.id ? ruta : null} />
               ))}
 
               {programados.length > 0 && (
@@ -201,6 +243,20 @@ export const ClienteSeguimientoPage = () => {
                       styles: theme === "dark" ? [...NIGHT_MODE_STYLES, ...HIDE_POI_STYLES] : HIDE_POI_STYLES,
                     }}
                   >
+                    {rutaPath.length > 1 && selected && (
+                      <Polyline
+                        path={rutaPath}
+                        options={
+                          ruta.aproximada
+                            ? {
+                                strokeOpacity: 0,
+                                icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: ESTADO[selected.estado].color, scale: 3 }, offset: "0", repeat: "12px" }],
+                                zIndex: 5,
+                              }
+                            : { strokeColor: ESTADO[selected.estado].color, strokeOpacity: 0.85, strokeWeight: 5, zIndex: 5 }
+                        }
+                      />
+                    )}
                     {destinos.map((s) => (
                       <Marker
                         key={`d-${s.id}`}
