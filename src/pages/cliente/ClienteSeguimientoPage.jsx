@@ -31,7 +31,7 @@ const Targa = ({ children }) => (
 // Una linea que dice si va a tiempo o cuantos minutos se atraso.
 const puntualidadTexto = (s) => {
   if (s.estado === "LLEGO") return `Llego a las ${horaRoma(s.llegoAt)}`;
-  if (s.retrasoMin >= 5) return `Retraso de ${s.retrasoMin} min`;
+  if (s.retrasoMin >= 5) return `Retraso de ${minutosTexto(s.retrasoMin)}`;
   return "A tiempo";
 };
 
@@ -50,7 +50,7 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa }) => {
         <Targa>{s.targa ?? "Sin targa"}</Targa>
         <span className="text-[12px] text-ink-400">{s.codigo}</span>
         <span className={clsx("ml-auto rounded-full px-2.5 py-0.5 text-[12px] font-medium", estado.pill)}>
-          {verLista ? (s.estado === "LLEGO" ? "Llego" : s.estado === "CON_RETRASO" ? `Retraso de ${s.retrasoMin} min` : estado.label) : estado.label}
+          {verLista ? (s.estado === "LLEGO" ? "Llego" : s.estado === "CON_RETRASO" ? `Retraso de ${minutosTexto(s.retrasoMin)}` : estado.label) : estado.label}
         </span>
       </span>
       <span className="text-[14px] font-medium text-ink-50">{s.destino}</span>
@@ -246,7 +246,7 @@ export const ClienteSeguimientoPage = () => {
                           className="w-fit cursor-pointer whitespace-nowrap rounded-md border border-gray-300 bg-white px-2 py-1 text-[12px] font-bold text-gray-900 shadow-md"
                         >
                           {s.targa}
-                          {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold text-orange-600">+{s.retrasoMin} min</span>}
+                          {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold text-orange-600">+{minutosTexto(s.retrasoMin)}</span>}
                         </div>
                       </OverlayView>
                     ))}

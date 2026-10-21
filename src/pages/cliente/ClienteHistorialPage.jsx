@@ -11,7 +11,7 @@ import { parseApiError } from "../../lib/api";
 import { exportClienteServiciosRequest, getClienteFotosRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { buildFullCsv, downloadCsv } from "../../lib/csv";
 import { currentMonth } from "../../lib/finanzas";
-import { horaRoma } from "../../lib/seguimiento";
+import { horaRoma, minutosTexto } from "../../lib/seguimiento";
 
 const ESTADO_PILL = {
   CONSEGNATO: "bg-success-500/15 text-success-500",
@@ -26,7 +26,7 @@ const fechaCorta = (iso) =>
   new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Rome" });
 
 // Llego a tiempo (hasta 5 min de margen) o con cuantos minutos de retraso.
-const puntualidad = (min) => (min == null ? "—" : min <= 5 ? "A tiempo" : `+${min} min`);
+const puntualidad = (min) => (min == null ? "—" : min <= 5 ? "A tiempo" : `+${minutosTexto(min)}`);
 
 const FotosModal = ({ servicio, onClose }) => {
   const [fotos, setFotos] = useState(null);
