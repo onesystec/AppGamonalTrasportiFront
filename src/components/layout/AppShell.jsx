@@ -394,6 +394,7 @@ const AppShellContent = () => {
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} />}
+              {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} />}
               {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} />}
               {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} />}
             </nav>
@@ -538,7 +539,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? DRAWER_NAV_ITEMS : isRrhh ? [] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}

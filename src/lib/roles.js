@@ -40,6 +40,7 @@ export const roleText = (user) => {
   if (!user) return "";
   if (user.cargo === "OWNER") return "Admin";
   if (user.cargo === "RRHH") return "Recursos Humanos";
+  if (user.cargo === "CLIENTE") return user.cliente?.nombre ? `Cliente · ${user.cliente.nombre}` : "Cliente";
   if (user.cargo === "ADMIN") {
     const tipo = responsableTipoLabel(user.responsableTipo);
     return tipo ? `Responsable · ${tipo}` : "Responsable";

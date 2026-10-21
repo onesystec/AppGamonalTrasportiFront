@@ -110,6 +110,10 @@ const PermisosChoferPage = lazy(() =>
 const VencimientosPage = lazy(() =>
   import("./pages/vencimientos/VencimientosPage").then((m) => ({ default: m.VencimientosPage })),
 );
+const ClienteApp = lazy(() => import("./pages/cliente/ClienteApp").then((m) => ({ default: m.ClienteApp })));
+const AccesoClientesPage = lazy(() =>
+  import("./pages/clientes/AccesoClientesPage").then((m) => ({ default: m.AccesoClientesPage })),
+);
 const PermisosPage = lazy(() =>
   import("./pages/calendario/PermisosPage").then((m) => ({ default: m.PermisosPage })),
 );
@@ -157,6 +161,14 @@ const RrhhGuard = () => {
     return <Navigate to="/busta-paga" replace />;
   }
   return <Outlet />;
+};
+
+// Direccion de la vista de un cliente (/cliente/...) abierta mientras todavia se inicia la sesion: espera, sin mandar a nadie al inicio. Cuando
+// la sesion carga y es de un cliente, App muestra su propia vista; si no lo es, vuelve al inicio (o al login si no hay sesion).
+const ClienteRutaPendiente = () => {
+  const { isAuthenticated, initializing } = useAuth();
+  if (initializing) return <PageLoader />;
+  return <Navigate to={isAuthenticated ? "/" : "/login"} replace />;
 };
 
 const OverlayRoutes = () => (
@@ -220,6 +232,8 @@ const RoleChangeNotice = () => {
 
 function App() {
   const location = useLocation();
+  const { user: sessionUser } = useAuth();
+  const isCliente = sessionUser?.cargo === "CLIENTE";
   // Al navegar a un detalle/alta desde una lista (RecordsListPage/DriversPage/
   // VehiclesPage pasan backgroundLocation en el "state" del Link), la lista sigue
   // pintandose de fondo con la location de ANTES de navegar (nunca se desmonta, no
@@ -227,6 +241,9 @@ function App() {
   // <Routes> aparte con la location real - patron estandar de "modal route" de
   // react-router.
   const backgroundLocation = location.state?.backgroundLocation;
+
+  // Un usuario de una empresa cliente tiene su propia vista (seguimiento de sus servicios), sin las pantallas de chofer ni de oficina.
+  if (isCliente) return <Suspense fallback={<PageLoader />}><ClienteApp /></Suspense>;
 
   return (
     <DataRefreshProvider>
@@ -290,6 +307,7 @@ function App() {
               <Route path="/records/extras-stefania/new" element={<NewExtrasStefaniaRecordPage />} />
               <Route path="/records/:id" element={<RecordDetailPage />} />
               <Route path="/vencimientos" element={<RoleOnly privileged allowRrhh><VencimientosPage /></RoleOnly>} />
+              <Route path="/acceso-clientes" element={<RoleOnly privileged><AccesoClientesPage /></RoleOnly>} />
               <Route path="/choferes" element={<RoleOnly privileged allowRrhh><DriversPage /></RoleOnly>} />
               <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
               <Route path="/choferes/:id" element={<RoleOnly privileged allowRrhh><DriverDetailPage /></RoleOnly>} />
@@ -332,6 +350,7 @@ function App() {
             </Route>
           </Route>
 
+          <Route path="/cliente/*" element={<ClienteRutaPendiente />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

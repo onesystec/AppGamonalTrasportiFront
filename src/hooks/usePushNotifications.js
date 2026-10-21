@@ -30,7 +30,8 @@ export const usePushNotifications = () => {
     // Area C en Finanzas, el seguimiento del servicio, etc.; si no sabe cual, al Mapa.
     const onTap = (action) => {
       const type = action?.notification?.data?.type;
-      if (type === "gps-respaldo") navigate("/");
+      if (type === "cliente-servicio") navigate("/cliente");
+      else if (type === "gps-respaldo") navigate("/");
       else if (type === "area-c") navigate("/finanzas/area-c");
       else if (type === "speeding") navigate("/");
       else if (type === "gps") navigate("/finanzas/paradas");
