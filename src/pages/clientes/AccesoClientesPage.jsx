@@ -12,12 +12,13 @@ import { Switch } from "../../components/ui/Switch";
 import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
+import { AREA_ACCESS_OPTIONS, AREA_LABEL_BY_KEY } from "../../lib/roles";
 import { listClienteUsersRequest } from "../../lib/cliente.api";
 import { listClientsRequest } from "../../lib/clients.api";
 import { CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
 import { createUserRequest, deleteUserRequest, updateUserRequest } from "../../lib/users.api";
 
-const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteModulos: CLIENTE_MODULOS_DEFAULT, activo: true };
+const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteAreas: [], clienteModulos: CLIENTE_MODULOS_DEFAULT, activo: true };
 
 const moduloLabel = (key) => CLIENTE_MODULOS.find((m) => m.key === key)?.label ?? key;
 
@@ -26,7 +27,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
   const isEdit = Boolean(initial?.id);
   const [form, setForm] = useState(
     initial
-      ? { nombre: initial.nombre, apellido: initial.apellido, correoElectronico: initial.correoElectronico, password: "", clienteId: initial.clienteId ?? "", clienteModulos: initial.clienteModulos ?? [], activo: initial.estado === "ACTIVO" }
+      ? { nombre: initial.nombre, apellido: initial.apellido, correoElectronico: initial.correoElectronico, password: "", clienteId: initial.clienteId ?? "", clienteAreas: initial.clienteAreas ?? [], clienteModulos: initial.clienteModulos ?? [], activo: initial.estado === "ACTIVO" }
       : EMPTY_FORM
   );
   const [saving, setSaving] = useState(false);
@@ -47,7 +48,8 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           nombre: form.nombre,
           apellido: form.apellido,
           correoElectronico: form.correoElectronico,
-          clienteId: form.clienteId || undefined,
+          clienteId: form.clienteId || null,
+          clienteAreas: form.clienteAreas,
           clienteModulos: form.clienteModulos,
           estado: form.activo ? "ACTIVO" : "INACTIVO",
         };
@@ -61,6 +63,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           password: form.password,
           cargo: "CLIENTE",
           clienteId: form.clienteId || undefined,
+          clienteAreas: form.clienteAreas,
           clienteModulos: form.clienteModulos,
         });
       }
@@ -80,7 +83,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
         <div>
           <h2 className="text-[17px] font-semibold text-ink-50">{isEdit ? "Editar usuario cliente" : "Nuevo usuario cliente"}</h2>
           <p className="mt-1 text-[13px] text-ink-300">
-            Entra con su propia vista: solo ve el seguimiento de los servicios de su empresa, sin las pantallas de chofer ni de oficina.
+            Entra con su propia vista: solo ve el seguimiento de los servicios que le des (por spedizione o por empresa), sin las pantallas de chofer ni de oficina.
           </p>
         </div>
         <Alert>{error}</Alert>
@@ -105,18 +108,43 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
             error={fieldErrors.password?.[0]}
             required={!isEdit}
           />
-          <div className="sm:col-span-2">
-            <SearchableSelect
-              id="cu-empresa"
-              label="Empresa cliente"
-              placeholder="Escribe para buscar la empresa"
-              options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
-              value={form.clienteId}
-              onChange={(v) => setField("clienteId", v)}
-              error={fieldErrors.clienteId?.[0]}
-            />
-            <p className="mt-1.5 text-[12px] text-ink-400">Solo vera los servicios de esta empresa. Varias personas pueden compartir la misma empresa.</p>
+        </div>
+
+        <div>
+          <span className="mb-1 block text-[13px] font-medium text-ink-300">Spedizioni que puede ver</span>
+          <p className="mb-2 text-[12px] text-ink-400">Ve todos los servicios de las spedizioni que marques, no uno solo.</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+            {AREA_ACCESS_OPTIONS.map((a) => (
+              <label key={a.key} htmlFor={`cu-area-${a.key}`} className="flex cursor-pointer items-center gap-2 text-[14px] text-ink-100">
+                <input
+                  id={`cu-area-${a.key}`}
+                  type="checkbox"
+                  checked={form.clienteAreas.includes(a.key)}
+                  onChange={() =>
+                    setField("clienteAreas", form.clienteAreas.includes(a.key) ? form.clienteAreas.filter((k) => k !== a.key) : [...form.clienteAreas, a.key])
+                  }
+                  className="h-4 w-4 rounded border-line/20 bg-transparent accent-accent-500"
+                />
+                {a.label}
+              </label>
+            ))}
           </div>
+          {fieldErrors.clienteAreas?.[0] && <span className="mt-1.5 block text-[13px] text-danger-500">{fieldErrors.clienteAreas[0]}</span>}
+        </div>
+
+        <div>
+          <SearchableSelect
+            id="cu-empresa"
+            label="Empresa cliente (opcional)"
+            placeholder="Escribe para buscar la empresa"
+            options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
+            value={form.clienteId}
+            onChange={(v) => setField("clienteId", v)}
+            error={fieldErrors.clienteId?.[0]}
+          />
+          <p className="mt-1.5 text-[12px] text-ink-400">
+            Si la eliges, tambien ve los servicios de esa empresa (se suman a las spedizioni). Tiene que tener al menos una spedizione o una empresa.
+          </p>
         </div>
 
         <div>
@@ -183,7 +211,7 @@ export const AccesoClientesPage = () => {
   const groups = useMemo(() => {
     const map = new Map();
     for (const u of users ?? []) {
-      const key = u.cliente?.nombre ?? "Sin empresa";
+      const key = u.cliente?.nombre ?? (u.clienteAreas?.length ? "Por spedizione" : "Sin acceso asignado");
       map.set(key, [...(map.get(key) ?? []), u]);
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, "es"));
@@ -254,6 +282,15 @@ export const AccesoClientesPage = () => {
                     {u.nombre} {u.apellido}
                   </span>
                   <span className="block truncate text-[13px] text-ink-300">{u.correoElectronico}</span>
+                  {(u.clienteAreas ?? []).length > 0 && (
+                    <span className="mt-1 flex flex-wrap gap-1.5">
+                      {u.clienteAreas.map((key) => (
+                        <span key={key} className="rounded-md bg-line/15 px-1.5 py-0.5 text-[11px] font-medium text-ink-100">
+                          {AREA_LABEL_BY_KEY[key] ?? key}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   <span className="mt-1 flex flex-wrap gap-1.5">
                     {(u.clienteModulos ?? []).length === 0 && <span className="text-[12px] text-warning-500">Sin modulos marcados: no ve nada</span>}
                     {(u.clienteModulos ?? []).map((key) => (

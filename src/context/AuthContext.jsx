@@ -9,7 +9,7 @@ const AuthContext = createContext(null);
 const REFRESH_INTERVAL_MS = 60_000;
 const REFRESH_MIN_GAP_MS = 15_000;
 // Lo que cambia la vista o los permisos: si ninguno cambio no se toca el estado (evita renders de mas).
-const ACCESS_FIELDS = ["cargo", "estado", "responsableTipo", "area", "nivelChofer", "areasPermitidas", "vehiculoAsignadoId", "clienteId", "clienteModulos"];
+const ACCESS_FIELDS = ["cargo", "estado", "responsableTipo", "area", "nivelChofer", "areasPermitidas", "vehiculoAsignadoId", "clienteId", "clienteAreas", "clienteModulos"];
 const accessChanged = (a, b) => ACCESS_FIELDS.some((key) => JSON.stringify(a?.[key]) !== JSON.stringify(b?.[key]));
 
 const DRIVER_MODE_KEY = "gamonal-driver-mode";

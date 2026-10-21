@@ -7,6 +7,7 @@ import { MoonIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
+import { AREA_LABEL_BY_KEY } from "../../lib/roles";
 
 const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").then((m) => ({ default: m.ClienteSeguimientoPage })));
 const ClienteHistorialPage = lazy(() => import("./ClienteHistorialPage").then((m) => ({ default: m.ClienteHistorialPage })));
@@ -25,6 +26,8 @@ const ClienteShell = () => {
   usePushNotifications();
 
   const modulos = user?.clienteModulos ?? [];
+  // Titulo de la cabecera: su empresa o, si solo tiene spedizioni, sus nombres.
+  const titulo = user?.cliente?.nombre ?? (user?.clienteAreas ?? []).map((key) => AREA_LABEL_BY_KEY[key] ?? key).join(" · ");
   const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
   const verHistorial = modulos.includes("HISTORIAL");
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
@@ -35,7 +38,7 @@ const ClienteShell = () => {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 basis-40">
-            <span className="block truncate text-[15px] font-semibold text-ink-50">{user?.cliente?.nombre ?? "Gamonal Driver"}</span>
+            <span className="block truncate text-[15px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
             <span className="block truncate text-[12px] text-ink-400">
               {user?.nombre} {user?.apellido}
             </span>
