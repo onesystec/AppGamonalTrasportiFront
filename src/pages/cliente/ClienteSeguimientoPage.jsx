@@ -35,7 +35,7 @@ const puntualidadTexto = (s) => {
   return "A tiempo";
 };
 
-const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta }) => {
+const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando }) => {
   const estado = ESTADO[s.estado];
   return (
     <button
@@ -70,6 +70,7 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta }) => {
         </span>
       )}
       {s.sinSenal && verMapa && <span className="text-[12px] text-warning-500">Sin senal del vehiculo por ahora</span>}
+      {selected && cargando && <span className="text-[12px] text-ink-400">Calculando el recorrido...</span>}
       {selected && ruta && (
         <span className="text-[12px] font-medium text-accent-300">
           {ruta.aproximada ? `A unos ${String(ruta.distanciaKm).replace(".", ",")} km en linea recta` : `Le faltan ${String(ruta.distanciaKm).replace(".", ",")} km por carretera`}
@@ -94,6 +95,7 @@ export const ClienteSeguimientoPage = () => {
   const [ruta, setRuta] = useState(null);
   const fittedRef = useRef("");
   const fittedRutaRef = useRef(null);
+  const userMovedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,22 +138,26 @@ export const ClienteSeguimientoPage = () => {
 
   const selected = useMemo(() => enCamino.find((s) => s.id === selectedId) ?? null, [enCamino, selectedId]);
 
-  // Tocar un servicio muestra el recorrido que le falta hasta su parada; tocarlo otra vez lo quita.
+  // Tocar un servicio lleva el mapa al vehiculo de inmediato (mientras se calcula el recorrido) y muestra lo que le falta hasta su parada;
+  // tocarlo otra vez lo quita.
   const select = (id) => {
     if (id === selectedId) {
       setSelectedId(null);
       return;
     }
     setSelectedId(id);
+    setRuta(null);
+    userMovedRef.current = false;
     const s = enCamino.find((x) => x.id === id);
     const point = s?.posicion ?? s?.destinoCoords;
     if (map && point) {
       map.panTo(point);
-      if ((map.getZoom() ?? 0) < 13) map.setZoom(13);
+      if ((map.getZoom() ?? 0) < 14) map.setZoom(14);
     }
   };
 
-  // Recorrido del servicio elegido: se pide al elegirlo y de nuevo cuando la furgoneta se mueve (el servidor lo guarda un minuto).
+  // Recorrido del servicio elegido: se pide al elegirlo y de nuevo cada vez que la furgoneta se mueve (unos 100 m), asi cambia solo si toma
+  // otro camino. Se guarda con el id del servicio para no dibujar nunca el recorrido de otro.
   const posKey = selected?.posicion ? `${selected.posicion.lat.toFixed(3)},${selected.posicion.lng.toFixed(3)}` : null;
   useEffect(() => {
     if (!verMapa || !selectedId || !posKey) {
@@ -160,23 +166,41 @@ export const ClienteSeguimientoPage = () => {
     }
     let cancelled = false;
     getClienteRutaRequest(selectedId)
-      .then((r) => !cancelled && setRuta(r))
+      .then((r) => !cancelled && setRuta(r ? { ...r, id: selectedId } : null))
       .catch(() => !cancelled && setRuta(null));
     return () => {
       cancelled = true;
     };
   }, [verMapa, selectedId, posKey]);
 
-  // Encuadra el mapa en el recorrido la primera vez que llega para el servicio elegido.
+  const rutaActual = ruta && ruta.id === selectedId ? ruta : null;
+  const cargandoRuta = Boolean(selected?.posicion) && !rutaActual;
+
+  // Encuadra el mapa en el recorrido (y el vehiculo) la primera vez que llega para el servicio elegido.
   useEffect(() => {
-    if (!map || !window.google || !ruta?.geometria?.coordinates?.length || fittedRutaRef.current === selectedId) return;
+    if (!map || !window.google || !rutaActual?.geometria?.coordinates?.length || fittedRutaRef.current === selectedId) return;
     fittedRutaRef.current = selectedId;
     const bounds = new window.google.maps.LatLngBounds();
-    ruta.geometria.coordinates.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
+    rutaActual.geometria.coordinates.forEach(([lng, lat]) => bounds.extend({ lat, lng }));
+    if (selected?.posicion) bounds.extend(selected.posicion);
     map.fitBounds(bounds, 70);
-  }, [map, ruta, selectedId]);
+  }, [map, rutaActual, selectedId, selected]);
 
-  const rutaPath = useMemo(() => (ruta?.geometria?.coordinates ?? []).map(([lng, lat]) => ({ lat, lng })), [ruta]);
+  // Si la furgoneta se sale de la vista al moverse, el mapa la sigue; si la persona movio el mapa a mano, se respeta.
+  const posLat = selected?.posicion?.lat;
+  const posLng = selected?.posicion?.lng;
+  useEffect(() => {
+    if (!map || posLat == null || userMovedRef.current) return;
+    const bounds = map.getBounds();
+    if (bounds && !bounds.contains({ lat: posLat, lng: posLng })) map.panTo({ lat: posLat, lng: posLng });
+  }, [map, posLat, posLng]);
+
+  // El recorrido arranca siempre en la posicion actual (el dibujo no se queda atras mientras llega el calculo nuevo).
+  const rutaPath = useMemo(() => {
+    if (!rutaActual) return [];
+    const coords = rutaActual.geometria.coordinates.map(([lng, lat]) => ({ lat, lng }));
+    return selected?.posicion && !rutaActual.aproximada ? [selected.posicion, ...coords] : coords;
+  }, [rutaActual, selected]);
 
   const programados = data?.programados ?? [];
   const hayMapa = verMapa && isLoaded;
@@ -202,7 +226,7 @@ export const ClienteSeguimientoPage = () => {
               )}
               {verMapa && enCamino.some((s) => s.posicion) && <p className="px-1 text-[12px] text-ink-400">Toca un servicio para ver el recorrido que le falta hasta tu parada.</p>}
               {enCamino.map((s) => (
-                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} ruta={selectedId === s.id ? ruta : null} />
+                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} ruta={selectedId === s.id ? rutaActual : null} cargando={selectedId === s.id && cargandoRuta} />
               ))}
 
               {programados.length > 0 && (
@@ -224,7 +248,13 @@ export const ClienteSeguimientoPage = () => {
 
           {verMapa && (
             <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2")}>
-              <div className="h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
+              <div className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
+                {selected && cargandoRuta && hayMapa && (
+                  <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-900 shadow-md">
+                    <Spinner className="h-3.5 w-3.5 border-gray-300 border-t-gray-700" />
+                    Calculando el recorrido...
+                  </div>
+                )}
                 {!hayMapa ? (
                   <div className="flex h-full items-center justify-center">
                     <Spinner className="h-6 w-6 border-line/20 border-t-line" />
@@ -236,6 +266,9 @@ export const ClienteSeguimientoPage = () => {
                     zoom={9}
                     onLoad={setMap}
                     onUnmount={() => setMap(null)}
+                    onDragStart={() => {
+                      userMovedRef.current = true;
+                    }}
                     options={{
                       streetViewControl: false,
                       mapTypeControl: false,
@@ -243,11 +276,11 @@ export const ClienteSeguimientoPage = () => {
                       styles: theme === "dark" ? [...NIGHT_MODE_STYLES, ...HIDE_POI_STYLES] : HIDE_POI_STYLES,
                     }}
                   >
-                    {rutaPath.length > 1 && selected && (
+                    {rutaPath.length > 1 && selected && rutaActual && (
                       <Polyline
                         path={rutaPath}
                         options={
-                          ruta.aproximada
+                          rutaActual.aproximada
                             ? {
                                 strokeOpacity: 0,
                                 icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: ESTADO[selected.estado].color, scale: 3 }, offset: "0", repeat: "12px" }],

@@ -16,7 +16,7 @@ import { AREA_ACCESS_OPTIONS, AREA_LABEL_BY_KEY } from "../../lib/roles";
 import { listClienteUsersRequest } from "../../lib/cliente.api";
 import { listClientsRequest } from "../../lib/clients.api";
 import { CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
-import { createUserRequest, deleteUserRequest, updateUserRequest } from "../../lib/users.api";
+import { createUserRequest, deleteUserRequest, updateUserRequest, uploadUserAvatarRequest } from "../../lib/users.api";
 
 const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteAreas: [], clienteModulos: CLIENTE_MODULOS_DEFAULT, activo: true };
 
@@ -33,6 +33,9 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [logoFile, setLogoFile] = useState(null);
+  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
+  useEffect(() => () => logoPreview && URL.revokeObjectURL(logoPreview), [logoPreview]);
 
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const onChange = (field) => (e) => setField(field, e.target.value);
@@ -42,6 +45,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
     setSaving(true);
     setError("");
     setFieldErrors({});
+    let savedId = null;
     try {
       if (isEdit) {
         const payload = {
@@ -55,8 +59,9 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
         };
         if (form.password) payload.password = form.password;
         await updateUserRequest(initial.id, payload);
+        savedId = initial.id;
       } else {
-        await createUserRequest({
+        const created = await createUserRequest({
           nombre: form.nombre,
           apellido: form.apellido,
           correoElectronico: form.correoElectronico,
@@ -66,8 +71,18 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           clienteAreas: form.clienteAreas,
           clienteModulos: form.clienteModulos,
         });
+        savedId = created.id;
       }
-      onSaved();
+      // El logo se sube aparte: si falla, el usuario ya quedo guardado y se avisa para reintentarlo desde Editar.
+      let warning = "";
+      if (logoFile) {
+        try {
+          await uploadUserAvatarRequest(savedId, logoFile, { logo: true });
+        } catch (logoErr) {
+          warning = `El usuario se guardo, pero el logo no se pudo subir: ${parseApiError(logoErr).message} Editalo para volver a intentarlo.`;
+        }
+      }
+      onSaved(warning);
     } catch (err) {
       const parsed = parseApiError(err);
       setError(parsed.message);
@@ -108,6 +123,24 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
             error={fieldErrors.password?.[0]}
             required={!isEdit}
           />
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Logo de la empresa (opcional)</span>
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1">
+              {logoPreview || initial?.imagenUrl ? (
+                <img src={logoPreview ?? initial.imagenUrl} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-[11px] text-gray-400">Sin logo</span>
+              )}
+            </span>
+            <label htmlFor="cu-logo" className="inline-flex cursor-pointer items-center rounded-xl border border-line/30 px-3.5 py-2 text-[13px] font-medium text-ink-50 transition-colors hover:bg-line/10">
+              {logoPreview || initial?.imagenUrl ? "Cambiar logo" : "Subir logo"}
+              <input id="cu-logo" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { setLogoFile(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+            </label>
+            <span className="text-[12px] text-ink-400">Aparece arriba a la izquierda, junto al nombre. Se ve entero, sin recortar.</span>
+          </div>
         </div>
 
         <div>
@@ -257,8 +290,9 @@ export const AccesoClientesPage = () => {
           initial={editing === "new" ? null : editing}
           clientes={clientes}
           onCancel={() => setEditing(null)}
-          onSaved={() => {
+          onSaved={(warning) => {
             setEditing(null);
+            setError(warning || "");
             load();
           }}
         />
@@ -277,6 +311,11 @@ export const AccesoClientesPage = () => {
           <div className="glass-surface rounded-2xl">
             {list.map((u, index) => (
               <div key={u.id} className={clsx("flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5", index > 0 && "border-t border-line/10")}>
+                {u.imagenUrl && (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
+                    <img src={u.imagenUrl} alt="" className="h-full w-full object-contain" />
+                  </span>
+                )}
                 <div className="min-w-0 flex-1 basis-56">
                   <span className="block truncate text-[15px] font-semibold text-ink-50">
                     {u.nombre} {u.apellido}

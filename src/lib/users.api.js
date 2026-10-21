@@ -15,8 +15,10 @@ export const updateUserRequest = (id, payload) =>
 
 export const deleteUserRequest = (id) => api.delete(`/users/${id}`);
 
-export const uploadUserAvatarRequest = (id, file) => {
+// logo: true = logo de una empresa cliente (se muestra entero, sin recortar a cuadrado).
+export const uploadUserAvatarRequest = (id, file, { logo = false } = {}) => {
   const formData = new FormData();
+  if (logo) formData.append("tipo", "logo");
   formData.append("imagen", file);
   return api.post(`/users/${id}/avatar`, formData).then((res) => res.data.data.user);
 };

@@ -26,8 +26,12 @@ const ClienteShell = () => {
   usePushNotifications();
 
   const modulos = user?.clienteModulos ?? [];
-  // Titulo de la cabecera: su empresa o, si solo tiene spedizioni, sus nombres.
-  const titulo = user?.cliente?.nombre ?? (user?.clienteAreas ?? []).map((key) => AREA_LABEL_BY_KEY[key] ?? key).join(" · ");
+  // Cabecera: el logo de su empresa y su nombre. El nombre es el de la empresa cliente o, si no tiene, el del propio usuario; debajo, las
+  // spedizioni que sigue o la persona.
+  const nombrePersona = `${user?.nombre ?? ""} ${user?.apellido ?? ""}`.trim();
+  const spedizioni = (user?.clienteAreas ?? []).map((key) => AREA_LABEL_BY_KEY[key] ?? key).join(" · ");
+  const titulo = user?.cliente?.nombre ?? nombrePersona;
+  const subtitulo = user?.cliente?.nombre ? nombrePersona : spedizioni;
   const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
   const verHistorial = modulos.includes("HISTORIAL");
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
@@ -36,12 +40,14 @@ const ClienteShell = () => {
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur">
         <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
-          <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-full" />
+          {user?.imagenUrl ? (
+            <img src={user.imagenUrl} alt={titulo} className="h-11 w-11 shrink-0 rounded-xl bg-white object-contain p-1" />
+          ) : (
+            <img src={logo} alt="" className="h-10 w-10 shrink-0 rounded-full" />
+          )}
           <div className="min-w-0 flex-1 basis-40">
-            <span className="block truncate text-[15px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
-            <span className="block truncate text-[12px] text-ink-400">
-              {user?.nombre} {user?.apellido}
-            </span>
+            <span className="block truncate text-[17px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
+            {subtitulo && <span className="block truncate text-[12px] text-ink-400">{subtitulo}</span>}
           </div>
           <nav className="flex items-center gap-1">
             {verSeguimiento && (
