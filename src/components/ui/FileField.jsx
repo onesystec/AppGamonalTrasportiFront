@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useMemo } from "react";
+import { hasNativeCamera, takeNativePhoto } from "../../lib/camera";
 import { CameraIcon, PaperclipIcon } from "./icons";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
@@ -19,6 +20,15 @@ export const FileField = ({ id, label, hint, file, onChange, existing, required,
   const pick = (e) => {
     onChange(e.target.files?.[0] ?? null);
     e.target.value = "";
+  };
+
+  const tomarFoto = async () => {
+    try {
+      const foto = await takeNativePhoto();
+      if (foto) onChange(foto);
+    } catch {
+      // permiso de camara denegado: queda "Elegir archivo"
+    }
   };
 
   const thumb = preview ? (
@@ -77,11 +87,18 @@ export const FileField = ({ id, label, hint, file, onChange, existing, required,
             </span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <label htmlFor={`${id}-camara`} className={actionButton}>
-              <CameraIcon className="h-4 w-4" />
-              Tomar foto
-              <input id={`${id}-camara`} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
-            </label>
+            {hasNativeCamera() ? (
+              <button type="button" className={actionButton} onClick={tomarFoto}>
+                <CameraIcon className="h-4 w-4" />
+                Tomar foto
+              </button>
+            ) : (
+              <label htmlFor={`${id}-camara`} className={actionButton}>
+                <CameraIcon className="h-4 w-4" />
+                Tomar foto
+                <input id={`${id}-camara`} type="file" accept="image/*" capture="environment" className="hidden" onChange={pick} />
+              </label>
+            )}
             <label htmlFor={id} className={actionButton}>
               <PaperclipIcon className="h-4 w-4" />
               {existing || file ? "Elegir otro archivo" : "Elegir archivo"}
