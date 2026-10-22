@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AUTH_LOGOUT_EVENT, parseApiError, setApiDriverMode } from "../lib/api";
 import { loginRequest, meRequest, registerRequest, ssoLoginRequest } from "../lib/auth.api";
+import { rememberChoferView } from "../lib/choferTips";
 import { clearToken, getToken, setToken } from "../lib/token";
 
 const AuthContext = createContext(null);
@@ -158,6 +159,11 @@ export const AuthProvider = ({ children }) => {
     () => (driverMode && realUser ? { ...realUser, cargo: "CHOFER", areasPermitidas: [], responsableTipo: null } : realUser),
     [driverMode, realUser]
   );
+
+  // Se recuerda si la vista es la del chofer, para mostrarle consejos en la pantalla de carga de la proxima apertura (antes de saber quien es).
+  useEffect(() => {
+    if (!initializing) rememberChoferView(user?.cargo === "CHOFER");
+  }, [user?.cargo, initializing]);
 
   const value = useMemo(
     () => ({
