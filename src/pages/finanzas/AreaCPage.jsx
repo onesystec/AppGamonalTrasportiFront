@@ -21,6 +21,7 @@ import { parseApiError } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import {
   deleteAreaCEntryRequest,
+  resendAreaCEntryNoticeRequest,
   listAreaCEntriesRequest,
   updateAreaCEntryRequest,
 } from "../../lib/vehicles.api";
@@ -57,13 +58,33 @@ const TrashIcon = ({ className }) => (
 // Una fila por entrada al Area C (targa + hora, ya completados por el sistema). El
 // "Pagado" y el comprobante son ediciones locales hasta que se confirman con "Guardar"
 // (un solo PATCH con los dos juntos, igual que en el resto de la app).
-const AreaCRow = ({ entry, onSaved, onDelete }) => {
+const AreaCRow = ({ entry, onSaved, onDelete, canResend = false }) => {
   const [pagado, setPagado] = useState(entry.pagado);
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Reenviar el aviso (push + correo) a los responsables: pide confirmar con un segundo toque porque le llega a varias personas.
+  const [resend, setResend] = useState({ step: "idle", message: "" });
 
   const dirty = pagado !== entry.pagado || file != null;
+
+  const handleResend = async () => {
+    if (resend.step === "idle") {
+      setResend({ step: "confirm", message: "" });
+      return;
+    }
+    setResend({ step: "sending", message: "" });
+    try {
+      const r = await resendAreaCEntryNoticeRequest(entry.id);
+      setResend({
+        step: "done",
+        message: `Aviso enviado a ${r.destinatarios} persona(s) por push y ${r.correosEnviados} de ${r.correosTotal} correo(s).`,
+      });
+    } catch (err) {
+      setResend({ step: "idle", message: "" });
+      setError(parseApiError(err).message);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -94,6 +115,18 @@ const AreaCRow = ({ entry, onSaved, onDelete }) => {
         <div>
           <span className="block font-medium text-ink-50">{formatDateTime(entry.enteredAt)}</span>
           <span className="text-[12px] text-ink-400">Entrada detectada</span>
+          {canResend && !entry.pagado && resend.step !== "done" && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resend.step === "sending"}
+              className="mt-1 block text-[12px] font-medium text-accent-400 hover:underline disabled:opacity-50"
+            >
+              {resend.step === "idle" && "Reenviar aviso a los responsables"}
+              {resend.step === "confirm" && "¿Enviar push y correo a todos? Toca otra vez"}
+              {resend.step === "sending" && "Enviando..."}
+            </button>
+          )}
         </div>
 
         <span className="font-semibold tracking-wide text-ink-50">{entry.targa}</span>
@@ -164,6 +197,7 @@ const AreaCRow = ({ entry, onSaved, onDelete }) => {
       </div>
 
       {error && <p className="mt-2 text-[12px] text-danger-500">{error}</p>}
+      {resend.step === "done" && <p className="mt-2 text-[12px] text-success-500">{resend.message}</p>}
     </li>
   );
 };
@@ -322,6 +356,7 @@ export const AreaCPage = () => {
                       // key con pagado/comprobante: la fila reinicia su estado local al guardar
                       key={`${entry.id}-${entry.pagado}-${entry.comprobanteUrl ?? ""}`}
                       entry={entry}
+                      canResend={user?.cargo === "OWNER"}
                       onSaved={handleSaved}
                       onDelete={(e) => {
                         setDeleteError("");

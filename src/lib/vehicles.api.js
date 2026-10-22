@@ -66,6 +66,10 @@ export const listVehicleMantenimientosRequest = (id) =>
 export const deleteVehicleMantenimientoRequest = (vehicleId, mantenimientoId) =>
   api.delete(`/vehiculos/${vehicleId}/mantenimiento/${mantenimientoId}`);
 
+// Vuelve a mandar el aviso (push + correo) de una entrada sin pagar a los responsables del vehiculo. Solo el Admin (OWNER).
+export const resendAreaCEntryNoticeRequest = (id) =>
+  api.post(`/vehiculos/area-c-entries/${id}/reavisar`).then((res) => res.data.data);
+
 // Elimina una entrada de Area C que no queremos guardar (Mapa > Area C, siempre despues
 // de confirmar en un modal). El backend borra tambien el comprobante.
 export const deleteAreaCEntryRequest = (id) =>
