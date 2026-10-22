@@ -47,6 +47,10 @@ export const deleteMancatoRequest = (id) => api.delete(`${BASE}/${id}`);
 export const listMancatoCandidatesRequest = (id) =>
   api.get(`${BASE}/${id}/candidatos`).then((res) => res.data.data.candidatos);
 
+// Reevalua los mancatos de un mes (solo el Admin): aplicar=false solo simula. Devuelve el resumen y las listas de cambios.
+export const reevaluarMancatosRequest = ({ month, aplicar = false, incluirFijados = false }) =>
+  api.post(`${BASE}/reevaluar`, { month, aplicar, incluirFijados }).then((res) => res.data.data.resultado);
+
 // Vuelve a evaluar los mancatos que la oficina no fijo a mano. Devuelve { revisados, cambiados }.
 export const rematchMancatosRequest = () =>
   api.post(`${BASE}/reasignar`).then((res) => res.data.data.resultado);

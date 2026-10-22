@@ -5,6 +5,7 @@ import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { MancatoSidebar } from "../../components/mancato/MancatoSidebar";
 import { MancatoTotalAnual } from "../../components/mancato/MancatoTotalAnual";
+import { ReevaluarMancatosModal } from "../../components/mancato/ReevaluarMancatosModal";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { CopyButton } from "../../components/ui/CopyButton";
@@ -585,6 +586,7 @@ const MancatoOficinaPage = () => {
   const location = useLocation();
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const { version, refresh } = useDataRefresh("mancato");
+  const [reevaluar, setReevaluar] = useState(false);
   const [searchParams] = useSearchParams();
   const asignacionParam = searchParams.get("asignacion");
 
@@ -742,6 +744,12 @@ const MancatoOficinaPage = () => {
             </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {user?.cargo === "OWNER" && (
+            <Button variant="ghost" className="w-full sm:w-auto sm:px-6" onClick={() => setReevaluar(true)}>
+              <RefreshIcon className="h-4 w-4" />
+              Reevaluar asignaciones
+            </Button>
+          )}
           <Link to="/finanzas/mancato/new" state={{ backgroundLocation: location }}>
             <Button className="w-full sm:w-auto sm:px-6">
               <PlusIcon className="h-4 w-4" />
@@ -1062,6 +1070,7 @@ const MancatoOficinaPage = () => {
           </div>
         </div>
       )}
+      {reevaluar && <ReevaluarMancatosModal onClose={() => setReevaluar(false)} onApplied={refresh} />}
     </div>
   );
 };
