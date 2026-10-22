@@ -21,7 +21,7 @@ import { createRecordRequest } from "../../lib/records.api";
 import { DestinoSugerencias } from "../../components/records/DestinoSugerencias";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
-import { BrenneroCheckbox } from "../../components/records/BrenneroCheckbox";
+import { PasosFronteraCheckboxes } from "../../components/records/BrenneroCheckbox";
 import { buildSalidaPayload, EMPTY_SALIDA, SalidaField } from "../../components/records/SalidaField";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -56,6 +56,7 @@ const INITIAL_FORM = {
   // Punto de salida: en blanco al empezar (si queda vacio se usa el deposito).
   salida: EMPTY_SALIDA,
   pasaPorBrennero: false,
+  pasaPorFrejus: false,
 };
 
 // Arma la direccion de la parada final a partir de calle/CAP/ciudad, en el mismo
@@ -139,7 +140,7 @@ export const NewDhlAbServiceRecordPage = () => {
 
     const payload = Object.fromEntries(
       Object.entries({ ...rest, ...(salidaPayload ? { salida: salidaPayload } : {}), codigo, ciudad, stops: [direccion] }).filter(
-        ([key, value]) => key === "stops" || key === "pasaPorBrennero" || value !== ""
+        ([key, value]) => key === "stops" || key === "pasaPorBrennero" || key === "pasaPorFrejus" || value !== ""
       )
     );
 
@@ -376,7 +377,13 @@ export const NewDhlAbServiceRecordPage = () => {
             />
           </div>
           <div className="mt-4">
-            <BrenneroCheckbox checked={form.pasaPorBrennero} onChange={(value) => setField("pasaPorBrennero", value)} disabled={submitting} />
+            <PasosFronteraCheckboxes
+              brennero={form.pasaPorBrennero}
+              onBrennero={(value) => setField("pasaPorBrennero", value)}
+              frejus={form.pasaPorFrejus}
+              onFrejus={(value) => setField("pasaPorFrejus", value)}
+              disabled={submitting}
+            />
           </div>
         </GlassCard>
 

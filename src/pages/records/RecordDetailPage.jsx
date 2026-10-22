@@ -430,6 +430,7 @@ const toFormState = (record) => ({
     lng: record.salida?.lng ?? null,
   },
   pasaPorBrennero: Boolean(record.pasaPorBrennero),
+  pasaPorFrejus: Boolean(record.pasaPorFrejus),
   aplicativo: record.aplicativo ?? "",
   extrasPiazzaZona: record.extrasPiazzaZona ?? "",
   stops: record.stops?.length
@@ -698,6 +699,7 @@ export const RecordDetailPage = () => {
         next.direccion.trim() !== (saved?.direccion ?? "") || next.lat !== (saved?.lat ?? null) || next.lng !== (saved?.lng ?? null);
       if (changed) payload.salida = buildSalidaPayload(next) ?? null;
       if (form.pasaPorBrennero !== Boolean(record.pasaPorBrennero)) payload.pasaPorBrennero = form.pasaPorBrennero;
+      if (form.pasaPorFrejus !== Boolean(record.pasaPorFrejus)) payload.pasaPorFrejus = form.pasaPorFrejus;
     }
 
     // Cambio de furgon (el mismo chofer termino con otro furgon): solo si cambio respecto de lo guardado.
@@ -1054,7 +1056,9 @@ const RecordSummaryView = ({
         />
         <InfoRow label="ETA" value={`${formatRomeDateTime(record.eta)} (Roma)`} />
         {record.salida?.direccion && <InfoRow label="Salida" value={record.salida.direccion} />}
-        {record.pasaPorBrennero && <InfoRow label="Ruta" value="Pasa por Brennero" />}
+        {(record.pasaPorBrennero || record.pasaPorFrejus) && (
+          <InfoRow label="Ruta" value={[record.pasaPorBrennero && "Pasa por Brennero", record.pasaPorFrejus && "Pasa por Frejus"].filter(Boolean).join(" y ")} />
+        )}
         <InfoRow
           label="Vehiculo"
           value={`${record.vehicle?.targa ?? "-"} - ${record.vehicle?.modelo ?? ""}`}
@@ -1519,6 +1523,8 @@ const RecordEditForm = ({
               onSalidaChange={(salida) => setField("salida", salida)}
               pasaPorBrennero={form.pasaPorBrennero}
               onPasaPorBrenneroChange={(value) => setField("pasaPorBrennero", value)}
+              pasaPorFrejus={form.pasaPorFrejus}
+              onPasaPorFrejusChange={(value) => setField("pasaPorFrejus", value)}
               sugerencias={destinoSugerencias(record.spedizzione, record.extrasPiazzaZona)}
               salidaPorDefecto={salidaPorDefectoLabel(record.spedizzione, record.extrasPiazzaZona)}
               disabled={saving}
