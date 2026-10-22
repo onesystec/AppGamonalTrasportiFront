@@ -13,6 +13,7 @@ import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
 import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, ShieldIcon, WalletIcon } from "../ui/icons";
+import { MemorandumsPendientesBanner, usePendingMemorandums } from "../memorandums/MemorandumsPendientesBanner";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { DriverModeSwitch } from "./DriverModeSwitch";
 import { NotificationsBell } from "./NotificationsBell";
@@ -248,13 +249,15 @@ const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
+  { to: "/memorandums", label: "Memorándums", icon: FileTextIcon },
   { to: "/vencimientos", label: "Vencimientos", icon: ShieldIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
 ];
 
 // Lo mismo para el chofer (y el Admin/Owner en su modo chofer): lo que no entra en su nav inferior.
-const CHOFER_DRAWER_NAV_ITEMS = [{ to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }];
+const MEMORANDUMS_NAV_ITEM = { to: "/memorandums", label: "Memorándums", icon: FileTextIcon };
+const CHOFER_DRAWER_NAV_ITEMS = [{ to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }, MEMORANDUMS_NAV_ITEM];
 
 // Placeholder de la barra superior en las paginas de lista donde filtra en vivo.
 const LIST_SEARCH_PLACEHOLDERS = {
@@ -281,6 +284,7 @@ const AppShellContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const listSearch = useListSearch();
+  const pendingMemorandums = usePendingMemorandums();
 
   // Buscador contextual: dentro de Vehiculos y Choferes filtra la lista en vivo (comparte
   // el texto con la barra de esa pagina); en el resto de la app reutiliza el buscador de
@@ -390,6 +394,7 @@ const AppShellContent = () => {
               )}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/choferes" label="Choferes" icon={UsersIcon} />}
               {user?.cargo === "OWNER" && <SidebarNavTab to="/busta-paga" label="Busta paga" icon={FileTextIcon} />}
+              <SidebarNavTab to="/memorandums" label="Memorándums" icon={FileTextIcon} />
               {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
@@ -505,6 +510,7 @@ const AppShellContent = () => {
             )}
           >
             <UpdateBanner />
+            <MemorandumsPendientesBanner count={pendingMemorandums} />
             <Outlet />
           </main>
         </div>
@@ -539,7 +545,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [MEMORANDUMS_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}

@@ -19,6 +19,9 @@ const ForgotPasswordPage = lazy(() =>
 const MisServiciosPage = lazy(() =>
   import("./pages/servicios/MisServiciosPage").then((m) => ({ default: m.MisServiciosPage }))
 );
+const MemorandumsPage = lazy(() => import("./pages/memorandums/MemorandumsPage").then((m) => ({ default: m.MemorandumsPage })));
+const EmitirMemorandumPage = lazy(() => import("./pages/memorandums/EmitirMemorandumPage").then((m) => ({ default: m.EmitirMemorandumPage })));
+const MemorandumDetailPage = lazy(() => import("./pages/memorandums/MemorandumDetailPage").then((m) => ({ default: m.MemorandumDetailPage })));
 const BustaPagaRrhhPage = lazy(() =>
   import("./pages/bustapaga/BustaPagaRrhhPage").then((m) => ({ default: m.BustaPagaRrhhPage }))
 );
@@ -153,7 +156,7 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
 
 // Recursos Humanos solo usa Choferes, Vehiculos, Busta paga y su perfil; cualquier otra direccion lo lleva a
 // Busta paga (el servidor ademas le niega todo lo demas).
-const RRHH_PATHS = ["/busta-paga", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
+const RRHH_PATHS = ["/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
 const RrhhGuard = () => {
   const { user } = useAuth();
   const { pathname } = useLocation();
@@ -346,6 +349,9 @@ function App() {
               <Route path="/control-flota" element={<Navigate to="/vehiculos" replace />} />
               <Route path="/mecanica" element={<RoleOnly privileged><MecanicaPage /></RoleOnly>} />
               <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />
+              <Route path="/memorandums" element={<MemorandumsPage />} />
+              <Route path="/memorandums/nuevo" element={<EmitirMemorandumPage />} />
+              <Route path="/memorandums/emitidos/:id" element={<MemorandumDetailPage />} />
             </Route>
             </Route>
           </Route>
