@@ -13,6 +13,7 @@ import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { PageLoader } from "../../components/ui/PageLoader";
+import { CameraPickButton } from "../../components/ui/CameraPickButton";
 import { Spinner } from "../../components/ui/Spinner";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { TextField } from "../../components/ui/TextField";
@@ -1197,16 +1198,24 @@ const RecordSummaryView = ({
       <Alert>{uploadError}</Alert>
 
       {isChofer && (
-        <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10">
-          {uploading ? <Spinner /> : "Subir foto de entrega"}
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <CameraPickButton
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10"
+            label="Tomar foto de entrega"
             onChange={onUpload}
             disabled={uploading}
           />
-        </label>
+          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10">
+            {uploading ? <Spinner /> : "Elegir foto o archivo"}
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={onUpload}
+              disabled={uploading}
+            />
+          </label>
+        </div>
       )}
 
       <p className="mt-2 text-[12px] text-ink-400">

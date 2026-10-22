@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Alert } from "../ui/Alert";
+import { CameraPickButton } from "../ui/CameraPickButton";
 import { Spinner } from "../ui/Spinner";
 import {
   CalendarIcon,
@@ -166,11 +167,19 @@ export const ServicioPendienteRow = ({ service, opening, uploading, error, onClo
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             {enProceso && (
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
-                {uploading ? <Spinner className="h-4 w-4" /> : <FileTextIcon className="h-4 w-4" />}
-                Subir bolla
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onUpload} disabled={uploading} />
-              </label>
+              <>
+                <CameraPickButton
+                  className="flex cursor-pointer items-center gap-2 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10"
+                  label="Tomar foto de la bolla"
+                  onChange={onUpload}
+                  disabled={uploading}
+                />
+                <label className="flex cursor-pointer items-center gap-2 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
+                  {uploading ? <Spinner className="h-4 w-4" /> : <FileTextIcon className="h-4 w-4" />}
+                  Subir bolla
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onUpload} disabled={uploading} />
+                </label>
+              </>
             )}
             <Link
               to={`/records/${service.id}`}

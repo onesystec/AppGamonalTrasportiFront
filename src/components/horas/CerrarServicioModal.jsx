@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
-import { CameraIcon, CheckCircleIcon } from "../ui/icons";
+import { CameraPickButton } from "../ui/CameraPickButton";
+import { CheckCircleIcon, PaperclipIcon } from "../ui/icons";
 import { TextField } from "../ui/TextField";
 import { Textarea } from "../ui/Textarea";
 import { parseApiError } from "../../lib/api";
@@ -215,11 +216,19 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
                   ))}
                 </ul>
               )}
-              <label className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
-                <CameraIcon className="h-4 w-4" />
-                {totalBollas > 0 ? "Agregar otra foto" : "Tomar o elegir foto"}
-                <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={addBollas} disabled={saving} />
-              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <CameraPickButton
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10"
+                  label={totalBollas > 0 ? "Tomar otra foto" : "Tomar foto"}
+                  onChange={addBollas}
+                  disabled={saving}
+                />
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10">
+                  <PaperclipIcon className="h-4 w-4" />
+                  {totalBollas > 0 ? "Elegir otro archivo" : "Elegir foto o archivo"}
+                  <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={addBollas} disabled={saving} />
+                </label>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-line/10 bg-line/[0.03] p-4">

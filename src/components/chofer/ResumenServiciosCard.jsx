@@ -33,7 +33,7 @@ const Tile = ({ label, value, tone, icon: Icon }) => {
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0 leading-tight">
-        <span className="block text-[10.5px] font-medium uppercase tracking-normal text-ink-300">{label}</span>
+        <span className="block truncate text-[10.5px] font-medium uppercase tracking-normal text-ink-300">{label}</span>
         <span className={clsx("block text-[30px] font-semibold leading-none", t.value)}>{value}</span>
         <span className="mt-0.5 block text-[12px] text-ink-300">{value === 1 ? "servicio" : "servicios"}</span>
       </div>
@@ -48,7 +48,7 @@ export const ResumenServiciosCard = ({ counts }) => (
       Mis servicios
     </h2>
 
-    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
       <Tile label="Hoy" value={counts.hoy} tone="blue" icon={CalendarIcon} />
       <Tile label="Pendientes" value={counts.pendientes} tone="amber" icon={ClockIcon} />
       <Tile label="Completados" value={counts.completados} tone="green" icon={CheckCircleIcon} />
