@@ -80,7 +80,13 @@ export const MancatoServicioCard = ({ mancato, isPrivileged, busy, onChange }) =
             {servicio.fechaRetiro ? `Retiro ${formatDateTime(servicio.fechaRetiro)}` : "Sin Fecha de retiro"}
             {" - "}ETA {formatDateTime(servicio.eta)}
             {servicio.driver && ` - ${servicio.driver.nombre} ${servicio.driver.apellido}`}
+            {servicio.targa && ` - ${[servicio.targa, servicio.targaFinal].filter(Boolean).join(" / ")}`}
           </span>
+          {servicio.targaNoCoincide && (
+            <span className="mt-1 rounded-lg bg-danger-500/10 px-2.5 py-1.5 text-[12px] font-medium text-danger-500">
+              La targa del mancato ({mancato.targa}) no coincide con la de este servicio. Corrige la targa o elige otro servicio.
+            </span>
+          )}
         </Link>
       ) : (
         <p className="mt-3 text-[14px] text-ink-300">
