@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Alert } from "../ui/Alert";
 import { Spinner } from "../ui/Spinner";
+import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { formatKmValue } from "../../lib/compactado";
 import { getCircuitoMapaRequest } from "../../lib/records.api";
@@ -50,6 +51,8 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [map, setMap] = useState(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const { user } = useAuth();
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES,
@@ -64,6 +67,19 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
       cancelled = true;
     };
   }, [recordId]);
+
+  // Solo el Admin: vuelve a calcular el circuito ya guardado con el calculo de rutas actual (el guardado no cambia solo).
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    setError("");
+    try {
+      setData(await getCircuitoMapaRequest(recordId, { recalcular: true }));
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   useEffect(() => {
     const onKeyDown = (e) => e.key === "Escape" && onClose();
@@ -115,9 +131,22 @@ export const CircuitoMapaModal = ({ recordId, onClose }) => {
               Lugar de espera &rarr; retiro &rarr; paradas &rarr; lugar de espera. Esta es la ruta con la que se validan los km.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
-            Cerrar
-          </button>
+          <div className="flex items-center gap-4">
+            {user?.cargo === "OWNER" && data && (
+              <button
+                type="button"
+                onClick={handleRecalculate}
+                disabled={recalculating}
+                title="Vuelve a calcular la ruta y los km de este servicio con el cálculo actual"
+                className="text-[13px] font-medium text-accent-400 hover:text-accent-300 disabled:opacity-50"
+              >
+                {recalculating ? "Recalculando…" : "Recalcular ruta"}
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+              Cerrar
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">

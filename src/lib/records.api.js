@@ -106,7 +106,9 @@ export const ajustarKmViajeRequest = (compactadoId, { reparto, nota }) =>
 export const getSinSustentarRequest = () => api.get("/records/sin-sustentar").then((res) => res.data.data);
 
 // Circuito del servicio (o del viaje) para verlo en un mapa: { circuito, puntos: [{ tipo, nombre, lat, lng }], geometria }.
-export const getCircuitoMapaRequest = (id) => api.get(`/records/${id}/circuito`).then((res) => res.data.data);
+// recalcular (solo el Admin): vuelve a calcular el circuito guardado con el calculo de rutas actual.
+export const getCircuitoMapaRequest = (id, { recalcular = false } = {}) =>
+  api.get(`/records/${id}/circuito`, { params: recalcular ? { recalcular: 1 } : undefined }).then((res) => res.data.data);
 
 // Reprogramacion (solo Admin/Responsable). "previa" devuelve la hora de salida sugerida para una ETA (o la ETA para una
 // salida) y los avisos de choque; "km-gps" los km que hizo el vehiculo desde que salio; "reprogramar" crea el servicio nuevo.
