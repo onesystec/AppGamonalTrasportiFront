@@ -198,6 +198,8 @@ export const SeguimientoPage = () => {
   const [estadoFilter, setEstadoFilter] = useState("todos");
   const [query, setQuery] = useState("");
   const [showPeajes, setShowPeajes] = useState(true);
+  // Por defecto no se muestran los servicios con muchas horas de retraso (olvidados, sin cerrar): "Ver antiguos" los trae para poder cerrarlos.
+  const [verAntiguos, setVerAntiguos] = useState(false);
   const [listOpen, setListOpen] = useState(
     () => typeof window === "undefined" || window.matchMedia("(min-width: 640px)").matches
   );
@@ -207,7 +209,7 @@ export const SeguimientoPage = () => {
     if (!isPrivileged) return undefined;
     let cancelled = false;
     const load = () =>
-      listSeguimientoRequest()
+      listSeguimientoRequest({ incluirAntiguos: verAntiguos })
         .then((result) => {
           if (!cancelled) {
             setData(result);
@@ -223,7 +225,7 @@ export const SeguimientoPage = () => {
       cancelled = true;
       stop();
     };
-  }, [isPrivileged]);
+  }, [isPrivileged, verAntiguos]);
 
   const servicios = useMemo(() => data?.servicios ?? [], [data]);
   const selected = useMemo(() => servicios.find((s) => s.id === selectedId) ?? null, [servicios, selectedId]);
@@ -427,6 +429,23 @@ export const SeguimientoPage = () => {
                   ))}
                 </div>
               </div>
+
+              {(data?.ocultos?.antiguos > 0 || verAntiguos) && (
+                <div className="flex items-center justify-between gap-2 border-b border-line/10 px-4 py-2 text-[11px] text-ink-300">
+                  <span>
+                    {verAntiguos
+                      ? `Se muestran también los servicios con más de ${data?.ocultos?.maxRetrasoHoras ?? 6} h de retraso.`
+                      : `${data.ocultos.antiguos} servicio(s) con más de ${data.ocultos.maxRetrasoHoras} h de retraso no se muestran (probablemente sin cerrar).`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setVerAntiguos((v) => !v)}
+                    className="shrink-0 font-semibold text-accent-400 hover:text-accent-300"
+                  >
+                    {verAntiguos ? "Ocultar antiguos" : "Ver antiguos"}
+                  </button>
+                </div>
+              )}
 
               <ul className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
                 {data === null ? (
