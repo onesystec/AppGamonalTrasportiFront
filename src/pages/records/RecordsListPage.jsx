@@ -25,6 +25,7 @@ import { Spinner } from "../../components/ui/Spinner";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
+import { useRecordChanges } from "../../hooks/useRecordChanges";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import {
@@ -454,6 +455,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   // y recien pide los registros completos del dia cuando se despliega ese dia. ---
   const [viewDate, setViewDate] = useState(CURRENT_VIEW_DATE);
   const [summary, setSummary] = useState(null);
+  const summaryMonthRef = useRef(null);
   const [openDays, setOpenDays] = useState(() => new Set());
   const [dayRecords, setDayRecords] = useState(() => new Map());
   const [loadingDays, setLoadingDays] = useState(() => new Set());
@@ -599,7 +601,12 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   useEffect(() => {
     if (!isPrivileged) return;
     let cancelled = false;
-    setSummary(null);
+    // Solo al cambiar de mes se vacia (spinner); al refrescar por un cambio se conserva lo que hay hasta que llegue lo nuevo.
+    const summaryMonthKey = `${viewDate.year}-${viewDate.month}`;
+    if (summaryMonthRef.current !== summaryMonthKey) {
+      setSummary(null);
+      summaryMonthRef.current = summaryMonthKey;
+    }
 
     listRecordsSummaryByMonthRequest(viewDate.year, viewDate.month)
       .then((data) => {
@@ -654,6 +661,14 @@ export const RecordsListPage = ({ section: sectionHint }) => {
       });
   };
 
+  // Vuelve a pedir un dia ya desplegado sin mostrar el spinner ni vaciarlo: el cambio aparece en el mismo lugar.
+  const refetchDaySilently = (key) => {
+    const [year, month, day] = key.split("-").map(Number);
+    listRecordsByDayRequest(year, month, day)
+      .then((data) => setDayRecords((prev) => new Map(prev).set(key, data)))
+      .catch(() => {});
+  };
+
   const toggleDay = (day) => {
     setOpenDays((prev) => {
       const next = new Set(prev);
@@ -674,14 +689,36 @@ export const RecordsListPage = ({ section: sectionHint }) => {
       isFirstVersionRender.current = false;
       return;
     }
-    setDayRecords(new Map());
+    // Los dias abiertos se vuelven a pedir sin vaciarlos (sin parpadeo); los cerrados se piden de nuevo cuando se abran.
+    setDayRecords((prev) => new Map([...prev].filter(([key]) => openDays.has(key))));
     setDayErrors(new Map());
-    openDays.forEach((key) => {
-      const [year, month, day] = key.split("-").map(Number);
-      fetchDay({ key, date: new Date(Date.UTC(year, month - 1, day)) });
-    });
+    openDays.forEach(refetchDaySilently);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
+
+  // Se creo, edito o borro un servicio en cualquier lado (otra persona, el bot de Telegram...): el servidor dice que dias cambiaron y solo esos
+  // dias (si estan desplegados) se vuelven a pedir, mas el resumen del mes y el panel de pendientes. Sin saber cuales (dias = null), todos los
+  // desplegados. Nada se vacia ni se recarga entero.
+  useRecordChanges((dias) => {
+    if (!isPrivileged) {
+      listRecordsRequest()
+        .then(setRecords)
+        .catch(() => {});
+      return;
+    }
+    listRecordsSummaryByMonthRequest(viewDate.year, viewDate.month)
+      .then(setSummary)
+      .catch(() => {});
+    listPendingRecordsRequest()
+      .then(setPendingRecords)
+      .catch(() => {});
+    if (showUnpaidOnly) {
+      listRecordsByMonthRequest(viewDate.year, viewDate.month)
+        .then(setUnpaidRecords)
+        .catch(() => {});
+    }
+    [...openDays].filter((key) => dias === null || dias.includes(key)).forEach(refetchDaySilently);
+  });
 
   const visibleRecords = records?.filter((r) => TAB_STATUSES[tab].includes(r.estado) && matchesArea(r));
 

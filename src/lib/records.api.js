@@ -38,6 +38,10 @@ export const listRecordsSummaryByMonthRequest = (year, month) =>
   api.get(`/records/${year}/${month}/summary`).then((res) => res.data.data.records);
 
 // Registros completos de un dia especifico (se piden recien al desplegar ese dia).
+// Dias de servicios que cambiaron desde la ultima consulta ({ version, instancia } de la respuesta anterior). dias = null: no se sabe cuales.
+export const getRecordChangesRequest = ({ version, instancia } = {}) =>
+  api.get("/records/cambios", { params: version != null ? { desde: version, instancia } : undefined }).then((res) => res.data.data);
+
 export const listRecordsByDayRequest = (year, month, day) =>
   api.get(`/records/${year}/${month}/${day}`).then((res) => res.data.data.records);
 
