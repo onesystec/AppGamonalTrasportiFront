@@ -41,7 +41,7 @@ const formatRomeDateTime = (value) =>
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  })} (hora de Roma)`;
+  })}`;
 
 const Fact = ({ label, children }) => (
   <div className="min-w-0">
@@ -266,7 +266,7 @@ export const MancatoDetailPage = () => {
                 {isPrivileged ? (
                   <Fact label="Vence">{formatDateOnly(mancato.fechaVencimiento)}</Fact>
                 ) : (
-                  <Fact label="Subido el">{formatRomeDateTime(mancato.registradoAt).replace(" (hora de Roma)", "")}</Fact>
+                  <Fact label="Subido el">{formatRomeDateTime(mancato.registradoAt)}</Fact>
                 )}
                 <Fact label="Costo">{formatCurrency(mancato.costo)}</Fact>
                 <Fact label="Targa">{mancato.targa}</Fact>

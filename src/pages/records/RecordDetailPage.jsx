@@ -164,7 +164,7 @@ const TraspasoOfService = ({ record, isChofer }) => {
         <p className="mt-1.5 text-[14px] text-ink-100">
           Lo termino <b>{name(relevo.chofer)}</b>
           {relevo.lugar ? `, en ${relevo.lugar}` : ""}
-          {relevo.traspasoHora ? `, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)} (Roma)` : ""}.{" "}
+          {relevo.traspasoHora ? `, que recibio el paquete el ${formatRomeDateTime(relevo.traspasoHora)}` : ""}.{" "}
           <Link to={`/records/${relevo.recordId}`} className="font-medium text-accent-400 hover:text-accent-300">
             Ver su servicio &rarr;
           </Link>
@@ -178,7 +178,7 @@ const TraspasoOfService = ({ record, isChofer }) => {
               {origen.codigo}
             </Link>
             ){origen.lugar ? ` en ${origen.lugar}` : ""}.{" "}
-            {record.traspasoHora && `Recibio el paquete el ${formatRomeDateTime(record.traspasoHora)} (Roma).`}
+            {record.traspasoHora && `Recibio el paquete el ${formatRomeDateTime(record.traspasoHora)}.`}
           </p>
         </>
       )}
@@ -1048,13 +1048,13 @@ const RecordSummaryView = ({
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {record.retiroPaqueteAt && (
-          <InfoRow label="Retiro del paquete" value={`${formatRomeDateTime(record.retiroPaqueteAt)} (Roma)`} />
+          <InfoRow label="Retiro del paquete" value={formatRomeDateTime(record.retiroPaqueteAt)} />
         )}
         <InfoRow
           label={record.retiroPaqueteAt ? "Salida a entregar" : "Salida / retiro"}
-          value={record.fechaRetiro ? `${formatRomeDateTime(record.fechaRetiro)} (Roma)` : "Sin cargar"}
+          value={record.fechaRetiro ? formatRomeDateTime(record.fechaRetiro) : "Sin cargar"}
         />
-        <InfoRow label="ETA" value={`${formatRomeDateTime(record.eta)} (Roma)`} />
+        <InfoRow label="ETA" value={formatRomeDateTime(record.eta)} />
         {record.salida?.direccion && <InfoRow label="Salida" value={record.salida.direccion} />}
         {(record.pasaPorBrennero || record.pasaPorFrejus) && (
           <InfoRow label="Ruta" value={[record.pasaPorBrennero && "Pasa por Brennero", record.pasaPorFrejus && "Pasa por Frejus"].filter(Boolean).join(" y ")} />
@@ -1485,7 +1485,7 @@ const RecordEditForm = ({
               <div>
                 <TextField
                   id="fechaRetiro"
-                  label="Fecha retiro (hora de Roma)"
+                  label="Fecha retiro"
                   type="datetime-local"
                   value={form.fechaRetiro}
                   onChange={handleChange("fechaRetiro")}
@@ -1502,7 +1502,7 @@ const RecordEditForm = ({
               />
               <TextField
                 id="eta"
-                label="ETA (hora de Roma)"
+                label="ETA"
                 type="datetime-local"
                 value={form.eta}
                 onChange={handleChange("eta")}

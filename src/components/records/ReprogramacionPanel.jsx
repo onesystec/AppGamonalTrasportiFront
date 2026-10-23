@@ -199,7 +199,7 @@ export const ReprogramacionPanel = ({ record, value, onChange, driverOptions, ve
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField id="reprog-eta" label="Nueva ETA (hora de Roma)" type="datetime-local" value={value.eta} onChange={onEta} disabled={disabled} />
+        <TextField id="reprog-eta" label="Nueva ETA" type="datetime-local" value={value.eta} onChange={onEta} disabled={disabled} />
         <TextField
           id="reprog-salida"
           label="Hora de salida (sugerida)"

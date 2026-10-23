@@ -87,7 +87,7 @@ export const PermisoModal = ({ initialDate, choferes, initialDriverId, onClose, 
                 registrado igual y se supera el tope.
               </p>
             )}
-            <p className="text-[12px] text-ink-400">Solicitado el {formatRomeDateTime(sent.solicitadoAt)} (hora de Roma)</p>
+            <p className="text-[12px] text-ink-400">Solicitado el {formatRomeDateTime(sent.solicitadoAt)}</p>
             <Button className="mt-2" onClick={onClose}>
               Listo
             </Button>
@@ -155,7 +155,7 @@ export const PermisoModal = ({ initialDate, choferes, initialDriverId, onClose, 
             <TextField
               id="permiso-solicitud"
               label="Fecha y hora de la solicitud (automatica)"
-              value={`${formatRomeDateTime(now)} - hora de Roma`}
+              value={formatRomeDateTime(now)}
               readOnly
               disabled
               tabIndex={-1}

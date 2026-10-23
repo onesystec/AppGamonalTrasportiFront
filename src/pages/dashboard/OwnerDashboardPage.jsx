@@ -436,7 +436,7 @@ export const OwnerDashboardPage = () => {
         />
         <KpiCard
           icon={RouteIcon}
-          label="Kilómetros"
+          label="Kilómetros recorridos"
           color="#22d3ee"
           value={`${Math.round(kpis.km.value).toLocaleString("es-AR")} km`}
           deltaPct={kpis.km.deltaPct}

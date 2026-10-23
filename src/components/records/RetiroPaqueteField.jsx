@@ -32,7 +32,7 @@ export const RetiroPaqueteField = ({ value, onChange, fechaRetiro, error }) => {
         <div className="mt-3 max-w-md">
           <TextField
             id="retiroPaqueteAt"
-            label="Retiro del paquete (hora de Roma)"
+            label="Retiro del paquete"
             type="datetime-local"
             value={value}
             onChange={(e) => onChange(e.target.value)}

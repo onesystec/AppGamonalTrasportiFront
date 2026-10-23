@@ -218,7 +218,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
           />
           <span className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-400">
             <ClockIcon className="h-3.5 w-3.5 shrink-0" />
-            La que aparece en el aviso (hora de Roma). Sirve para asignarlo al servicio.
+            La que aparece en el aviso. Sirve para asignarlo al servicio.
           </span>
         </div>
 
@@ -321,7 +321,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
         <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
         <span>
           {isEdit && mancato
-            ? `Registrado el ${new Date(mancato.registradoAt).toLocaleString("es-AR", { timeZone: "Europe/Rome", hour12: false })} (hora de Roma). No se puede editar.`
+            ? `Registrado el ${new Date(mancato.registradoAt).toLocaleString("es-AR", { timeZone: "Europe/Rome", hour12: false })}. No se puede editar.`
             : "El sistema guarda solo el dia y la hora en que registras este mancato pagamento. No se puede editar."}
         </span>
       </div>

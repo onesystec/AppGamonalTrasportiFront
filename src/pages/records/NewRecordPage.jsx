@@ -257,7 +257,7 @@ export const NewRecordPage = () => {
             <div>
               <TextField
                 id="fechaRetiro"
-                label="Fecha retiro (hora de Roma)"
+                label="Fecha retiro"
                 type="datetime-local"
                 value={form.fechaRetiro}
                 onChange={handleChange("fechaRetiro")}
@@ -278,7 +278,7 @@ export const NewRecordPage = () => {
 
             <TextField
               id="eta"
-              label="ETA (hora de Roma)"
+              label="ETA"
               type="datetime-local"
               value={form.eta}
               onChange={handleChange("eta")}

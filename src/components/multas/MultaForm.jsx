@@ -467,7 +467,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
         <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
         <span>
           {isEdit && multa
-            ? `Cargada el ${new Date(multa.registradoAt).toLocaleString("es-AR", { timeZone: "Europe/Rome", hour12: false })} (hora de Roma). No se puede editar.`
+            ? `Cargada el ${new Date(multa.registradoAt).toLocaleString("es-AR", { timeZone: "Europe/Rome", hour12: false })}. No se puede editar.`
             : "El sistema guarda solo el dia y la hora en que cargas esta multa. No se puede editar."}
         </span>
       </div>

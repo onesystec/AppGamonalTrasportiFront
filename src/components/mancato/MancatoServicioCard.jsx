@@ -62,7 +62,7 @@ export const MancatoServicioCard = ({ mancato, isPrivileged, busy, onChange }) =
       {formatTransito(mancato) && (
         <p className="mt-2 flex items-center gap-1.5 text-[13px] text-ink-300">
           <ClockIcon className="h-3.5 w-3.5 shrink-0" />
-          Tránsito: {formatTransito(mancato)} (hora de Roma)
+          Tránsito: {formatTransito(mancato)}
         </p>
       )}
 
