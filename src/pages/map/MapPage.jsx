@@ -18,7 +18,7 @@ import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { parseApiError } from "../../lib/api";
-import { EN_PROCESO_STATUSES, VEHICLE_AREA_OPTIONS } from "../../lib/constants";
+import { EN_PROCESO_STATUSES } from "../../lib/constants";
 import { computeLocationPermissionAlerts, filterToPiazzaYDhlRoma } from "../../lib/dashboardStats";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
 import { addMinutes } from "../../lib/format";
@@ -455,6 +455,8 @@ export const MapPage = () => {
   // con su estado y se pueden ubicar en el mapa; los que no, al final y marcados "GPS desactivado". Sin GPS
   // ni ficha del celular, no hay pin. Los vehiculos que reportan pero no tienen ficha caen en "Sin asignar".
   const vehicleItems = useMemo(() => {
+    // La lista solo muestra los vehiculos que el Admin dejo visibles en el Mapa (interruptor de cada vehiculo en Vehiculos).
+    const allowedFleet = (fleet ?? []).filter((v) => v.mostrarEnMapa !== false);
     const fleetByTarga = new Map((fleet ?? []).map((v) => [normalizeTarga(v.targa), v]));
     const unique = new Map();
     (enrichedLocations ?? []).forEach((loc) => {
@@ -462,7 +464,13 @@ export const MapPage = () => {
       if (!unique.has(key)) unique.set(key, loc);
     });
 
-    const withLocation = [...unique.values()].map((loc) => {
+    const withLocation = [...unique.values()]
+      .filter((loc) => {
+        const t = loc.vehiculoGps?.targa ?? driverVehicleTarga.get(loc.id) ?? null;
+        const f = t ? fleetByTarga.get(normalizeTarga(t)) : undefined;
+        return !f || f.mostrarEnMapa !== false;
+      })
+      .map((loc) => {
       const targa = loc.vehiculoGps?.targa ?? driverVehicleTarga.get(loc.id) ?? null;
       const ficha = targa ? fleetByTarga.get(normalizeTarga(targa)) : undefined;
       const minutos = loc.vehiculoGps && loc.actualizada ? minutesAgo(loc.actualizada) : null;
@@ -479,11 +487,12 @@ export const MapPage = () => {
         area: ficha?.area ?? "SIN_ASIGNAR",
         modelo: ficha?.modelo ?? null,
         sinSenalMin: sinSenal ? minutos : null,
+        empresa: ficha?.empresa ?? "GAMONAL",
       };
     });
 
     const represented = new Set(withLocation.filter((i) => i.targa).map((i) => normalizeTarga(i.targa)));
-    const withoutGps = (fleet ?? [])
+    const withoutGps = allowedFleet
       .filter((v) => !represented.has(normalizeTarga(v.targa)))
       .map((v) => ({
         loc: null,
@@ -493,6 +502,7 @@ export const MapPage = () => {
         area: v.area,
         modelo: v.modelo,
         sinSenalMin: null,
+        empresa: v.empresa ?? "GAMONAL",
       }));
 
     return [...withLocation, ...withoutGps].sort(
@@ -503,22 +513,19 @@ export const MapPage = () => {
     );
   }, [enrichedLocations, driverVehicleTarga, fleet]);
 
-  // Pestanias por area: "General" (todos) + cada area con vehiculos ("Sin asignar" solo si hay).
-  const areaTabs = useMemo(() => {
-    const counts = new Map();
-    vehicleItems.forEach((i) => counts.set(i.area, (counts.get(i.area) ?? 0) + 1));
-    return [
+  // Pestanias de la lista: "General" (todos los vehiculos permitidos en el mapa), "Gamonal" (la flota de la empresa) y "Piazza" (los vehiculos que
+  // aporte Piazza; mientras no haya ninguno, queda en 0).
+  const areaTabs = useMemo(
+    () => [
       { key: "todos", label: "General", count: vehicleItems.length },
-      ...VEHICLE_AREA_OPTIONS.filter((o) => o.value !== "SIN_ASIGNAR" || counts.has("SIN_ASIGNAR")).map((o) => ({
-        key: o.value,
-        label: o.label,
-        count: counts.get(o.value) ?? 0,
-      })),
-    ];
-  }, [vehicleItems]);
+      { key: "GAMONAL", label: "Gamonal", count: vehicleItems.filter((i) => i.empresa === "GAMONAL").length },
+      { key: "PIAZZA", label: "Piazza", count: vehicleItems.filter((i) => i.empresa === "PIAZZA").length },
+    ],
+    [vehicleItems]
+  );
 
   const itemsInArea = useMemo(
-    () => (areaFilter === "todos" ? vehicleItems : vehicleItems.filter((i) => i.area === areaFilter)),
+    () => (areaFilter === "todos" ? vehicleItems : vehicleItems.filter((i) => i.empresa === areaFilter)),
     [vehicleItems, areaFilter]
   );
 

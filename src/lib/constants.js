@@ -180,6 +180,12 @@ export const CHART_COLORS = {
   km: "#22d3ee",
 };
 
+// De quien es el vehiculo: Gamonal (la flota actual) o Piazza (vehiculos que aportara Piazza). Son las pestanias de la lista del Mapa.
+export const EMPRESA_VEHICULO_OPTIONS = [
+  { value: "GAMONAL", label: "Gamonal" },
+  { value: "PIAZZA", label: "Piazza" },
+];
+
 export const VEHICLE_STATUS_OPTIONS = [
   { value: "DISPONIBLE", label: "Disponible" },
   { value: "EN_MANTENIMIENTO", label: "En mantenimiento" },

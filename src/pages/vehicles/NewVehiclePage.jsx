@@ -12,7 +12,7 @@ import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
-import { GRUPO_OPTIONS, VEHICLE_AREA_OPTIONS, VEHICLE_STATUS_OPTIONS } from "../../lib/constants";
+import { EMPRESA_VEHICULO_OPTIONS, GRUPO_OPTIONS, VEHICLE_AREA_OPTIONS, VEHICLE_STATUS_OPTIONS } from "../../lib/constants";
 import { createVehicleRequest } from "../../lib/vehicles.api";
 
 const INITIAL_FORM = {
@@ -21,6 +21,7 @@ const INITIAL_FORM = {
   area: "",
   grupo: "",
   estado: "DISPONIBLE",
+  empresa: "GAMONAL",
   categoria: "",
   poliza: "",
   rTecnica: "",
@@ -137,6 +138,15 @@ export const NewVehiclePage = () => {
               value={form.grupo}
               onChange={(v) => setField("grupo", v)}
               error={fieldErrors.grupo?.[0]}
+            />
+            <SearchableSelect
+              id="empresa"
+              label="Empresa"
+              placeholder="De quién es el vehículo"
+              options={EMPRESA_VEHICULO_OPTIONS}
+              value={form.empresa}
+              onChange={(v) => setField("empresa", v)}
+              error={fieldErrors.empresa?.[0]}
             />
             <SearchableSelect
               id="estado"

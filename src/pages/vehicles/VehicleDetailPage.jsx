@@ -17,7 +17,7 @@ import { VehicleSpeedingSection } from "../../components/vehicles/VehicleSpeedin
 import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
-import { GRUPO_OPTIONS, VEHICLE_AREA_OPTIONS, VEHICLE_STATUS_OPTIONS } from "../../lib/constants";
+import { EMPRESA_VEHICULO_OPTIONS, GRUPO_OPTIONS, VEHICLE_AREA_OPTIONS, VEHICLE_STATUS_OPTIONS } from "../../lib/constants";
 import { formatDate, toDateInputValue } from "../../lib/format";
 import {
   deleteVehicleRequest,
@@ -34,6 +34,7 @@ const toFormState = (vehicle) => ({
   area: vehicle.area ?? "",
   grupo: vehicle.grupo ?? "",
   estado: vehicle.estado ?? "",
+  empresa: vehicle.empresa ?? "GAMONAL",
   categoria: vehicle.categoria ?? "",
   poliza: toDateInputValue(vehicle.poliza),
   rTecnica: toDateInputValue(vehicle.rTecnica),
@@ -344,6 +345,7 @@ export const VehicleDetailPage = () => {
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <VehicleStat label="Area" value={areaLabel(vehicle.area)} />
             <VehicleStat label="Grupo" value={vehicle.grupo ? grupoLabel(vehicle.grupo) : null} />
+            <VehicleStat label="Empresa" value={vehicle.empresa === "PIAZZA" ? "Piazza" : "Gamonal"} />
             <VehicleStat label="Categoria de consumo" value={vehicle.categoria ? CATEGORIA_VEHICULO_LABELS[vehicle.categoria] : null} />
             <VehicleStat
               label="Area C (ZTL Milano)"
@@ -403,6 +405,15 @@ export const VehicleDetailPage = () => {
                 value={form.estado}
                 onChange={(v) => setField("estado", v)}
                 error={fieldErrors.estado?.[0]}
+              />
+              <SearchableSelect
+                id="empresa"
+                label="Empresa"
+                placeholder="De quién es el vehículo"
+                options={EMPRESA_VEHICULO_OPTIONS}
+                value={form.empresa}
+                onChange={(v) => setField("empresa", v)}
+                error={fieldErrors.empresa?.[0]}
               />
               <SearchableSelect
                 id="categoria"
