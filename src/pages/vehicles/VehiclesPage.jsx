@@ -628,12 +628,13 @@ export const VehiclesPage = () => {
     setSyncMessage("");
     try {
       const result = await syncVehiclesFromVelocityFleetRequest();
+      const avisos = result.avisos?.length ? ` (${result.avisos.join("; ")})` : "";
       setSyncMessage(
         result.createdCount === 0
-          ? "No hay targas nuevas para importar."
-          : `Se importaron ${result.createdCount} vehículo(s): ${result.created
-              .map((v) => v.targa)
-              .join(", ")}. Revisa su área/modelo en la ficha de cada uno.`
+          ? `No hay dispositivos nuevos: OneSystec tiene ${result.dispositivosOnesystec ?? 0} y Velocity Fleet no trae targas nuevas${avisos}.`
+          : `Se importaron ${result.createdCount} vehículo(s): ${result.created.map((v) => v.targa).join(", ")}. ` +
+              `Los de OneSystec (${result.onesystec ?? 0}) quedan visibles en el mapa; los de Velocity Fleet (${result.velocity ?? 0}) quedan ocultos hasta que los actives. ` +
+              `Revisa su área/modelo en la ficha de cada uno${avisos}.`
       );
       refreshVehicles();
     } catch (err) {
@@ -657,7 +658,7 @@ export const VehiclesPage = () => {
         <div className="flex flex-wrap gap-2">
           {user?.cargo === "OWNER" && (
             <Button variant="ghost" className="!w-auto px-5" onClick={handleSyncFromVelocity} loading={syncing}>
-              Importar de Velocity Fleet
+              Buscar dispositivos nuevos
             </Button>
           )}
           <Link to="/vehiculos/new" state={{ backgroundLocation: location }}>
