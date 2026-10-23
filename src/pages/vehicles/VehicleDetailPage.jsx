@@ -10,6 +10,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
 import { StatCard } from "../../components/ui/StatCard";
+import { Switch } from "../../components/ui/Switch";
 import { TextField } from "../../components/ui/TextField";
 import { VehicleStatusBadge } from "../../components/ui/VehicleStatusBadge";
 import { VehicleSpeedingSection } from "../../components/vehicles/VehicleSpeedingSection";
@@ -37,6 +38,7 @@ const toFormState = (vehicle) => ({
   poliza: toDateInputValue(vehicle.poliza),
   rTecnica: toDateInputValue(vehicle.rTecnica),
   autorizadoAreaC: vehicle.autorizadoAreaC ?? false,
+  mostrarEnMapa: vehicle.mostrarEnMapa ?? true,
 });
 
 // Muestra el valor si esta cargado, o un placeholder atenuado si falta completarlo.
@@ -348,6 +350,11 @@ export const VehicleDetailPage = () => {
               value={vehicle.autorizadoAreaC ? "Autorizado" : "No autorizado"}
               tone={vehicle.autorizadoAreaC ? "green" : "amber"}
             />
+            <VehicleStat
+              label="Mapa"
+              value={vehicle.mostrarEnMapa === false ? "Oculto en el mapa" : "Visible en el mapa"}
+              tone={vehicle.mostrarEnMapa === false ? "amber" : "green"}
+            />
           </div>
         ) : (
           <form className="mt-8 flex flex-col gap-5" onSubmit={handleSave}>
@@ -417,6 +424,14 @@ export const VehicleDetailPage = () => {
               />
               Autorizado para circular en Area C (permiso ZTL de Milano)
             </label>
+
+            <Switch
+              id="mostrarEnMapa"
+              label="Mostrar en el mapa"
+              description="Si está apagado, este vehículo no aparece en el Mapa (los avisos de Área C y de velocidad siguen funcionando)."
+              checked={form.mostrarEnMapa}
+              onChange={(value) => setField("mostrarEnMapa", value)}
+            />
 
             <div className="border-t border-line/10 pt-5">
               <h3 className="mb-4 text-[13px] font-medium uppercase tracking-wide text-ink-400">

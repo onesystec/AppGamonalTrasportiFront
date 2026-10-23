@@ -22,6 +22,7 @@ import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Select } from "../../components/ui/Select";
 import { Spinner } from "../../components/ui/Spinner";
 import { StatTile } from "../../components/ui/StatTile";
+import { Switch } from "../../components/ui/Switch";
 import { TextField } from "../../components/ui/TextField";
 import { VehicleStatusBadge } from "../../components/ui/VehicleStatusBadge";
 import { useAuth } from "../../context/AuthContext";
@@ -40,7 +41,7 @@ import { computeFleetKmUsage, computeVehicleDocumentAlerts, filterToMainAreas } 
 import { listRecordsByMonthRequest } from "../../lib/records.api";
 import { SpeedingAlertsPanel } from "../../components/vehicles/SpeedingAlertsPanel";
 import { getNotificationScopeRequest, vehicleInScope } from "../../lib/notifications.api";
-import { listVehiclesRequest, syncVehiclesFromVelocityFleetRequest } from "../../lib/vehicles.api";
+import { listVehiclesRequest, syncVehiclesFromVelocityFleetRequest, updateVehicleRequest } from "../../lib/vehicles.api";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
 import { kmRecorrido } from "../../lib/km";
 
@@ -135,7 +136,32 @@ const GroupSection = ({ title, members }) => (
 // Vista de tabla
 // ---------------------------------------------------------------------------
 
-const VehicleTable = ({ vehicles }) => {
+// Interruptor "se ve en el Mapa" de cada vehiculo: se guarda al tocarlo (sin entrar a editar). Los importados solos de Velocity Fleet (que pueden ser de
+// otras empresas de la cuenta, como UNIVEX) nacen apagados.
+const MapaSwitch = ({ vehicle }) => {
+  const [on, setOn] = useState(vehicle.mostrarEnMapa !== false);
+  const [saving, setSaving] = useState(false);
+  const toggle = async (value) => {
+    setOn(value);
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("mostrarEnMapa", String(value));
+      await updateVehicleRequest(vehicle.id, formData);
+    } catch {
+      setOn(!value);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
+      <Switch id={`mapa-${vehicle.id}`} checked={on} onChange={toggle} disabled={saving} />
+    </div>
+  );
+};
+
+const VehicleTable = ({ vehicles, canToggleMap = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const open = (id) => navigate(`/vehiculos/${id}`, { state: { backgroundLocation: location } });
@@ -150,6 +176,7 @@ const VehicleTable = ({ vehicles }) => {
             <th className="px-2 py-3.5 font-medium">Centro</th>
             <th className="px-2 py-3.5 font-medium">Conductor</th>
             <th className="px-2 py-3.5 text-right font-medium">Km</th>
+            {canToggleMap && <th className="px-2 py-3.5 text-center font-medium">En el mapa</th>}
             <th className="py-3.5 pl-2 pr-4 font-medium">Estado</th>
           </tr>
         </thead>
@@ -182,6 +209,11 @@ const VehicleTable = ({ vehicles }) => {
               <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums text-ink-100">
                 {vehicle.kmActual != null ? fmtKm(vehicle.kmActual) : "—"}
               </td>
+              {canToggleMap && (
+                <td className="px-2 py-3">
+                  <MapaSwitch vehicle={vehicle} />
+                </td>
+              )}
               <td className="py-3 pl-2 pr-4">
                 <VehicleStatusBadge status={vehicle.estado} />
               </td>
@@ -712,7 +744,7 @@ export const VehiclesPage = () => {
                 Ningún vehículo coincide con los filtros.
               </GlassCard>
             ) : view === "tabla" ? (
-              <VehicleTable vehicles={pageItems} />
+              <VehicleTable vehicles={pageItems} canToggleMap={user?.cargo === "OWNER" || user?.cargo === "ADMIN"} />
             ) : (
               <div className="flex flex-col gap-7">
                 {groups.map((g) => (

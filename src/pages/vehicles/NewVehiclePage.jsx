@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
+import { Switch } from "../../components/ui/Switch";
 import { TextField } from "../../components/ui/TextField";
 import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
@@ -24,6 +25,7 @@ const INITIAL_FORM = {
   poliza: "",
   rTecnica: "",
   autorizadoAreaC: false,
+  mostrarEnMapa: true,
 };
 
 const FILE_FIELDS = [
@@ -181,6 +183,14 @@ export const NewVehiclePage = () => {
             />
             Autorizado para circular en Area C (permiso ZTL de Milano)
           </label>
+
+          <Switch
+            id="mostrarEnMapa"
+            label="Mostrar en el mapa"
+            description="Si está apagado, este vehículo no aparece en el Mapa."
+            checked={form.mostrarEnMapa}
+            onChange={(value) => setField("mostrarEnMapa", value)}
+          />
 
           <div className="border-t border-line/10 pt-5">
             <h3 className="mb-4 text-[13px] font-medium uppercase tracking-wide text-ink-400">
