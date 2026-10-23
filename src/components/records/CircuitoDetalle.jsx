@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatKmValue } from "../../lib/compactado";
 import { CircuitoMapaModal } from "./CircuitoMapaModal";
+import { RecorridoRealModal } from "./RecorridoRealModal";
 
 const sentido = (nombre, sinPeaje, evitado, lista, cantidad, revisar) => {
   if (sinPeaje) return evitado ? `${nombre}: sin peaje` : `${nombre}: sin peaje (no se pudo calcular la ruta que los evita)`;
@@ -19,16 +20,23 @@ const PeajesResumen = ({ peajes }) =>
 
 // Los km del circuito de un servicio o viaje tramo por tramo (lugar de espera -> retiro -> paradas -> lugar de espera), con un
 // boton para verlo en el mapa. `circuito` = record.circuito (con tramos).
-export const CircuitoDetalle = ({ circuito, recordId, className }) => {
+export const CircuitoDetalle = ({ circuito, recordId, className, recorridoEstado }) => {
   const [open, setOpen] = useState(false);
+  const [openReal, setOpenReal] = useState(false);
   if (!circuito?.tramos?.length) return null;
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-400">Circuito planificado</h4>
-        <button type="button" onClick={() => setOpen(true)} className="text-[12px] font-medium text-accent-400 hover:text-accent-300">
-          Ver en el mapa
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setOpenReal(true)} className="text-[12px] font-medium text-accent-400 hover:text-accent-300">
+            Ver recorrido real
+            {recorridoEstado === "REVISAR" && <span className="ml-1.5 rounded-full bg-warning-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning-500">Revisar</span>}
+          </button>
+          <button type="button" onClick={() => setOpen(true)} className="text-[12px] font-medium text-accent-400 hover:text-accent-300">
+            Ver en el mapa
+          </button>
+        </div>
       </div>
       <PeajesResumen peajes={circuito.peajes} />
       <ul className="mt-1.5 flex flex-col gap-1">
@@ -46,6 +54,7 @@ export const CircuitoDetalle = ({ circuito, recordId, className }) => {
         </li>
       </ul>
       {open && <CircuitoMapaModal recordId={recordId} onClose={() => setOpen(false)} />}
+      {openReal && <RecorridoRealModal recordId={recordId} onClose={() => setOpenReal(false)} />}
     </div>
   );
 };

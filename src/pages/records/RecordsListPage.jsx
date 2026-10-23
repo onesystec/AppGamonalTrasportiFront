@@ -41,6 +41,7 @@ import { CompactarModal } from "../../components/records/CompactarModal";
 import { FaltantesChips, hasFaltantes } from "../../components/records/FaltantesPanel";
 import { EMPTY_RECORD_FILTERS, RecordFilters, countActiveFilters } from "../../components/records/RecordFilters";
 import { ViajeChip } from "../../components/records/ViajeChip";
+import { DesvioChip } from "../../components/records/DesvioChip";
 import {
   listPendingRecordsRequest,
   listRecordsByDayRequest,
@@ -189,6 +190,7 @@ const RecordCard = ({ record }) => {
       </div>
       <FaltantesChips faltantes={record.faltantes} className="mt-3" />
       <ViajeChip compactado={record.compactado} className="mt-3" />
+      <DesvioChip recorridoEstado={record.recorridoEstado} className="mt-3 ml-2" />
       </GlassCard>
     </Link>
   );
@@ -242,6 +244,7 @@ const RecordRow = ({ record }) => {
         </span>
         <FaltantesChips faltantes={record.faltantes} className="mt-1" />
         <ViajeChip compactado={record.compactado} className="mt-1" />
+        <DesvioChip recorridoEstado={record.recorridoEstado} className="mt-1" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-ink-100">{record.vehicle?.targa ?? "-"}</span>

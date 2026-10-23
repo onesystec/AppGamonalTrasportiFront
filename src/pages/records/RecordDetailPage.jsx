@@ -1131,7 +1131,7 @@ const RecordSummaryView = ({
         </div>
       </div>
 
-      <CircuitoDetalle circuito={record.circuito} recordId={record.id} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />
+      <CircuitoDetalle circuito={record.circuito} recordId={record.id} recorridoEstado={record.recorridoEstado} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />
 
       <ViajeCompactoCard record={record} isChofer={isChofer} onChanged={onReload} />
 

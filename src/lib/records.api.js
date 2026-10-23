@@ -39,6 +39,10 @@ export const listRecordsSummaryByMonthRequest = (year, month) =>
 
 // Registros completos de un dia especifico (se piden recien al desplegar ese dia).
 // Dias de servicios que cambiaron desde la ultima consulta ({ version, instancia } de la respuesta anterior). dias = null: no se sabe cuales.
+// Recorrido real del vehiculo (GPS de OneSystec) comparado con la ruta planificada. recalcular: vuelve a pedirlo al GPS.
+export const getRecorridoRequest = (id, { recalcular = false } = {}) =>
+  api.get(`/records/${id}/recorrido`, { params: recalcular ? { recalcular: 1 } : undefined, timeout: 60000 }).then((res) => res.data.data);
+
 export const getRecordChangesRequest = ({ version, instancia } = {}) =>
   api.get("/records/cambios", { params: version != null ? { desde: version, instancia } : undefined }).then((res) => res.data.data);
 
