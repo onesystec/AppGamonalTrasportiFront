@@ -8,6 +8,10 @@ export const listVehiclesRequest = () => sharedGet("vehiculos", () => api.get("/
 // tienen ese dispositivo instalado (no todos todavia). Ver MapPage.jsx: se usa para
 // reemplazar la posicion del celular del chofer por la del vehiculo cuando esta
 // disponible, mas precisa.
+// De quien es cada vehiculo ahora: el servicio actual y su chofer (desde 50 min antes del retiro hasta que termina la vuelta), para el Mapa.
+export const listCurrentServicesRequest = () =>
+  api.get("/vehiculos/servicios-actuales").then((res) => res.data.data.vehiculos);
+
 export const listVehicleLivePositionsRequest = () =>
   api.get("/vehiculos/live-positions").then((res) => res.data.data.positions);
 

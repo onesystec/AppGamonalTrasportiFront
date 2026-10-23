@@ -28,7 +28,7 @@ import { startVisibleInterval } from "../../lib/polling";
 import { PEAJE_COLOR_CERCA } from "../../lib/peajes";
 import { PeajesLayer } from "../../components/mapa/PeajesLayer";
 import { getRecordLiveEtaRequest, listPendingRecordsRequest } from "../../lib/records.api";
-import { getEtaToDestinationRequest, listVehicleLivePositionsRequest, listVehiclesRequest } from "../../lib/vehicles.api";
+import { getEtaToDestinationRequest, listCurrentServicesRequest, listVehicleLivePositionsRequest, listVehiclesRequest } from "../../lib/vehicles.api";
 import { getDriverReturnEtaRequest, listDriverLocationsRequest, listUsersRequest } from "../../lib/users.api";
 
 // Modulo estable fuera del componente: si se recrea en cada render, useJsApiLoader
@@ -133,6 +133,27 @@ const STATUS_META = {
 const GPS_SIN_SENAL_MIN = 24 * 60;
 const GPS_OFF_COLOR = "#8a94a8";
 
+// Distancia en km entre dos puntos { lat, lng } (aproximada, de sobra para saber si dos pines estan lejos).
+const distanceKm = (a, b) => {
+  const rad = (d) => (d * Math.PI) / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+};
+
+// Id del marcador: uno por vehiculo con GPS y uno por celular (cuadradito). Es el que abre su InfoWindow.
+const markerIdOf = (loc) => (loc.celular ? `phone-${loc.id}` : loc.id);
+
+// Pin del celular de un chofer: un cuadradito, para diferenciarlo del pin redondo/flecha de los vehiculos.
+const PHONE_PIN_COLOR = "#a78bfa";
+const phoneIcon = () => ({
+  path: "M -6 -6 L 6 -6 L 6 6 L -6 6 Z",
+  scale: 1,
+  fillColor: PHONE_PIN_COLOR,
+  fillOpacity: 0.95,
+  strokeColor: "#ffffff",
+  strokeWeight: 2,
+});
+
 const haceTexto = (min) => {
   if (min < 60) return `${min} min`;
   if (min < 48 * 60) return `${Math.round(min / 60)} h`;
@@ -175,8 +196,12 @@ const VehicleListItem = ({ item, active, onSelect }) => {
             )}
           </span>
           <span className="block truncate text-[12px] text-ink-300">
-            {item.driver ?? (sinUbicacion ? item.modelo ?? "Sin chofer asignado" : "Sin chofer asignado")}
+            {item.driver ? (item.servicioCodigo ? `${item.driver} · ${item.servicioCodigo}` : item.driver) : "Sin servicio"}
           </span>
+          {item.varios && <span className="block truncate text-[11px] font-medium text-warning-500">Revisar: 2 servicios a la vez</span>}
+          {item.movimientoSinServicio && (
+            <span className="block truncate text-[11px] font-medium text-warning-500">En movimiento sin servicio</span>
+          )}
           {!sinUbicacion && (
             <span className="block truncate text-[11px] font-medium" style={{ color: meta.color }}>
               {meta.label}
@@ -231,6 +256,8 @@ export const MapPage = () => {
   // dispositivo instalado. Ver enrichedLocations mas abajo: reemplaza la posicion del
   // celular del chofer por esta cuando esta disponible para su vehiculo asignado.
   const [vehiclePositions, setVehiclePositions] = useState(null);
+  // De quien es cada vehiculo ahora: el servicio que tiene en este momento y su chofer (ver listCurrentServicesRequest).
+  const [serviciosActuales, setServiciosActuales] = useState(null);
   const [records, setRecords] = useState(null);
   const [allDrivers, setAllDrivers] = useState(null);
   // ETA del marcador que tiene el InfoWindow abierto en el mapa (un servicio en camino,
@@ -278,6 +305,12 @@ export const MapPage = () => {
       listVehicleLivePositionsRequest()
         .then((data) => {
           if (!cancelled) setVehiclePositions(data);
+        })
+        .catch(() => {});
+      // Silencioso tambien: sin esto el mapa solo muestra las targas, sin chofer.
+      listCurrentServicesRequest()
+        .then((data) => {
+          if (!cancelled) setServiciosActuales(data);
         })
         .catch(() => {});
     };
@@ -330,113 +363,39 @@ export const MapPage = () => {
 
   const normalizeTarga = (targa) => targa?.replace(/\s+/g, "").toUpperCase() ?? "";
 
-  // Vehiculo asignado (targa) de cada chofer, para cruzar con vehiclePositions -
-  // viene de allDrivers (lista completa), no de "locations", que no trae ese dato.
-  const driverVehicleTarga = useMemo(() => {
+  // De quien es cada vehiculo ahora, por targa.
+  const currentServiceByTarga = useMemo(() => {
     const map = new Map();
-    (allDrivers ?? []).forEach((d) => {
-      if (d.vehiculoAsignado?.targa) map.set(d.id, d.vehiculoAsignado.targa);
-    });
+    (serviciosActuales ?? []).forEach((s) => map.set(normalizeTarga(s.targa), s));
     return map;
-  }, [allDrivers]);
+  }, [serviciosActuales]);
 
-  const vehiclePositionByTarga = useMemo(() => {
-    const map = new Map();
-    (vehiclePositions ?? []).forEach((p) => map.set(normalizeTarga(p.targa), p));
-    return map;
-  }, [vehiclePositions]);
-
-  // Reemplaza la posicion del celular del chofer por la del GPS de su vehiculo
-  // asignado (Velocity Fleet) cuando esa unidad lo tiene instalado - pedido
-  // explicito: mas preciso, viene del vehiculo y no del telefono. Los vehiculos sin
-  // ese GPS (no todos lo tienen todavia) siguen mostrando la ubicacion del celular,
-  // sin excepcion - nunca se cae el pin por no tener el dispositivo instalado.
-  //
-  // Ademas: un vehiculo con GPS de Velocity Fleet tiene que aparecer aunque el
-  // celular del chofer NO este compartiendo ubicacion en este momento (celular
-  // apagado, permiso denegado, o simplemente todavia no arranco a compartir) - sin
-  // esto, un vehiculo con GPS real quedaba sin pin solo porque no habia una entrada
-  // de "locations" (celular) previa a la cual reemplazarle la posicion.
+  // Un pin por cada vehiculo con GPS (Velocity Fleet / OneSystec) y, si el celular de los choferes esta activo, un pin aparte por cada celular
+  // (cuadradito). El chofer que se muestra en un vehiculo es el del SERVICIO que tiene ahora (desde 50 min antes del retiro hasta que termina la
+  // vuelta), nunca el "vehiculo habitual" del chofer: el vehiculo puede cambiar en cualquier momento. Sin servicio, solo la targa.
   const enrichedLocations = useMemo(() => {
     if (!locations) return locations;
 
-    const driverIdsWithPhoneLocation = new Set(locations.map((loc) => loc.id));
-    // Targas ya usadas (por un chofer con celular o sin el, mas abajo) - lo que quede
-    // sin marcar al final son vehiculos con GPS que hoy no tienen a nadie asignado,
-    // y aun asi tienen que verse: el pedido es ver los vehiculos, no solo los que
-    // tienen chofer puesto en este momento.
-    const usedTargas = new Set();
-
-    const merged = locations.map((loc) => {
-      const targa = driverVehicleTarga.get(loc.id);
-      const normTarga = targa ? normalizeTarga(targa) : null;
-      const vehiclePosition = normTarga ? vehiclePositionByTarga.get(normTarga) : undefined;
-      if (!vehiclePosition) return loc;
-      usedTargas.add(normTarga);
-      return {
-        ...loc,
-        lat: vehiclePosition.lat,
-        lng: vehiclePosition.lng,
-        actualizada: vehiclePosition.updatedAt ?? loc.actualizada,
-        vehiculoGps: {
-          targa,
-          speed: vehiclePosition.speed,
-          speedUnit: vehiclePosition.speedUnit,
-          ignition: vehiclePosition.ignition,
-          direction: vehiclePosition.direction,
-        },
-      };
-    });
-
-    (allDrivers ?? []).forEach((d) => {
-      if (driverIdsWithPhoneLocation.has(d.id)) return; // ya cubierto arriba
-      const targa = d.vehiculoAsignado?.targa;
-      const normTarga = targa ? normalizeTarga(targa) : null;
-      if (!normTarga || usedTargas.has(normTarga)) return;
-      const vehiclePosition = vehiclePositionByTarga.get(normTarga);
-      if (!vehiclePosition) return;
-      usedTargas.add(normTarga);
-
-      // El servicio activo del chofer (si tiene) no viene con el GPS del vehiculo -
-      // se busca en "records" para que el pin/lista se comporten igual que uno con
-      // ubicacion de celular (icono, aparecer en Pendientes, etc.).
-      const servicio =
-        (records ?? []).find((r) => r.driver?.id === d.id && EN_PROCESO_STATUSES.includes(r.estado)) ?? null;
-
-      merged.push({
-        id: d.id,
-        nombre: d.nombre,
-        apellido: d.apellido,
-        lat: vehiclePosition.lat,
-        lng: vehiclePosition.lng,
-        actualizada: vehiclePosition.updatedAt,
-        servicio,
-        vehiculoGps: {
-          targa,
-          speed: vehiclePosition.speed,
-          speedUnit: vehiclePosition.speedUnit,
-          ignition: vehiclePosition.ignition,
-          direction: vehiclePosition.direction,
-        },
-      });
-    });
-
-    // Vehiculos con GPS que no tienen chofer asignado ahora mismo (o cuyo chofer
-    // asignado no matcheo arriba por algun motivo) - se muestran igual, solo con la
-    // targa como "nombre" (no hay chofer que mostrar).
-    (vehiclePositions ?? []).forEach((vp) => {
+    const vehicleLocs = (vehiclePositions ?? []).map((vp) => {
       const normTarga = normalizeTarga(vp.targa);
-      if (usedTargas.has(normTarga)) return;
-      usedTargas.add(normTarga);
-
-      merged.push({
+      const actual = currentServiceByTarga.get(normTarga);
+      const servicio = actual?.servicio
+        ? ((records ?? []).find((r) => r.id === actual.servicio.id) ?? {
+            id: actual.servicio.id,
+            codigo: actual.servicio.codigo,
+            destinazione: actual.servicio.destinazione,
+            estado: actual.servicio.estado,
+          })
+        : null;
+      return {
         id: `vehiculo-${normTarga}`,
-        nombre: vp.targa,
-        apellido: "",
+        nombre: actual?.driver?.nombre ?? vp.targa,
+        apellido: actual?.driver?.apellido ?? "",
         lat: vp.lat,
         lng: vp.lng,
         actualizada: vp.updatedAt,
-        servicio: null,
+        servicio,
+        servicioActual: actual?.servicio ? { ...actual.servicio, tramo: actual.tramo, varios: actual.varios } : null,
         vehiculoGps: {
           targa: vp.targa,
           speed: vp.speed,
@@ -444,12 +403,21 @@ export const MapPage = () => {
           ignition: vp.ignition,
           direction: vp.direction,
         },
-        sinChofer: true,
-      });
+        sinChofer: !actual?.driver,
+      };
     });
 
-    return merged;
-  }, [locations, allDrivers, records, vehiclePositions, driverVehicleTarga, vehiclePositionByTarga]);
+    // Celular lejos de su vehiculo: si el chofer de un servicio tiene el celular en el mapa y el vehiculo de ese servicio tambien, y estan a mas de
+    // 3 km, se marca (los dos datos no concuerdan: puede haber un cruce).
+    const phoneLocs = locations.map((loc) => {
+      const vehicleLoc = loc.servicio ? vehicleLocs.find((v) => v.servicio?.id === loc.servicio.id) : null;
+      const distanciaVehiculoKm = vehicleLoc ? distanceKm(loc, vehicleLoc) : null;
+      if (vehicleLoc && distanciaVehiculoKm > 3) vehicleLoc.distanciaCelularKm = distanciaVehiculoKm;
+      return { ...loc, celular: true, distanciaVehiculoKm };
+    });
+
+    return [...vehicleLocs, ...phoneLocs];
+  }, [locations, vehiclePositions, currentServiceByTarga, records]);
 
   // Una fila por vehiculo en la lista lateral: toda la flota (fichas de Vehiculos). Los que tienen GPS salen
   // con su estado y se pueden ubicar en el mapa; los que no, al final y marcados "GPS desactivado". Sin GPS
@@ -458,52 +426,63 @@ export const MapPage = () => {
     // La lista solo muestra los vehiculos que el Admin dejo visibles en el Mapa (interruptor de cada vehiculo en Vehiculos).
     const allowedFleet = (fleet ?? []).filter((v) => v.mostrarEnMapa !== false);
     const fleetByTarga = new Map((fleet ?? []).map((v) => [normalizeTarga(v.targa), v]));
-    const unique = new Map();
-    (enrichedLocations ?? []).forEach((loc) => {
-      const key = loc.vehiculoGps?.targa ? normalizeTarga(loc.vehiculoGps.targa) : `driver-${loc.id}`;
-      if (!unique.has(key)) unique.set(key, loc);
-    });
+    const infoActual = (targa) => {
+      const actual = targa ? currentServiceByTarga.get(normalizeTarga(targa)) : undefined;
+      return {
+        driver: actual?.driver ? `${actual.driver.nombre} ${actual.driver.apellido}`.trim() : null,
+        servicioCodigo: actual?.servicio?.codigo ?? null,
+        varios: Boolean(actual?.varios),
+        tieneServicio: Boolean(actual?.servicio),
+      };
+    };
 
-    const withLocation = [...unique.values()]
+    const withLocation = (enrichedLocations ?? [])
+      .filter((loc) => loc.vehiculoGps)
       .filter((loc) => {
-        const t = loc.vehiculoGps?.targa ?? driverVehicleTarga.get(loc.id) ?? null;
-        const f = t ? fleetByTarga.get(normalizeTarga(t)) : undefined;
+        const f = fleetByTarga.get(normalizeTarga(loc.vehiculoGps.targa));
         return !f || f.mostrarEnMapa !== false;
       })
       .map((loc) => {
-      const targa = loc.vehiculoGps?.targa ?? driverVehicleTarga.get(loc.id) ?? null;
-      const ficha = targa ? fleetByTarga.get(normalizeTarga(targa)) : undefined;
-      const minutos = loc.vehiculoGps && loc.actualizada ? minutesAgo(loc.actualizada) : null;
-      const sinSenal = minutos != null && minutos >= GPS_SIN_SENAL_MIN;
-      return {
-        loc,
-        status: locStatus(loc),
-        targa,
-        driver: loc.sinChofer
-          ? ficha?.conductores?.length
-            ? ficha.conductores.map((c) => c.nombre).join(", ")
-            : null
-          : `${loc.nombre} ${loc.apellido}`.trim(),
-        area: ficha?.area ?? "SIN_ASIGNAR",
-        modelo: ficha?.modelo ?? null,
-        sinSenalMin: sinSenal ? minutos : null,
-        empresa: ficha?.empresa ?? "GAMONAL",
-      };
-    });
+        const targa = loc.vehiculoGps.targa;
+        const ficha = fleetByTarga.get(normalizeTarga(targa));
+        const minutos = loc.actualizada ? minutesAgo(loc.actualizada) : null;
+        const sinSenal = minutos != null && minutos >= GPS_SIN_SENAL_MIN;
+        const actual = infoActual(targa);
+        const status = locStatus(loc);
+        return {
+          loc,
+          status,
+          targa,
+          driver: actual.driver,
+          servicioCodigo: actual.servicioCodigo,
+          varios: actual.varios,
+          movimientoSinServicio: status === "moving" && !actual.tieneServicio,
+          area: ficha?.area ?? "SIN_ASIGNAR",
+          modelo: ficha?.modelo ?? null,
+          sinSenalMin: sinSenal ? minutos : null,
+          empresa: ficha?.empresa ?? "GAMONAL",
+        };
+      });
 
-    const represented = new Set(withLocation.filter((i) => i.targa).map((i) => normalizeTarga(i.targa)));
+    const represented = new Set(withLocation.map((i) => normalizeTarga(i.targa)));
     const withoutGps = allowedFleet
       .filter((v) => !represented.has(normalizeTarga(v.targa)))
-      .map((v) => ({
-        loc: null,
-        status: "noGps",
-        targa: v.targa,
-        driver: v.conductores?.length ? v.conductores.map((c) => c.nombre).join(", ") : null,
-        area: v.area,
-        modelo: v.modelo,
-        sinSenalMin: null,
-        empresa: v.empresa ?? "GAMONAL",
-      }));
+      .map((v) => {
+        const actual = infoActual(v.targa);
+        return {
+          loc: null,
+          status: "noGps",
+          targa: v.targa,
+          driver: actual.driver,
+          servicioCodigo: actual.servicioCodigo,
+          varios: actual.varios,
+          movimientoSinServicio: false,
+          area: v.area,
+          modelo: v.modelo,
+          sinSenalMin: null,
+          empresa: v.empresa ?? "GAMONAL",
+        };
+      });
 
     return [...withLocation, ...withoutGps].sort(
       (a, b) =>
@@ -511,7 +490,7 @@ export const MapPage = () => {
         STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
         (a.targa ?? "~").localeCompare(b.targa ?? "~", "es")
     );
-  }, [enrichedLocations, driverVehicleTarga, fleet]);
+  }, [enrichedLocations, fleet, currentServiceByTarga]);
 
   // Pestanias de la lista: "General" (todos los vehiculos permitidos en el mapa), "Gamonal" (la flota de la empresa) y "Piazza" (los vehiculos que
   // aporte Piazza; mientras no haya ninguno, queda en 0).
@@ -556,7 +535,7 @@ export const MapPage = () => {
   // id que usan los Marker mas abajo (loc.servicio?.id ?? `idle-${loc.id}`). En celular
   // la lista se cierra para dejar ver el mapa.
   const selectVehicle = (loc) => {
-    const markerId = loc.servicio?.id ?? `idle-${loc.id}`;
+    const markerId = markerIdOf(loc);
     setOpenInfoId(markerId);
     map?.panTo({ lat: loc.lat, lng: loc.lng });
     map?.setZoom(15);
@@ -573,33 +552,29 @@ export const MapPage = () => {
     [allDrivers, records]
   );
 
-  // ETA del marcador que tiene el InfoWindow abierto en el mapa (puede
-  // ser un servicio en camino o un chofer libre volviendo a la base) - solo se pide
-  // mientras ese InfoWindow sigue abierto. undefined = todavia no llego la primera
-  // respuesta ("Calculando..."), null = ya se pidio pero no hay ETA disponible.
-  useEffect(() => {
-    if (!openInfoId || openInfoId === "destination") {
-      setOpenMarkerEta(undefined);
-      return;
-    }
+  // Vehiculo/chofer del marcador que tiene el InfoWindow abierto ahora mismo (o
+  // undefined si no hay ninguno abierto) - se usa para el formulario de "ETA a un
+  // destino" que se muestra adentro del InfoWindow.
+  const openLoc = useMemo(
+    () => enrichedLocations?.find((loc) => markerIdOf(loc) === openInfoId),
+    [enrichedLocations, openInfoId]
+  );
 
-    const isIdleDriver = openInfoId.startsWith("idle-");
-    // Un vehiculo sin chofer asignado (ver sinChofer/vehiculoPositions mas arriba) usa
-    // "vehiculo-{targa}" como id, no un id de usuario real - no hay "chofer volviendo a
-    // la base" que calcular ahi. Antes esto igual disparaba getDriverReturnEtaRequest
-    // con ese id sintetico, que el backend rechazaba con 400 cada vez que se abria ese
-    // InfoWindow.
-    if (isIdleDriver && openInfoId.slice("idle-".length).startsWith("vehiculo-")) {
-      setOpenMarkerEta(null);
+  // ETA del marcador que tiene el InfoWindow abierto: la del servicio (en vivo) si tiene uno, o el tiempo de regreso a la base de un chofer libre
+  // (solo celulares). Un vehiculo sin servicio no tiene ETA que calcular. Solo se pide mientras ese InfoWindow sigue abierto.
+  // undefined = todavia no llego la primera respuesta ("Calculando..."), null = no hay ETA disponible.
+  const etaRecordId = openLoc?.servicio?.id ?? null;
+  const etaDriverId = !etaRecordId && openLoc?.celular ? openLoc.id : null;
+  useEffect(() => {
+    if (!openInfoId || openInfoId === "destination" || (!etaRecordId && !etaDriverId)) {
+      setOpenMarkerEta(openInfoId && openInfoId !== "destination" ? null : undefined);
       return;
     }
 
     setOpenMarkerEta(undefined);
     let cancelled = false;
     const fetchEta = () => {
-      const request = isIdleDriver
-        ? getDriverReturnEtaRequest(openInfoId.slice("idle-".length))
-        : getRecordLiveEtaRequest(openInfoId);
+      const request = etaRecordId ? getRecordLiveEtaRequest(etaRecordId) : getDriverReturnEtaRequest(etaDriverId);
       request
         .then((eta) => {
           if (!cancelled) setOpenMarkerEta(eta ?? null);
@@ -615,15 +590,7 @@ export const MapPage = () => {
       cancelled = true;
       stopPolling();
     };
-  }, [openInfoId]);
-
-  // Vehiculo/chofer del marcador que tiene el InfoWindow abierto ahora mismo (o
-  // undefined si no hay ninguno abierto) - se usa para el formulario de "ETA a un
-  // destino" que se muestra adentro del InfoWindow.
-  const openLoc = useMemo(
-    () => enrichedLocations?.find((loc) => (loc.servicio?.id ?? `idle-${loc.id}`) === openInfoId),
-    [enrichedLocations, openInfoId]
-  );
+  }, [openInfoId, etaRecordId, etaDriverId]);
 
   // El formulario de destino es "a demanda" (el usuario escribe y confirma), no se
   // vuelve a pedir solo. Se limpia al cambiar de marcador (o cerrar el InfoWindow)
@@ -809,7 +776,7 @@ export const MapPage = () => {
                     <VehicleListItem
                       key={item.targa ?? item.loc?.id}
                       item={item}
-                      active={!!item.loc && openInfoId === (item.loc.servicio?.id ?? `idle-${item.loc.id}`)}
+                      active={!!item.loc && openInfoId === markerIdOf(item.loc)}
                       onSelect={selectVehicle}
                     />
                   ))
@@ -934,7 +901,7 @@ export const MapPage = () => {
               {enrichedLocations
                 ?.filter((loc) => loc.vehiculoGps)
                 .map((loc) => {
-                  const markerId = loc.servicio?.id ?? `idle-${loc.id}`;
+                  const markerId = markerIdOf(loc);
                   return (
                     <OverlayView
                       key={`label-${markerId}`}
@@ -955,47 +922,83 @@ export const MapPage = () => {
                   );
                 })}
 
+              {/* Celulares de los choferes: el cuadradito lleva el nombre de la persona (no es un vehiculo). */}
+              {enrichedLocations
+                ?.filter((loc) => loc.celular)
+                .map((loc) => (
+                  <OverlayView
+                    key={`label-${markerIdOf(loc)}`}
+                    position={{ lat: loc.lat, lng: loc.lng }}
+                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                    getPixelPositionOffset={(width, height) => ({ x: -width / 2, y: -height - 14 })}
+                  >
+                    <div
+                      onClick={() => setOpenInfoId(markerIdOf(loc))}
+                      className="w-fit cursor-pointer whitespace-nowrap rounded-md border border-violet-300 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-900 shadow-md"
+                    >
+                      {loc.nombre} {loc.apellido}
+                    </div>
+                  </OverlayView>
+                ))}
+
               {enrichedLocations?.map((loc) => {
                 // key/estado por loc.servicio.id cuando hay servicio (un mismo chofer
                 // puede tener varias entradas si tiene mas de un servicio "en camino"
                 // a la vez, viajes compactados, todas con el mismo loc.id); si esta
                 // libre (sin servicio) usa loc.id, que ahi si es unico por chofer.
-                const markerId = loc.servicio?.id ?? `idle-${loc.id}`;
+                const markerId = markerIdOf(loc);
                 return (
                   <Marker
                     key={markerId}
                     position={{ lat: loc.lat, lng: loc.lng }}
                     onClick={() => setOpenInfoId(markerId)}
-                    icon={
-                      loc.vehiculoGps
-                        ? vehicleIcon(loc.vehiculoGps)
-                        : loc.servicio
-                          ? undefined
-                          : {
-                              path: window.google.maps.SymbolPath.CIRCLE,
-                              scale: 8,
-                              fillColor: IDLE_DRIVER_COLOR,
-                              fillOpacity: 0.9,
-                              strokeColor: "#ffffff",
-                              strokeWeight: 2,
-                            }
-                    }
+                    icon={loc.celular ? phoneIcon() : vehicleIcon(loc.vehiculoGps)}
                   >
                     {openInfoId === markerId && (
                       <InfoWindow onCloseClick={() => setOpenInfoId(null)}>
                         <div className="text-[13px]">
-                          <strong>
-                            {loc.nombre} {loc.apellido}
-                          </strong>
-                          <br />
-                          {loc.vehiculoGps && (
+                          {loc.celular ? (
                             <>
-                              GPS del vehiculo {loc.vehiculoGps.targa}
-                              {loc.vehiculoGps.speed != null
-                                ? ` - ${Math.round(loc.vehiculoGps.speed)} ${loc.vehiculoGps.speedUnit ?? ""}`
-                                : ""}
-                              {loc.vehiculoGps.ignition === false ? " (motor apagado)" : ""}
+                              <strong>
+                                {loc.nombre} {loc.apellido}
+                              </strong>
                               <br />
+                              Ubicación del celular
+                              <br />
+                            </>
+                          ) : (
+                            <>
+                              <strong>{loc.vehiculoGps.targa}</strong>
+                              <br />
+                              {loc.sinChofer ? "Sin servicio ahora" : `Chofer del servicio: ${loc.nombre} ${loc.apellido}`}
+                              <br />
+                              {loc.vehiculoGps.speed != null ? `${Math.round(loc.vehiculoGps.speed)} ${loc.vehiculoGps.speedUnit ?? ""}` : ""}
+                              {loc.vehiculoGps.ignition === false ? `${loc.vehiculoGps.speed != null ? " - " : ""}motor apagado` : ""}
+                              {loc.vehiculoGps.speed != null || loc.vehiculoGps.ignition === false ? <br /> : null}
+                              {loc.servicioActual?.tramo === "VUELTA" && (
+                                <>
+                                  Volviendo a la base
+                                  <br />
+                                </>
+                              )}
+                              {loc.servicioActual?.varios && (
+                                <>
+                                  <strong>⚠ Hay más de un servicio de este vehículo a esta hora: revisa en Registros.</strong>
+                                  <br />
+                                </>
+                              )}
+                              {loc.sinChofer && isVehicleMoving(loc.vehiculoGps) && (
+                                <>
+                                  <strong>⚠ En movimiento sin servicio asignado.</strong>
+                                  <br />
+                                </>
+                              )}
+                              {loc.distanciaCelularKm != null && (
+                                <>
+                                  <strong>⚠ El celular del chofer está a {loc.distanciaCelularKm.toFixed(1)} km del vehículo.</strong>
+                                  <br />
+                                </>
+                              )}
                             </>
                           )}
                           {loc.servicio ? (
@@ -1015,10 +1018,8 @@ export const MapPage = () => {
                                 "ETA en vivo no disponible"
                               )}
                             </>
-                          ) : loc.sinChofer ? (
+                          ) : !loc.celular ? (
                             <>
-                              Sin chofer asignado
-                              <br />
                               Actualizado hace {minutesAgo(loc.actualizada)} min
                             </>
                           ) : (
