@@ -41,7 +41,7 @@ import { computeFleetKmUsage, computeVehicleDocumentAlerts, filterToMainAreas } 
 import { listRecordsByMonthRequest } from "../../lib/records.api";
 import { SpeedingAlertsPanel } from "../../components/vehicles/SpeedingAlertsPanel";
 import { getNotificationScopeRequest, vehicleInScope } from "../../lib/notifications.api";
-import { listVehiclesRequest, syncVehiclesFromVelocityFleetRequest, updateVehicleRequest } from "../../lib/vehicles.api";
+import { listVehiclesRequest, setMapaVisibilityRequest, syncVehiclesFromVelocityFleetRequest } from "../../lib/vehicles.api";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
 import { kmRecorrido } from "../../lib/km";
 
@@ -95,7 +95,7 @@ const VehicleThumb = ({ vehicle, className }) =>
 // Vista de tarjetas (agrupada por centro, como antes)
 // ---------------------------------------------------------------------------
 
-const VehicleCard = ({ vehicle }) => {
+const VehicleCard = ({ vehicle, onToggleMap }) => {
   const location = useLocation();
   return (
     <Link to={`/vehiculos/${vehicle.id}`} state={{ backgroundLocation: location }} className="block">
@@ -112,6 +112,13 @@ const VehicleCard = ({ vehicle }) => {
           <span className="truncate text-[11px] text-ink-400">{areaLabel(vehicle.area)}</span>
           <VehicleStatusBadge status={vehicle.estado} className="shrink-0 !px-2 !py-0.5 !text-[11px]" />
         </div>
+
+        {onToggleMap && (
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-line/[0.07] pt-3">
+            <span className="text-[11px] text-ink-400">{vehicle.mostrarEnMapa === false ? "Oculto en el mapa" : "Visible en el mapa"}</span>
+            <MapaSwitch vehicle={vehicle} onToggle={onToggleMap} />
+          </div>
+        )}
       </GlassCard>
     </Link>
   );
@@ -119,14 +126,14 @@ const VehicleCard = ({ vehicle }) => {
 
 // @container (no breakpoints de viewport): la grilla vive en una columna que no es el
 // ancho completo, asi que las variantes @sm/@md/@xl miran el ancho real disponible.
-const GroupSection = ({ title, members }) => (
+const GroupSection = ({ title, members, onToggleMap }) => (
   <div className="@container flex flex-col gap-3">
     <h2 className="text-[13px] font-medium uppercase tracking-wide text-ink-300">
       {title} <span className="text-ink-500">({members.length})</span>
     </h2>
     <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @xl:grid-cols-3">
       {members.map((vehicle) => (
-        <VehicleCard key={vehicle.id} vehicle={vehicle} />
+        <VehicleCard key={vehicle.id} vehicle={vehicle} onToggleMap={onToggleMap} />
       ))}
     </div>
   </div>
@@ -136,32 +143,22 @@ const GroupSection = ({ title, members }) => (
 // Vista de tabla
 // ---------------------------------------------------------------------------
 
-// Interruptor "se ve en el Mapa" de cada vehiculo: se guarda al tocarlo (sin entrar a editar). Los importados solos de Velocity Fleet (que pueden ser de
-// otras empresas de la cuenta, como UNIVEX) nacen apagados.
-const MapaSwitch = ({ vehicle }) => {
-  const [on, setOn] = useState(vehicle.mostrarEnMapa !== false);
-  const [saving, setSaving] = useState(false);
-  const toggle = async (value) => {
-    setOn(value);
-    setSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append("mostrarEnMapa", String(value));
-      await updateVehicleRequest(vehicle.id, formData);
-    } catch {
-      setOn(!value);
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
-      <Switch id={`mapa-${vehicle.id}`} checked={on} onChange={toggle} disabled={saving} />
-    </div>
-  );
-};
+// Interruptor "se ve en el Mapa" de cada vehiculo. Lo guarda la pagina (onToggle) al tocarlo, sin entrar a editar. Los importados solos de Velocity
+// Fleet (que pueden ser de otras empresas de la cuenta, como UNIVEX) nacen apagados.
+const MapaSwitch = ({ vehicle, onToggle }) => (
+  <div
+    onClick={(e) => {
+      // Dentro de una tarjeta que es un enlace: tocar el interruptor no abre la ficha.
+      e.preventDefault();
+      e.stopPropagation();
+    }}
+    className="flex justify-center"
+  >
+    <Switch id={`mapa-${vehicle.id}`} checked={vehicle.mostrarEnMapa !== false} onChange={(value) => onToggle([vehicle.id], value)} />
+  </div>
+);
 
-const VehicleTable = ({ vehicles, canToggleMap = false }) => {
+const VehicleTable = ({ vehicles, onToggleMap }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const open = (id) => navigate(`/vehiculos/${id}`, { state: { backgroundLocation: location } });
@@ -176,7 +173,7 @@ const VehicleTable = ({ vehicles, canToggleMap = false }) => {
             <th className="px-2 py-3.5 font-medium">Centro</th>
             <th className="px-2 py-3.5 font-medium">Conductor</th>
             <th className="px-2 py-3.5 text-right font-medium">Km</th>
-            {canToggleMap && <th className="px-2 py-3.5 text-center font-medium">En el mapa</th>}
+            {onToggleMap && <th className="px-2 py-3.5 text-center font-medium">En el mapa</th>}
             <th className="py-3.5 pl-2 pr-4 font-medium">Estado</th>
           </tr>
         </thead>
@@ -209,9 +206,9 @@ const VehicleTable = ({ vehicles, canToggleMap = false }) => {
               <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums text-ink-100">
                 {vehicle.kmActual != null ? fmtKm(vehicle.kmActual) : "—"}
               </td>
-              {canToggleMap && (
+              {onToggleMap && (
                 <td className="px-2 py-3">
-                  <MapaSwitch vehicle={vehicle} />
+                  <MapaSwitch vehicle={vehicle} onToggle={onToggleMap} />
                 </td>
               )}
               <td className="py-3 pl-2 pr-4">
@@ -526,6 +523,24 @@ export const VehiclesPage = () => {
   // Al salir de Vehiculos se limpia la busqueda.
   useEffect(() => () => setListSearch(""), []);
 
+  // Mostrar u ocultar en el Mapa (uno o varios): se ve al instante y se guarda; si falla vuelve a como estaba.
+  const [mapaBusy, setMapaBusy] = useState(false);
+  const setMapa = async (ids, value) => {
+    const idSet = new Set(ids);
+    const apply = (visible) => (prev) => prev?.map((v) => (idSet.has(v.id) ? { ...v, mostrarEnMapa: visible } : v));
+    const previous = vehicles;
+    setVehicles(apply(value));
+    setMapaBusy(true);
+    try {
+      await setMapaVisibilityRequest(ids, value);
+    } catch (err) {
+      setVehicles(previous);
+      setError(parseApiError(err).message);
+    } finally {
+      setMapaBusy(false);
+    }
+  };
+
   const changeView = (next) => {
     setView(next);
     try {
@@ -732,6 +747,36 @@ export const VehiclesPage = () => {
               />
             </div>
 
+            {isPrivileged && (
+              <div className="glass-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-[14px] font-medium text-ink-50">Vehículos en el mapa</p>
+                  <p className="text-[12px] text-ink-400">
+                    {vehicles.filter((v) => v.mostrarEnMapa !== false).length} de {total} visibles
+                    {hasFilters ? ` · los botones aplican a los ${filtered.length} de esta lista` : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    className="!w-auto px-4 py-2 text-[13px]"
+                    disabled={mapaBusy || filtered.length === 0}
+                    onClick={() => setMapa(filtered.map((v) => v.id), true)}
+                  >
+                    Mostrar todos
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!w-auto px-4 py-2 text-[13px]"
+                    disabled={mapaBusy || filtered.length === 0}
+                    onClick={() => setMapa(filtered.map((v) => v.id), false)}
+                  >
+                    Ocultar todos
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-[13px] text-ink-400">
                 {hasFilters ? `${filtered.length} de ${total} vehículos coinciden` : `${total} vehículos en la flota`}
@@ -744,11 +789,11 @@ export const VehiclesPage = () => {
                 Ningún vehículo coincide con los filtros.
               </GlassCard>
             ) : view === "tabla" ? (
-              <VehicleTable vehicles={pageItems} canToggleMap={user?.cargo === "OWNER" || user?.cargo === "ADMIN"} />
+              <VehicleTable vehicles={pageItems} onToggleMap={isPrivileged ? setMapa : undefined} />
             ) : (
               <div className="flex flex-col gap-7">
                 {groups.map((g) => (
-                  <GroupSection key={g.title} title={g.title} members={g.members} />
+                  <GroupSection key={g.title} title={g.title} members={g.members} onToggleMap={isPrivileged ? setMapa : undefined} />
                 ))}
               </div>
             )}

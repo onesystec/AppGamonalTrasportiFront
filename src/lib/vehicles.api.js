@@ -55,6 +55,10 @@ export const createVehicleRequest = (formData) =>
 export const updateVehicleRequest = (id, formData) =>
   api.patch(`/vehiculos/${id}`, formData).then((res) => res.data.data.vehicle);
 
+// Mostrar u ocultar en el Mapa uno o varios vehiculos a la vez (Admin y Responsables).
+export const setMapaVisibilityRequest = (ids, mostrarEnMapa) =>
+  api.post("/vehiculos/mapa-visibilidad", { ids, mostrarEnMapa }).then((res) => res.data.data);
+
 export const deleteVehicleRequest = (id) => api.delete(`/vehiculos/${id}`);
 
 export const registerVehicleKmRequest = (id, data) =>
