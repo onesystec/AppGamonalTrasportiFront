@@ -16,9 +16,11 @@ import {
   RETRASO_AVISO_MIN,
   SEGUIMIENTO_COLOR_RETRASO,
   SEGUIMIENTO_COLOR_SIN_GPS,
+  SEGUIMIENTO_COLOR_SOBRE_ETA,
   SEGUIMIENTO_TIPOS,
   horaRoma,
   llegadaTexto,
+  minutosHHMM,
   minutosTexto,
   tipoMeta,
 } from "../../lib/seguimiento";
@@ -95,8 +97,8 @@ const ServicioItem = ({ s, active, onSelect }) => {
           </span>
           <span className="text-[11.5px] text-ink-400">ETA {horaRoma(s.etaPlan)}</span>
           {tarde && (
-            <span className="text-[11.5px] font-semibold" style={{ color: SEGUIMIENTO_COLOR_RETRASO }}>
-              +{s.retrasoMin} min sobre la ETA
+            <span className="text-[11.5px] font-semibold" style={{ color: SEGUIMIENTO_COLOR_SOBRE_ETA }}>
+              +{minutosHHMM(s.retrasoMin)} sobre la ETA
             </span>
           )}
         </div>
@@ -166,7 +168,7 @@ const LineaDeTiempo = ({ servicio, onSelect }) => (
               ) : (
                 <p className="text-[11.5px] text-ink-300">
                   ETA {horaRoma(t.etaPlan)} ·{" "}
-                  <span className="font-semibold" style={{ color: tarde ? SEGUIMIENTO_COLOR_RETRASO : undefined }}>
+                  <span className="font-semibold" style={{ color: tarde ? SEGUIMIENTO_COLOR_SOBRE_ETA : undefined }}>
                     llega ~{horaRoma(t.llegadaEstimada)}
                   </span>
                 </p>

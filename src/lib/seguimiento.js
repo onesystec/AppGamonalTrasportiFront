@@ -10,6 +10,8 @@ export const SEGUIMIENTO_TIPOS = [
 
 export const SEGUIMIENTO_COLOR_SIN_GPS = "#ff3b57";
 export const SEGUIMIENTO_COLOR_RETRASO = "#ffb020";
+// Rojo: el servicio ya paso su ETA (el tiempo "sobre la ETA").
+export const SEGUIMIENTO_COLOR_SOBRE_ETA = "#ff3b57";
 
 export const tipoMeta = (key) => SEGUIMIENTO_TIPOS.find((t) => t.key === key) ?? SEGUIMIENTO_TIPOS[SEGUIMIENTO_TIPOS.length - 1];
 
@@ -33,6 +35,12 @@ export const horaRoma = (value) =>
   value
     ? new Date(value).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Rome" })
     : "—";
+
+// Minutos -> "HH:MM" (1240 -> "20:40").
+export const minutosHHMM = (min) => {
+  const total = Math.max(0, Math.round(min ?? 0));
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
 
 export const minutosTexto = (min) => {
   if (min == null) return "—";
