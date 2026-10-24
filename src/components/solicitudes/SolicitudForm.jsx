@@ -4,6 +4,7 @@ import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { TextField } from "../ui/TextField";
 import { Textarea } from "../ui/Textarea";
+import { useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
 import { APLICATIVO_OPTIONS } from "../../lib/constants";
 import { kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
@@ -47,6 +48,7 @@ const aplicativosDe = (servicio) =>
 // Formulario del registro limitado, con las columnas del Excel mensual de cada servicio: DHL (Milano y Roma: + "Pagato al 50%" en Roma) y AB Service
 // (+ Aut. ritiro y el Totale en km). La oficina completa el resto al aceptarlo.
 export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
+  const t = useT();
   const [form, setForm] = useState(() => (solicitud ? fromSolicitud(solicitud) : EMPTY));
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -96,7 +98,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       <Alert>{formError}</Alert>
 
       <div>
-        <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Servicio</span>
+        <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{t("form.service")}</span>
         <div className="flex flex-wrap gap-2">
           {SOLICITUD_SERVICIOS.map((s) => (
             <button
@@ -116,22 +118,22 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField id="sol-cliente" label="Cliente" value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />
-        <TextField id="sol-fecha" label="Fecha y hora" type="datetime-local" value={form.fechaHora} onChange={onChange("fechaHora")} error={fieldErrors.fechaHora?.[0]} required />
+        <TextField id="sol-cliente" label={t("form.client")} value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />
+        <TextField id="sol-fecha" label={t("form.dateTime")} type="datetime-local" value={form.fechaHora} onChange={onChange("fechaHora")} error={fieldErrors.fechaHora?.[0]} required />
         <TextField className="sm:col-span-2" id="sol-destino" label="Destinazione" value={form.destinazione} onChange={onChange("destinazione")} error={fieldErrors.destinazione?.[0]} required />
         {esAb && <TextField id="sol-aut" label="Aut. ritiro" value={form.autRitiro} onChange={onChange("autRitiro")} error={fieldErrors.autRitiro?.[0]} />}
         <TextField id="sol-fornitore" label="Fornitore" value={form.fornitore} onChange={onChange("fornitore")} error={fieldErrors.fornitore?.[0]} />
         <TextField
           id="sol-km"
-          label={esAb ? "Totale (km)" : "KM destino"}
-          placeholder={esAb ? "Ej: 430" : "Ej: 25 KM, 68 o NAVETTA HP"}
+          label={esAb ? t("form.kmTotal") : t("form.kmDestination")}
+          placeholder={esAb ? t("form.kmExampleAb") : t("form.kmExample")}
           value={form.km}
           onChange={onChange("km")}
           error={fieldErrors.km?.[0]}
         />
         <TextField id="sol-pagato" label="Pagato (EUR)" type="number" step="0.01" min="0" value={form.pagato} onChange={onChange("pagato")} error={fieldErrors.pagato?.[0]} />
-        <TextField id="sol-varie" label="Varie" placeholder="Ej: 1 H ONSITE" value={form.varie} onChange={onChange("varie")} error={fieldErrors.varie?.[0]} />
-        <TextField id="sol-varie2" label="Varie 2 (EUR)" type="number" step="0.01" min="0" placeholder="Ej: 10 (lo cobrado por el onsite)" value={form.varie2} onChange={onChange("varie2")} error={fieldErrors.varie2?.[0]} />
+        <TextField id="sol-varie" label="Varie" placeholder={t("form.varieExample")} value={form.varie} onChange={onChange("varie")} error={fieldErrors.varie?.[0]} />
+        <TextField id="sol-varie2" label="Varie 2 (EUR)" type="number" step="0.01" min="0" placeholder={t("form.varie2Example")} value={form.varie2} onChange={onChange("varie2")} error={fieldErrors.varie2?.[0]} />
       </div>
 
       {esRoma && (
@@ -143,9 +145,9 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
 
       {aplicativos.length > 0 && (
         <label className="block" htmlFor="sol-aplicativo">
-          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Numero (opcional, para el mensaje de WhatsApp)</span>
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{t("form.numberLabel")}</span>
           <select id="sol-aplicativo" value={form.aplicativo} onChange={onChange("aplicativo")} className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50">
-            <option value="">Sin numero</option>
+            <option value="">{t("form.noNumber")}</option>
             {aplicativos.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -158,7 +160,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       {esAb && (
         <Textarea
           id="sol-descripcion"
-          label="Descripcion del envio (Customer, Shipment, Ship To... para el mensaje de WhatsApp)"
+          label={t("form.shipmentDescription")}
           rows={7}
           value={form.descripcion}
           onChange={onChange("descripcion")}
@@ -168,10 +170,10 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
 
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="ghost" className="!w-auto px-5 py-2.5" onClick={onCancel} disabled={submitting}>
-          Cancelar
+          {t("common.cancel")}
         </Button>
         <Button type="submit" loading={submitting} className="!w-auto px-6 py-2.5">
-          {solicitud ? "Guardar cambios" : "Enviar solicitud"}
+          {solicitud ? t("form.saveChanges") : t("form.send")}
         </Button>
       </div>
     </form>

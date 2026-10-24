@@ -10,6 +10,7 @@ import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/Solic
 import { SolicitudForm } from "../../components/solicitudes/SolicitudForm";
 import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudWhatsappButton";
 import { useAuth } from "../../context/AuthContext";
+import { useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
 import { startVisibleInterval } from "../../lib/polling";
 import { currentMonth } from "../../lib/finanzas";
@@ -19,23 +20,27 @@ import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib
 
 const REFRESH_MS = 60 * 1000;
 
-const Modal = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
-    <button type="button" aria-label="Cerrar" className="absolute inset-0 bg-black/60" onClick={onClose} />
-    <div className="relative max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <h2 className="text-[17px] font-semibold text-ink-50">{title}</h2>
-        <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
-          <CloseIcon className="h-5 w-5" />
-        </button>
+const Modal = ({ title, onClose, children }) => {
+  const t = useT();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="text-[17px] font-semibold text-ink-50">{title}</h2>
+          <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
+            <CloseIcon className="h-5 w-5" />
+          </button>
+        </div>
+        {children}
       </div>
-      {children}
     </div>
-  </div>
-);
+  );
+};
 
 // Vista rapida de un registro: todos sus datos, "Copiar para WhatsApp" y, mientras este pendiente, editar y borrar.
 const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
+  const t = useT();
   const [confirmando, setConfirmando] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -56,7 +61,7 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
     <Modal title={`${solicitud.cliente}`} onClose={onClose}>
       <div className="mb-3 flex items-center gap-2">
         <EstadoPill estado={solicitud.estado} />
-        {solicitud.estado === "ACEPTADA" && <span className="text-[12px] text-ink-300">Ya esta en el registro de Gamonal Trasporti</span>}
+        {solicitud.estado === "ACEPTADA" && <span className="text-[12px] text-ink-300">{t("reg.inRecord")}</span>}
       </div>
       <Alert>{error}</Alert>
       <SolicitudDetalle solicitud={solicitud} />
@@ -64,17 +69,17 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
         <SolicitudWhatsappButton solicitud={solicitud} />
         {solicitud.estado === "PENDIENTE" && (
           <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={onEdit}>
-            Editar
+            {t("common.edit")}
           </Button>
         )}
         {solicitud.estado !== "ACEPTADA" &&
           (confirmando ? (
             <Button variant="danger" className="!w-auto px-4 py-2 text-[13px]" loading={deleting} onClick={handleDelete}>
-              Si, eliminar
+              {t("reg.yesDelete")}
             </Button>
           ) : (
             <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px] text-danger-500" onClick={() => setConfirmando(true)}>
-              Eliminar
+              {t("common.delete")}
             </Button>
           ))}
       </div>
@@ -111,6 +116,7 @@ COLUMNAS.EXTRA_PIAZZA = COLUMNAS.DHL_MILANO;
 
 // Los registros del mes por servicio, con las columnas del Excel y los totales de abajo (pagato y varie 2), como en cada hoja.
 const TablaRegistros = ({ items, servicio, onSelect }) => {
+  const t = useT();
   const columnas = COLUMNAS[servicio];
   const totales = columnas.filter((c) => c.total).map((c) => ({ key: c.key, label: c.label, value: items.reduce((sum, s) => sum + c.total(s), 0) }));
   return (
@@ -123,7 +129,7 @@ const TablaRegistros = ({ items, servicio, onSelect }) => {
                 {c.label}
               </th>
             ))}
-            <th className="px-3 py-2.5 text-left font-semibold">Estado</th>
+            <th className="px-3 py-2.5 text-left font-semibold">{t("hist.status")}</th>
           </tr>
         </thead>
         <tbody>
@@ -141,16 +147,16 @@ const TablaRegistros = ({ items, servicio, onSelect }) => {
           ))}
         </tbody>
       </table>
-      {items.length === 0 && <p className="px-4 py-8 text-center text-[13px] text-ink-300">Sin registros de este servicio en el mes.</p>}
+      {items.length === 0 && <p className="px-4 py-8 text-center text-[13px] text-ink-300">{t("reg.none")}</p>}
       {items.length > 0 && (
         <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-line/15 px-4 py-2.5 text-[13px] text-ink-300">
-          {totales.map((t) => (
-            <span key={t.key}>
-              Total {t.label}: <strong className="text-ink-50">{formatCurrency(t.value)}</strong>
+          {totales.map((tot) => (
+            <span key={tot.key}>
+              {t("reg.totalOf", { label: tot.label })} <strong className="text-ink-50">{formatCurrency(tot.value)}</strong>
             </span>
           ))}
           <span>
-            Total: <strong className="text-ink-50">{formatCurrency(totales.reduce((sum, t) => sum + t.value, 0))}</strong>
+            {t("reg.total")} <strong className="text-ink-50">{formatCurrency(totales.reduce((sum, tot) => sum + tot.value, 0))}</strong>
           </span>
         </div>
       )}
@@ -161,6 +167,7 @@ const TablaRegistros = ({ items, servicio, onSelect }) => {
 // Registro limitado de Piazza: pide servicios a la oficina con pocos datos y los ve por mes, ordenados como las hojas del Excel (DHL Milano, DHL Roma,
 // AB Service). La oficina los completa y los acepta; aqui se ve en que estado esta cada uno.
 export const ClienteRegistroPage = () => {
+  const t = useT();
   const { user } = useAuth();
   const [month, setMonth] = useState(currentMonth);
   const [servicio, setServicio] = useState("DHL_MILANO");
@@ -196,19 +203,19 @@ export const ClienteRegistroPage = () => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-ink-50">Registro</h1>
-          <p className="text-[13px] text-ink-300">Tus servicios pedidos a Gamonal Trasporti. La oficina los completa y los acepta.</p>
+          <h1 className="text-[22px] font-semibold text-ink-50">{t("reg.title")}</h1>
+          <p className="text-[13px] text-ink-300">{t("reg.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <MonthSelector month={month} onChange={setMonth} allowFuture />
           <Button className="!w-auto px-5 py-2.5" onClick={() => setForm({})}>
             <PlusIcon className="h-4 w-4" />
-            Nuevo registro
+            {t("reg.new")}
           </Button>
         </div>
       </div>
 
-      <div role="tablist" aria-label="Servicios" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label={t("reg.services")} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {SOLICITUD_SERVICIOS.map((t) => (
           <button
             key={t.value}
@@ -244,7 +251,7 @@ export const ClienteRegistroPage = () => {
       )}
 
       {form && (
-        <Modal title={form.solicitud ? "Editar registro" : "Nuevo registro"} onClose={() => setForm(null)}>
+        <Modal title={form.solicitud ? t("reg.editTitle") : t("reg.new")} onClose={() => setForm(null)}>
           <SolicitudForm
             solicitud={form.solicitud}
             onCancel={() => setForm(null)}

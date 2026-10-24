@@ -36,3 +36,15 @@ export const onParentTheme = (callback) => {
   }
   return () => window.removeEventListener("message", onMessage);
 };
+
+// El idioma de la cuenta, tambien lo manda OneSystec (junto con el tema). Mismo criterio: solo se cree al padre directo.
+export const onParentLanguage = (callback) => {
+  if (!isEmbedded) return () => {};
+  const onMessage = (event) => {
+    if (event.source !== window.parent) return;
+    const data = event.data;
+    if (data?.source === "onesystec" && data.type === "language" && (data.value === "es" || data.value === "it")) callback(data.value);
+  };
+  window.addEventListener("message", onMessage);
+  return () => window.removeEventListener("message", onMessage);
+};

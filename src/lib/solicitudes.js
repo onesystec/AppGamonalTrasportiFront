@@ -85,12 +85,13 @@ export const buildWhatsappMessage = (s, now = new Date()) => {
   const varie = (s.varie ?? "").trim();
   const descripcion = (s.descripcion ?? "").trim();
   const km = kmDeSolicitud(s);
-  if (km == null) missing.push("KM");
+  // Codigos, no textos: quien los muestra los traduce (wa.missing.*).
+  if (km == null) missing.push("km");
 
   if (s.servicio === "AB_SERVICE") {
-    if (!descripcion) missing.push("Descripcion del envio");
+    if (!descripcion) missing.push("description");
     const mencion = menciones(s.autRitiro);
-    if (!mencion) missing.push("Aut. ritiro");
+    if (!mencion) missing.push("autRitiro");
     // "19.00" se dice "19": las horas en punto sin minutos.
     const limite = p.minute === "00" ? String(Number(p.hour)) : hora;
     const lines = [descripcion || null, km != null ? `KM ${km}` : null, etaLine, mencion || null, `CONSEGNI ${hoy ? "OGGI" : `IL ${diaCorto}`} ENTRO LE ${limite}`];

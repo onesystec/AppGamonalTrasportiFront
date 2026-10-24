@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../../i18n/index.jsx";
 import { buildWhatsappMessage } from "../../lib/solicitudes";
 import { copyText } from "../ui/CopyButton";
 import { CheckIcon, CopyIcon } from "../ui/icons";
@@ -7,6 +8,7 @@ import { CheckIcon, CopyIcon } from "../ui/icons";
 // "Copiar para WhatsApp": arma el mensaje de la solicitud segun su tipo (DHL, AB Service...) y lo copia. Si a la plantilla le falta algun dato
 // lo copia igual, sin esa linea, y avisa cual falta.
 export const SolicitudWhatsappButton = ({ solicitud, className }) => {
+  const t = useT();
   const [status, setStatus] = useState("idle"); // idle | ok | error
   const [missing, setMissing] = useState([]);
   const timer = useRef(null);
@@ -33,9 +35,9 @@ export const SolicitudWhatsappButton = ({ solicitud, className }) => {
         )}
       >
         {status === "ok" ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
-        {status === "ok" ? "Copiado" : status === "error" ? "No se pudo copiar" : "Copiar para WhatsApp"}
+        {status === "ok" ? t("wa.copied") : status === "error" ? t("wa.failed") : t("wa.copy")}
       </button>
-      {status !== "idle" && missing.length > 0 && <span className="text-[11.5px] text-warning-500">Falta en el mensaje: {missing.join(", ")}</span>}
+      {status !== "idle" && missing.length > 0 && <span className="text-[11.5px] text-warning-500">{t("wa.missing", { items: missing.map((code) => t(`wa.missing.${code}`)).join(", ") })}</span>}
     </span>
   );
 };

@@ -4,10 +4,11 @@ const MOVING_SPEED_THRESHOLD = 1;
 
 export const VEHICLE_STATUS_COLOR = { moving: "#22e093", idlingOn: "#ff8a1a", idlingOff: "#ff3b57" };
 
+// "label" es la clave del texto (i18n): quien lo muestra lo traduce.
 export const VEHICLE_STATUS_META = {
-  moving: { label: "En movimiento", color: VEHICLE_STATUS_COLOR.moving },
-  idlingOn: { label: "Parado · motor encendido", color: VEHICLE_STATUS_COLOR.idlingOn },
-  idlingOff: { label: "Parado · motor apagado", color: VEHICLE_STATUS_COLOR.idlingOff },
+  moving: { label: "vehicle.moving", color: VEHICLE_STATUS_COLOR.moving },
+  idlingOn: { label: "vehicle.idlingOn", color: VEHICLE_STATUS_COLOR.idlingOn },
+  idlingOff: { label: "vehicle.idlingOff", color: VEHICLE_STATUS_COLOR.idlingOff },
 };
 
 export const vehicleStatus = (gps) => {

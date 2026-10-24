@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { useT } from "../../i18n/index.jsx";
 import { notifyParentFullscreen } from "../../lib/embedded";
 
 const ExpandIcon = () => (
@@ -17,6 +18,7 @@ const CollapseIcon = () => (
 // Contenedor de un mapa con un boton para verlo en pantalla completa: ocupa todo el marco de la app (y, dentro de OneSystec, tambien su pantalla).
 // `className` es el tamano normal; en pantalla completa pasa a cubrirlo todo y el mapa de adentro (alto/ancho 100%) lo llena.
 export const FullscreenMap = ({ className, children }) => {
+  const t = useT();
   const [full, setFull] = useState(false);
 
   useEffect(() => {
@@ -42,8 +44,8 @@ export const FullscreenMap = ({ className, children }) => {
       <button
         type="button"
         onClick={() => setFull((value) => !value)}
-        aria-label={full ? "Salir de pantalla completa" : "Ver el mapa en pantalla completa"}
-        title={full ? "Salir de pantalla completa" : "Pantalla completa"}
+        aria-label={full ? t("fullscreen.exit") : t("fullscreen.enter")}
+        title={full ? t("fullscreen.exit") : t("fullscreen.title")}
         className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-md hover:bg-gray-100"
       >
         {full ? <CollapseIcon /> : <ExpandIcon />}

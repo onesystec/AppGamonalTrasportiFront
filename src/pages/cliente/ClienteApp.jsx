@@ -6,6 +6,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useT } from "../../i18n/index.jsx";
 import { isEmbedded } from "../../lib/embedded";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
@@ -29,15 +30,16 @@ const mobileTabClass = ({ isActive }) =>
   );
 
 // Vistas del usuario cliente segun las casillas que le activo el Admin: el mapa (En vivo y Seguimiento), el historial y el registro.
+// "label" es la clave del texto (i18n).
 const buildNav = (modulos) => {
   const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
   const mapa = [
-    ...(modulos.includes("EN_VIVO") ? [{ to: "/cliente/en-vivo", label: "En vivo", icon: MapPinIcon }] : []),
-    ...(verSeguimiento ? [{ to: "/cliente", label: "Seguimiento", icon: RouteIcon, end: true }] : []),
+    ...(modulos.includes("EN_VIVO") ? [{ to: "/cliente/en-vivo", label: "nav.live", icon: MapPinIcon }] : []),
+    ...(verSeguimiento ? [{ to: "/cliente", label: "nav.tracking", icon: RouteIcon, end: true }] : []),
   ];
   const otras = [
-    ...(modulos.includes("HISTORIAL") ? [{ to: "/cliente/historial", label: "Historial", icon: FileTextIcon }] : []),
-    ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "Registro", icon: ClipboardListIcon }] : []),
+    ...(modulos.includes("HISTORIAL") ? [{ to: "/cliente/historial", label: "nav.history", icon: FileTextIcon }] : []),
+    ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : []),
   ];
   return { mapa, otras };
 };
@@ -45,6 +47,7 @@ const buildNav = (modulos) => {
 // Estructura de la vista de un usuario cliente: barra de navegacion a la izquierda (arriba, en el celular) con sus vistas, y a la derecha la
 // vista elegida. Solo su empresa, sus servicios y lo que el Admin le activo; sin el menu de chofer ni de oficina.
 const ClienteShell = () => {
+  const t = useT();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   usePushNotifications();
@@ -81,7 +84,7 @@ const ClienteShell = () => {
         <button
           type="button"
           onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+          aria-label={theme === "dark" ? t("nav.themeLight") : t("nav.themeDark")}
           className="flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-line/10 hover:text-ink-50"
         >
           <ThemeIcon className="h-[18px] w-[18px]" />
@@ -90,7 +93,7 @@ const ClienteShell = () => {
       {/* Dentro de OneSystec la sesion se cierra desde OneSystec, no desde aqui. */}
       {!isEmbedded && (
         <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">
-          Cerrar sesion
+          {t("nav.signOut")}
         </button>
       )}
     </>
@@ -101,25 +104,25 @@ const ClienteShell = () => {
       {/* Escritorio: barra lateral fija. */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-5 border-r border-line/10 bg-background px-3 py-4 lg:flex">
         <div className="px-1">{marca}</div>
-        <nav aria-label="Vistas" className="flex flex-1 flex-col gap-4 overflow-y-auto">
+        <nav aria-label={t("nav.views")} className="flex flex-1 flex-col gap-4 overflow-y-auto">
           {mapa.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Mapa</span>
+              <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">{t("nav.groupMap")}</span>
               {mapa.map(({ to, label, icon: Icon, end }) => (
                 <NavLink key={to} to={to} end={end} className={itemClass}>
                   <Icon className="h-[18px] w-[18px] shrink-0" />
-                  {label}
+                  {t(label)}
                 </NavLink>
               ))}
             </div>
           )}
           {otras.length > 0 && (
             <div className="flex flex-col gap-1">
-              {mapa.length > 0 && <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Servicios</span>}
+              {mapa.length > 0 && <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">{t("nav.groupServices")}</span>}
               {otras.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} className={itemClass}>
                   <Icon className="h-[18px] w-[18px] shrink-0" />
-                  {label}
+                  {t(label)}
                 </NavLink>
               ))}
             </div>
@@ -136,10 +139,10 @@ const ClienteShell = () => {
             {acciones}
           </div>
           {todas.length > 0 && (
-            <nav aria-label="Vistas" className="flex gap-1 overflow-x-auto px-3 pb-2">
+            <nav aria-label={t("nav.views")} className="flex gap-1 overflow-x-auto px-3 pb-2">
               {todas.map(({ to, label, end }) => (
                 <NavLink key={to} to={to} end={end} className={mobileTabClass}>
-                  {label}
+                  {t(label)}
                 </NavLink>
               ))}
             </nav>
@@ -157,6 +160,7 @@ const ClienteShell = () => {
 
 // Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el mapa en vivo, el historial o el registro; si no, un aviso.
 const ClienteInicio = () => {
+  const t = useT();
   const { user } = useAuth();
   const modulos = user?.clienteModulos ?? [];
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
@@ -165,7 +169,7 @@ const ClienteInicio = () => {
   if (modulos.includes("REGISTRO")) return <Navigate to="/cliente/registro" replace />;
   return (
     <p className="px-1 py-10 text-center text-[14px] text-ink-300">
-      Tu usuario todavia no tiene secciones activadas. Pidele a Gamonal Trasporti que te las active.
+      {t("nav.noSections")}
     </p>
   );
 };

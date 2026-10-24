@@ -8,6 +8,7 @@ import { FullscreenMap } from "../../components/ui/FullscreenMap";
 import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
 import { getClienteEnVivoRequest } from "../../lib/cliente.api";
 import { HIDE_POI_STYLES, NIGHT_MODE_STYLES } from "../../lib/mapStyles";
@@ -23,14 +24,17 @@ const MAP_STYLE = { width: "100%", height: "100%" };
 const STATUS_ORDER = { moving: 0, idlingOn: 1, idlingOff: 2 };
 
 const minutosDesde = (iso) => (iso ? Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)) : null);
-const haceTexto = (min) => (min == null ? "" : min < 1 ? "ahora" : min < 60 ? `hace ${min} min` : min < 1440 ? `hace ${Math.round(min / 60)} h` : `hace ${Math.round(min / 1440)} d`);
+const haceTexto = (min, t) =>
+  min == null ? "" : min < 1 ? t("ago.now") : min < 60 ? t("ago.min", { n: min }) : min < 1440 ? t("ago.hour", { n: Math.round(min / 60) }) : t("ago.day", { n: Math.round(min / 1440) });
 
 // Mapa "En Vivo" del usuario cliente: la posicion de los vehiculos en tiempo real, como en el Mapa de la oficina pero solo con la targa (sin chofer ni
 // servicio) y sin los peajes.
 export const ClienteEnVivoPage = () => {
+  const t = useT();
+  const { language } = useLanguage();
   const { user } = useAuth();
   const { theme } = useTheme();
-  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY, libraries: GOOGLE_MAPS_LIBRARIES });
+  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY, libraries: GOOGLE_MAPS_LIBRARIES, language });
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [map, setMap] = useState(null);
@@ -92,9 +96,9 @@ export const ClienteEnVivoPage = () => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[22px] font-semibold text-ink-50">
-          En vivo <span className="ml-2 text-[13px] font-normal text-ink-400">Se actualiza solo cada 20 segundos</span>
+          {t("live.title")} <span className="ml-2 text-[13px] font-normal text-ink-400">{t("live.refresh")}</span>
         </h1>
-        {data && <span className="text-[12px] text-ink-400">Actualizado a las {horaRoma(data.generadoAt)}</span>}
+        {data && <span className="text-[12px] text-ink-400">{t("common.updatedAt", { time: horaRoma(data.generadoAt) })}</span>}
       </div>
 
       <Alert>{error}</Alert>
@@ -107,11 +111,11 @@ export const ClienteEnVivoPage = () => {
               {Object.values(VEHICLE_STATUS_META).map((m) => (
                 <span key={m.label} className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: m.color }} />
-                  {m.label}
+                  {t(m.label)}
                 </span>
               ))}
             </div>
-            {vehiculos.length === 0 && <p className="glass-surface rounded-2xl px-4 py-5 text-[13px] text-ink-300">Ningun vehiculo esta transmitiendo su posicion ahora mismo.</p>}
+            {vehiculos.length === 0 && <p className="glass-surface rounded-2xl px-4 py-5 text-[13px] text-ink-300">{t("live.none")}</p>}
             <ul className="glass-surface flex flex-col rounded-2xl p-1.5">
               {vehiculos.map((v) => {
                 const meta = VEHICLE_STATUS_META[v.status];
@@ -126,8 +130,8 @@ export const ClienteEnVivoPage = () => {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-semibold tracking-wide text-ink-50">{v.targa}</span>
                         <span className="block truncate text-[11.5px]" style={{ color: meta.color }}>
-                          {meta.label}
-                          {v.min != null && v.min >= 1 && <span className="text-ink-400"> · {haceTexto(v.min)}</span>}
+                          {t(meta.label)}
+                          {v.min != null && v.min >= 1 && <span className="text-ink-400"> · {haceTexto(v.min, t)}</span>}
                         </span>
                       </span>
                       {v.status === "moving" && v.speed != null && (
