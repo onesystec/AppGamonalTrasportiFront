@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { PageLoader } from "../../components/ui/PageLoader";
-import { MoonIcon, SunIcon } from "../../components/ui/icons";
+import { ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
@@ -13,14 +13,36 @@ const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").the
 const ClienteHistorialPage = lazy(() => import("./ClienteHistorialPage").then((m) => ({ default: m.ClienteHistorialPage })));
 const ClienteRegistroPage = lazy(() => import("./ClienteRegistroPage").then((m) => ({ default: m.ClienteRegistroPage })));
 
-const tabClass = ({ isActive }) =>
+const ClienteEnVivoPage = lazy(() => import("./ClienteEnVivoPage").then((m) => ({ default: m.ClienteEnVivoPage })));
+
+const itemClass = ({ isActive }) =>
   clsx(
-    "rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
+    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
+    isActive ? "bg-line/15 text-ink-50" : "text-ink-300 hover:bg-line/10 hover:text-ink-50"
+  );
+
+const mobileTabClass = ({ isActive }) =>
+  clsx(
+    "shrink-0 rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
     isActive ? "bg-line/15 text-ink-50" : "text-ink-300 hover:text-ink-50"
   );
 
-// Estructura de la vista de un usuario cliente: solo su empresa, sus servicios y lo que el Admin le activo. Sin el menu de chofer
-// ni de oficina.
+// Vistas del usuario cliente segun las casillas que le activo el Admin: el mapa (En vivo y Seguimiento), el historial y el registro.
+const buildNav = (modulos) => {
+  const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
+  const mapa = [
+    ...(modulos.includes("EN_VIVO") ? [{ to: "/cliente/en-vivo", label: "En vivo", icon: MapPinIcon }] : []),
+    ...(verSeguimiento ? [{ to: "/cliente", label: "Seguimiento", icon: RouteIcon, end: true }] : []),
+  ];
+  const otras = [
+    ...(modulos.includes("HISTORIAL") ? [{ to: "/cliente/historial", label: "Historial", icon: FileTextIcon }] : []),
+    ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "Registro", icon: ClipboardListIcon }] : []),
+  ];
+  return { mapa, otras };
+};
+
+// Estructura de la vista de un usuario cliente: barra de navegacion a la izquierda (arriba, en el celular) con sus vistas, y a la derecha la
+// vista elegida. Solo su empresa, sus servicios y lo que el Admin le activo; sin el menu de chofer ni de oficina.
 const ClienteShell = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -33,68 +55,105 @@ const ClienteShell = () => {
   const spedizioni = (user?.clienteAreas ?? []).map((key) => AREA_LABEL_BY_KEY[key] ?? key).join(" · ");
   const titulo = user?.cliente?.nombre ?? nombrePersona;
   const subtitulo = user?.cliente?.nombre ? nombrePersona : spedizioni;
-  const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
-  const verHistorial = modulos.includes("HISTORIAL");
-  const verRegistro = modulos.includes("REGISTRO");
+  const { mapa, otras } = buildNav(modulos);
+  const todas = [...mapa, ...otras];
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
 
+  const marca = (
+    <div className="flex items-center gap-3">
+      {user?.imagenUrl ? (
+        <img src={user.imagenUrl} alt={titulo} className="h-11 w-11 shrink-0 rounded-xl bg-white object-contain p-1" />
+      ) : (
+        <img src={logo} alt="" className="h-10 w-10 shrink-0 rounded-full" />
+      )}
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-[16px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
+        {subtitulo && <span className="block truncate text-[12px] text-ink-400">{subtitulo}</span>}
+      </div>
+    </div>
+  );
+
+  const acciones = (
+    <>
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-line/10 hover:text-ink-50"
+      >
+        <ThemeIcon className="h-[18px] w-[18px]" />
+      </button>
+      <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">
+        Cerrar sesion
+      </button>
+    </>
+  );
+
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur">
-        <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
-          {user?.imagenUrl ? (
-            <img src={user.imagenUrl} alt={titulo} className="h-11 w-11 shrink-0 rounded-xl bg-white object-contain p-1" />
-          ) : (
-            <img src={logo} alt="" className="h-10 w-10 shrink-0 rounded-full" />
+    <div className="min-h-dvh bg-background lg:flex">
+      {/* Escritorio: barra lateral fija. */}
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-5 border-r border-line/10 bg-background px-3 py-4 lg:flex">
+        <div className="px-1">{marca}</div>
+        <nav aria-label="Vistas" className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          {mapa.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Mapa</span>
+              {mapa.map(({ to, label, icon: Icon, end }) => (
+                <NavLink key={to} to={to} end={end} className={itemClass}>
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           )}
-          <div className="min-w-0 flex-1 basis-40">
-            <span className="block truncate text-[17px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
-            {subtitulo && <span className="block truncate text-[12px] text-ink-400">{subtitulo}</span>}
+          {otras.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {mapa.length > 0 && <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Servicios</span>}
+              {otras.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={itemClass}>
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </nav>
+        <div className="flex items-center justify-between border-t border-line/10 pt-3">{acciones}</div>
+      </aside>
+
+      <div className="min-w-0 flex-1">
+        {/* Celular: cabecera con las vistas en una fila. */}
+        <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur lg:hidden">
+          <div className="flex items-center gap-3 px-4 pb-1 pt-3">
+            <div className="min-w-0 flex-1">{marca}</div>
+            {acciones}
           </div>
-          <nav className="flex items-center gap-1">
-            {verSeguimiento && (
-              <NavLink to="/cliente" end className={tabClass}>
-                Seguimiento
-              </NavLink>
-            )}
-            {verHistorial && (
-              <NavLink to="/cliente/historial" className={tabClass}>
-                Historial
-              </NavLink>
-            )}
-            {verRegistro && (
-              <NavLink to="/cliente/registro" className={tabClass}>
-                Registro
-              </NavLink>
-            )}
-          </nav>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-line/10 hover:text-ink-50"
-          >
-            <ThemeIcon className="h-[18px] w-[18px]" />
-          </button>
-          <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">
-            Cerrar sesion
-          </button>
-        </div>
-      </header>
-      <main className="w-full px-4 py-4 lg:px-6">
-        <Suspense fallback={<PageLoader />}>
-          <Outlet />
-        </Suspense>
-      </main>
+          {todas.length > 0 && (
+            <nav aria-label="Vistas" className="flex gap-1 overflow-x-auto px-3 pb-2">
+              {todas.map(({ to, label, end }) => (
+                <NavLink key={to} to={to} end={end} className={mobileTabClass}>
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          )}
+        </header>
+        <main className="w-full px-4 py-4 lg:px-6">
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+        </main>
+      </div>
     </div>
   );
 };
 
-// Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el historial o el registro; si no, un aviso.
+// Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el mapa en vivo, el historial o el registro; si no, un aviso.
 const ClienteInicio = () => {
   const { user } = useAuth();
   const modulos = user?.clienteModulos ?? [];
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
+  if (modulos.includes("EN_VIVO")) return <Navigate to="/cliente/en-vivo" replace />;
   if (modulos.includes("HISTORIAL")) return <Navigate to="/cliente/historial" replace />;
   if (modulos.includes("REGISTRO")) return <Navigate to="/cliente/registro" replace />;
   return (
@@ -108,6 +167,7 @@ export const ClienteApp = () => (
   <Routes>
     <Route element={<ClienteShell />}>
       <Route path="/cliente" element={<ClienteInicio />} />
+      <Route path="/cliente/en-vivo" element={<ClienteEnVivoPage />} />
       <Route path="/cliente/historial" element={<ClienteHistorialPage />} />
       <Route path="/cliente/registro" element={<ClienteRegistroPage />} />
       <Route path="*" element={<Navigate to="/cliente" replace />} />

@@ -218,7 +218,7 @@ export const ClienteSeguimientoPage = () => {
       {!data && !error && <PageLoader />}
 
       {data && (
-        <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,380px)_1fr] 2xl:grid-cols-[minmax(0,440px)_1fr]")}>
+        <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,285px)_1fr] 2xl:grid-cols-[minmax(0,330px)_1fr]")}>
           {verLista && (
             <div className="order-2 flex flex-col gap-3 lg:order-1">
               {enCamino.length === 0 && (

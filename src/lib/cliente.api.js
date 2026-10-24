@@ -3,6 +3,8 @@ import { api } from "./api";
 // Usuarios de empresas cliente (solo lectura; el servidor filtra siempre por su empresa).
 export const getClienteMeRequest = () => api.get("/cliente/me").then((res) => res.data.data.cliente);
 
+export const getClienteEnVivoRequest = () => api.get("/cliente/en-vivo").then((res) => res.data.data);
+
 export const getClienteSeguimientoRequest = () => api.get("/cliente/seguimiento").then((res) => res.data.data.seguimiento);
 
 // Recorrido que le falta a la furgoneta hasta la parada del cliente (null si ya llego o no hay posicion).
