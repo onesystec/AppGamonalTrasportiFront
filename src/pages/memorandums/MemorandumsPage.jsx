@@ -135,8 +135,9 @@ export const MemorandumsPage = () => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Memorándums</h1>
-          <p className="mt-1 text-[14px] text-ink-300">
+          {/* Quien emite (Admin, Responsable, RR.HH.) ya ve el titulo "Recursos Humanos" arriba. */}
+          {!canEmit && <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Memorándums</h1>}
+          <p className={clsx("text-[14px] text-ink-300", !canEmit && "mt-1")}>
             Comunicados oficiales de la empresa. Para abrir cada uno tienes que confirmar que lo recibes.
           </p>
         </div>

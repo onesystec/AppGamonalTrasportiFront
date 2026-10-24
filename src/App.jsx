@@ -22,6 +22,8 @@ const MisServiciosPage = lazy(() =>
 const MemorandumsPage = lazy(() => import("./pages/memorandums/MemorandumsPage").then((m) => ({ default: m.MemorandumsPage })));
 const EmitirMemorandumPage = lazy(() => import("./pages/memorandums/EmitirMemorandumPage").then((m) => ({ default: m.EmitirMemorandumPage })));
 const MemorandumDetailPage = lazy(() => import("./pages/memorandums/MemorandumDetailPage").then((m) => ({ default: m.MemorandumDetailPage })));
+const RrhhLayout = lazy(() => import("./pages/rrhh/RrhhLayout").then((m) => ({ default: m.RrhhLayout })));
+const RrhhIndex = lazy(() => import("./pages/rrhh/RrhhLayout").then((m) => ({ default: m.RrhhIndex })));
 const BustaPagaRrhhPage = lazy(() =>
   import("./pages/bustapaga/BustaPagaRrhhPage").then((m) => ({ default: m.BustaPagaRrhhPage }))
 );
@@ -154,9 +156,9 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
   return isPrivileged === privileged ? children : <Navigate to={redirectTo} replace />;
 };
 
-// Recursos Humanos solo usa Choferes, Vehiculos, Busta paga y su perfil; cualquier otra direccion lo lleva a
+// Recursos Humanos (Busta paga + Memorandums) solo usa esa seccion, Choferes, Vehiculos y su perfil; cualquier otra direccion lo lleva a
 // Busta paga (el servidor ademas le niega todo lo demas).
-const RRHH_PATHS = ["/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
+const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
 const RrhhGuard = () => {
   const { user } = useAuth();
   const { pathname } = useLocation();
@@ -348,10 +350,13 @@ function App() {
               {/* Control de Flota ya no existe: Area C esta en Finanzas y los excesos de velocidad en Vehiculos. */}
               <Route path="/control-flota" element={<Navigate to="/vehiculos" replace />} />
               <Route path="/mecanica" element={<RoleOnly privileged><MecanicaPage /></RoleOnly>} />
-              <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />
-              <Route path="/memorandums" element={<MemorandumsPage />} />
-              <Route path="/memorandums/nuevo" element={<EmitirMemorandumPage />} />
-              <Route path="/memorandums/emitidos/:id" element={<MemorandumDetailPage />} />
+              <Route path="/rrhh" element={<RrhhIndex />} />
+              <Route element={<RrhhLayout />}>
+                <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />
+                <Route path="/memorandums" element={<MemorandumsPage />} />
+                <Route path="/memorandums/nuevo" element={<EmitirMemorandumPage />} />
+                <Route path="/memorandums/emitidos/:id" element={<MemorandumDetailPage />} />
+              </Route>
             </Route>
             </Route>
           </Route>

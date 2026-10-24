@@ -130,8 +130,7 @@ export const BustaPagaRrhhPage = () => {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Busta paga</h1>
-        <p className="mt-1 text-[14px] text-ink-300">
+        <p className="text-[14px] text-ink-300">
           Envía la busta paga a cada persona del equipo (choferes, Responsables, Recursos Humanos y Admin). Para abrirla, quien la recibe tiene que firmar y queda el comprobante.
         </p>
       </div>

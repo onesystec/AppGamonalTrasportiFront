@@ -210,14 +210,20 @@ const MapPinIcon = (props) => (
 
 // Nav vertical fija a la izquierda para pantallas de desktop (sm y mas anchas).
 // En celular se usa la BottomNavTab de mas abajo en su lugar.
-const SidebarNavTab = ({ to, label, icon: Icon }) => (
+// Seccion "Recursos Humanos": junta Busta paga y Memorandums (cada uno con su ruta de siempre), asi que se marca activa en cualquiera de las dos.
+const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums"];
+const inPaths = (pathname, paths) => paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+const SidebarNavTab = ({ to, label, icon: Icon, match }) => {
+  const { pathname } = useLocation();
+  return (
   <NavLink
     to={to}
     end={to === "/"}
     className={({ isActive }) =>
       clsx(
         "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-        isActive
+        isActive || (match && inPaths(pathname, match))
           ? "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r-full before:bg-sidebar-active"
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
       )
@@ -226,25 +232,29 @@ const SidebarNavTab = ({ to, label, icon: Icon }) => (
     <Icon className="h-5 w-5 shrink-0" />
     {label}
   </NavLink>
-);
+  );
+};
 
 // Nav inferior fija para pantallas de celular: ocupa todo el ancho, siempre visible
 // arriba del contenido de cada seccion. En desktop se usa la SidebarNavTab de la izquierda.
-const BottomNavTab = ({ to, label, icon: Icon }) => (
-  <NavLink
-    to={to}
-    end={to === "/"}
-    className={({ isActive }) =>
-      clsx(
-        "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 py-3.5 text-center text-[11px] font-medium leading-tight transition-colors",
-        isActive ? "text-sidebar-active" : "text-sidebar-foreground/60"
-      )
-    }
-  >
-    <Icon className="h-6 w-6" />
-    {label}
-  </NavLink>
-);
+const BottomNavTab = ({ to, label, icon: Icon, match }) => {
+  const { pathname } = useLocation();
+  return (
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) =>
+        clsx(
+          "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 py-3.5 text-center text-[11px] font-medium leading-tight transition-colors",
+          isActive || (match && inPaths(pathname, match)) ? "text-sidebar-active" : "text-sidebar-foreground/60"
+        )
+      }
+    >
+      <Icon className="h-6 w-6" />
+      {label}
+    </NavLink>
+  );
+};
 
 // Secciones que en mobile viven en el nav deslizable (MobileNavDrawer) en vez del
 // nav inferior, para no saturarlo de iconos - se activa tocando el logo GT del
@@ -253,7 +263,7 @@ const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
-  { to: "/memorandums", label: "Memorándums", icon: FileTextIcon },
+  { to: "/rrhh", label: "Recursos Humanos", icon: UsersIcon, match: RRHH_PATHS },
   { to: "/vencimientos", label: "Vencimientos", icon: ShieldIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
   { to: "/mecanica", label: "Mecánica", icon: WrenchIcon },
@@ -261,6 +271,7 @@ const DRAWER_NAV_ITEMS = [
 
 // Lo mismo para el chofer (y el Admin/Owner en su modo chofer): lo que no entra en su nav inferior.
 const MEMORANDUMS_NAV_ITEM = { to: "/memorandums", label: "Memorándums", icon: FileTextIcon };
+const RRHH_NAV_ITEM = { to: "/rrhh", label: "Recursos Humanos", icon: UsersIcon, match: RRHH_PATHS };
 const CHOFER_DRAWER_NAV_ITEMS = [{ to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }, MEMORANDUMS_NAV_ITEM];
 
 // Placeholder de la barra superior en las paginas de lista donde filtra en vivo.
@@ -385,7 +396,7 @@ const AppShellContent = () => {
                   <SidebarNavTab to="/finanzas" label="Finanzas" icon={WalletIcon} />
                 </>
               ) : isRrhh ? (
-                <SidebarNavTab to="/busta-paga" label="Busta paga" icon={FileTextIcon} />
+                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
               ) : (
                 <>
                   <SidebarNavTab to="/" label="Hoy" icon={HomeIcon} />
@@ -397,8 +408,11 @@ const AppShellContent = () => {
                 </>
               )}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/choferes" label="Choferes" icon={UsersIcon} />}
-              {user?.cargo === "OWNER" && <SidebarNavTab to="/busta-paga" label="Busta paga" icon={FileTextIcon} />}
-              <SidebarNavTab to="/memorandums" label="Memorándums" icon={FileTextIcon} />
+              {isPrivileged ? (
+                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
+              ) : (
+                !isRrhh && <SidebarNavTab to="/memorandums" label="Memorándums" icon={FileTextIcon} />
+              )}
               {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
@@ -531,7 +545,7 @@ const AppShellContent = () => {
           </>
         ) : isRrhh ? (
           <>
-            <BottomNavTab to="/busta-paga" label="Busta paga" icon={FileTextIcon} />
+            <BottomNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
             <BottomNavTab to="/profile" label="Perfil" icon={UserIcon} />
           </>
         ) : (
@@ -551,7 +565,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [MEMORANDUMS_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}

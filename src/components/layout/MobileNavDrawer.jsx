@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { isEmbedded } from "../../lib/embedded";
 import { SettingsIcon } from "../ui/icons";
@@ -55,6 +55,7 @@ const LogoutIcon = (props) => (
 // mas cambiar de tema y cerrar sesion al pie. Solo existe en mobile (sm:hidden) -
 // en desktop esas secciones ya estan en el sidebar fijo de siempre.
 export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onToggleTheme, onLogout }) => {
+  const { pathname } = useLocation();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e) => {
@@ -85,7 +86,7 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
           </div>
 
           <nav className="mt-8 flex flex-col gap-1">
-            {items.map(({ to, label, icon: Icon }) => (
+            {items.map(({ to, label, icon: Icon, match }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -93,7 +94,7 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
                 className={({ isActive }) =>
                   clsx(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-                    isActive
+                    isActive || match?.some((p) => pathname === p || pathname.startsWith(`${p}/`))
                       ? "bg-sidebar-accent font-semibold text-white"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
                   )
