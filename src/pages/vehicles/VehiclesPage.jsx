@@ -26,7 +26,6 @@ import { Switch } from "../../components/ui/Switch";
 import { TextField } from "../../components/ui/TextField";
 import { VehicleStatusBadge } from "../../components/ui/VehicleStatusBadge";
 import { useAuth } from "../../context/AuthContext";
-import { userAreaKeys } from "../../lib/roles";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import {
@@ -37,13 +36,12 @@ import {
   VEHICLE_STATUS_OPTIONS,
   getTagliandoStatus,
 } from "../../lib/constants";
-import { computeFleetKmUsage, computeVehicleDocumentAlerts, filterToMainAreas } from "../../lib/dashboardStats";
-import { listRecordsByMonthRequest } from "../../lib/records.api";
+import { computeVehicleDocumentAlerts } from "../../lib/dashboardStats";
+import { getKmRankingRequest } from "../../lib/finanzas.api";
 import { SpeedingAlertsPanel } from "../../components/vehicles/SpeedingAlertsPanel";
 import { getNotificationScopeRequest, vehicleInScope } from "../../lib/notifications.api";
 import { listVehiclesRequest, setMapaVisibilityRequest, syncVehiclesFromVelocityFleetRequest } from "../../lib/vehicles.api";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
-import { kmRecorrido } from "../../lib/km";
 
 const areaLabel = (value) => VEHICLE_AREA_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
 const centroLabel = (grupo) => (grupo ? GRUPO_LABELS[grupo] ?? grupo : "Sin grupo");
@@ -359,14 +357,9 @@ const CenterSummaryPanel = ({ vehicles }) => {
   );
 };
 
-// Suma de los km del mes en curso (real si ya se cargo, si no el planificado); los
-// servicios anulados no cuentan. Usa los mismos registros del mes que el ranking.
-const KmMonthPanel = ({ records }) => {
-  const total = records
-    ? records
-        .filter((r) => r.estado !== "ANNULLATO")
-        .reduce((sum, r) => sum + kmRecorrido(r), 0)
-    : null;
+// Suma de los km del mes en curso: los mismos que se pagan y que muestra el ranking (la suma de la flota).
+const KmMonthPanel = ({ ranking }) => {
+  const total = ranking ? ranking.vehiculos.reduce((sum, v) => sum + v.km, 0) : null;
   const monthName = new Date().toLocaleDateString("es-AR", { month: "long" });
 
   return (
@@ -388,14 +381,13 @@ const KmMonthPanel = ({ records }) => {
 };
 
 const KM_BREAKDOWN_ROWS = [
-  { key: "EXTRA_PIAZZA", label: "Extras Piazza", multiplier: 1 },
-  { key: "DHL", label: "DHL", multiplier: 2 },
-  { key: "AB_SERVICE", label: "AB Service", multiplier: 2 },
+  { key: "EXTRA_PIAZZA", label: "Extras Piazza" },
+  { key: "DHL", label: "DHL" },
+  { key: "AB_SERVICE", label: "AB Service" },
+  { key: "EXTRAS_STEFANIA", label: "Otros", onlyIfAny: true },
 ];
 
-// Desglose de KM del mes por tipo de servicio, con el x2 de DHL/AB Service
-// visible por separado (ver kmMultiplier en dashboardStats.js) en vez de solo
-// el total ya ponderado.
+// Desglose de KM del mes por tipo de servicio: los mismos km que se pagan (ver getKmRankingForActor en el servidor).
 const VehicleKmModal = ({ entry, onClose }) => {
   useEffect(() => {
     const onKeyDown = (e) => e.key === "Escape" && onClose();
@@ -413,17 +405,17 @@ const VehicleKmModal = ({ entry, onClose }) => {
       />
       <div className="glass-surface relative z-10 w-full max-w-sm rounded-3xl bg-background p-6">
         <h2 className="text-[17px] font-semibold text-ink-50">{entry.nombre}</h2>
-        <p className="mt-1 text-[13px] text-ink-400">KM recorridos este mes, por tipo de servicio.</p>
+        <p className="mt-1 text-[13px] text-ink-400">KM de este mes por tipo de servicio, los mismos que se pagan.</p>
 
         <div className="mt-4 flex flex-col gap-2">
-          {KM_BREAKDOWN_ROWS.map(({ key, label, multiplier }) => (
+          {KM_BREAKDOWN_ROWS.filter(({ key, onlyIfAny }) => !onlyIfAny || entry.breakdown[key] > 0).map(({ key, label }) => (
             <div
               key={key}
               className="flex items-center justify-between rounded-xl glass-surface-sm px-3 py-2 text-[13px]"
             >
               <span className="text-ink-50">{label}</span>
               <span className="text-ink-300">
-                {fmtKm(entry.breakdown[key])} km{multiplier > 1 ? ` x2 = ${fmtKm(entry.breakdown[key] * multiplier)} km` : ""}
+                {fmtKm(entry.breakdown[key])} km
               </span>
             </div>
           ))}
@@ -442,13 +434,9 @@ const VehicleKmModal = ({ entry, onClose }) => {
   );
 };
 
-// Top de vehiculos por KM recorrido este mes (planificado o real, ver
-// computeFleetKmUsage). Acotado a las 5 areas principales (ver filterToMainAreas),
-// mismo criterio que el resto de la app.
-const FleetRankingPanel = ({ records }) => {
-  const { user } = useAuth();
-  const areaKeys = userAreaKeys(user);
-  const ranking = records ? computeFleetKmUsage(filterToMainAreas(records, areaKeys), "mes").slice(0, 10) : undefined;
+// Top de vehiculos por KM de este mes: los mismos que se pagan en Pago a choferes (km reales del chofer o circuito del sistema).
+const FleetRankingPanel = ({ ranking: all }) => {
+  const ranking = all ? all.vehiculos.slice(0, 10) : undefined;
   const [selectedEntry, setSelectedEntry] = useState(null);
 
   return (
@@ -504,7 +492,7 @@ export const VehiclesPage = () => {
 
   const [vehicles, setVehicles] = useState(null);
   const [scope, setScope] = useState(null);
-  const [monthlyRecords, setMonthlyRecords] = useState(null);
+  const [kmRanking, setKmRanking] = useState(null);
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
@@ -567,12 +555,11 @@ export const VehiclesPage = () => {
 
   // Depende tambien de recordsVersion: el uso de flota/ranking sale de los registros
   // del mes, no de los vehiculos - si se edita un km desde el detalle de un registro,
-  // esto tiene que reflejarse aca tambien.
+  // esto tiene que reflejarse aca tambien. El servidor calcula los mismos km que el pago.
   useEffect(() => {
     if (!isPrivileged) return;
-    const now = new Date();
-    listRecordsByMonthRequest(now.getFullYear(), now.getMonth() + 1)
-      .then(setMonthlyRecords)
+    getKmRankingRequest({ periodo: "mes" })
+      .then(setKmRanking)
       .catch((err) => setError(parseApiError(err).message));
   }, [isPrivileged, recordsVersion]);
 
@@ -830,8 +817,8 @@ export const VehiclesPage = () => {
             )}
             {isPrivileged && <SpeedingAlertsPanel />}
             <CenterSummaryPanel vehicles={vehicles} />
-            {!isRrhh && <KmMonthPanel records={monthlyRecords} />}
-            {!isRrhh && <FleetRankingPanel records={monthlyRecords} />}
+            {!isRrhh && <KmMonthPanel ranking={kmRanking} />}
+            {!isRrhh && <FleetRankingPanel ranking={kmRanking} />}
           </aside>
         </div>
       )}

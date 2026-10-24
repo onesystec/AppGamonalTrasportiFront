@@ -19,11 +19,9 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationsContext";
 import { parseApiError } from "../../lib/api";
 import {
-  computeDriverKmRanking,
   computeDriverStats,
   computeEconomicStats,
   computeExtrasPiazzaZonaBreakdown,
-  computeFleetKmUsage,
   computeReperibilidadPiazza,
   computeServicePeriodStats,
   computeVehicleStats,
@@ -33,6 +31,7 @@ import {
 } from "../../lib/dashboardStats";
 import { RECORD_STATUS_LABELS } from "../../lib/constants";
 import { formatCurrency, formatDate, formatDateTime } from "../../lib/format";
+import { getKmRankingRequest } from "../../lib/finanzas.api";
 import { listRecordsRequest, searchRecordsRequest } from "../../lib/records.api";
 import { listUsersRequest, updateUserRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -44,6 +43,9 @@ const DISPONIBLE_OPTIONS = [
 
 // Filtro de zona de la pestana Semanal (rentabilidad, ranking de choferes/vehiculos) -
 // "Todos" por defecto para no cambiar lo que ya se ve hoy (Milano+Roma mezclado).
+// Areas que cuentan en esta pantalla (ver filterToPiazzaYDhlRoma).
+const RANKING_AREAS = ["piazza-milano", "piazza-roma", "dhl-roma"];
+
 const SEMANAL_ZONA_OPTIONS = [
   { value: "TODOS", label: "Todos" },
   { value: "MILANO", label: "Milano" },
@@ -166,8 +168,7 @@ const buildZoneBlock = (label, servicios, choferesDisp, vehiculosDisp) => {
   return lines;
 };
 
-// Ranking de choferes o vehiculos por KM esta semana (computeDriverKmRanking /
-// computeFleetKmUsage), mas quien de la lista activa no aparece en el ranking - no
+// Ranking de choferes o vehiculos por KM esta semana (getKmRankingRequest), mas quien de la lista activa no aparece en el ranking - no
 // tuvo ningun servicio esta semana.
 const RankingCard = ({ title, subtitle, entries, emptyLabel, inactiveLabel, inactiveNames }) => (
   <GlassCard>
@@ -464,14 +465,24 @@ export const DailySummaryPage = () => {
     return records.filter((r) => r.extrasPiazzaZona === semanalZona);
   }, [records, semanalZona]);
 
-  const driverRanking = useMemo(
-    () => (semanalRecords ? computeDriverKmRanking(semanalRecords, "semana") : []),
-    [semanalRecords]
-  );
-  const fleetRanking = useMemo(
-    () => (semanalRecords ? computeFleetKmUsage(semanalRecords, "semana") : []),
-    [semanalRecords]
-  );
+  // Rankings de la semana: los mismos km que se pagan (los calcula el servidor), de Extras Piazza + DHL Roma y de la zona elegida.
+  const [kmRankingSemana, setKmRankingSemana] = useState(null);
+  useEffect(() => {
+    if (!isPrivileged || tab !== "semanal") return undefined;
+    let cancelled = false;
+    getKmRankingRequest({ periodo: "semana", zona: semanalZona === "TODOS" ? undefined : semanalZona, areas: RANKING_AREAS })
+      .then((data) => {
+        if (!cancelled) setKmRankingSemana(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setWeeklyError(parseApiError(err).message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPrivileged, tab, semanalZona, records]);
+  const driverRanking = useMemo(() => kmRankingSemana?.choferes ?? [], [kmRankingSemana]);
+  const fleetRanking = useMemo(() => kmRankingSemana?.vehiculos ?? [], [kmRankingSemana]);
   const zonaBreakdown = useMemo(
     () => (records ? computeExtrasPiazzaZonaBreakdown(records, "semana") : []),
     [records]
@@ -986,7 +997,7 @@ export const DailySummaryPage = () => {
 
               <RankingCard
                 title="Choferes esta semana"
-                subtitle="KM recorridos (planificado o real), de mayor a menor."
+                subtitle="KM de la semana (los mismos que se pagan), de mayor a menor."
                 entries={driverRanking.slice(0, 8)}
                 emptyLabel="Sin servicios esta semana todavia."
                 inactiveLabel={`Sin actividad esta semana (${inactiveDriverNames.length})`}

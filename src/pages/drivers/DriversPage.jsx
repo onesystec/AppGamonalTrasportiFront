@@ -31,18 +31,17 @@ import { parseApiError } from "../../lib/api";
 import { AREA_OPTIONS, CARGO_LABELS, GRUPO_LABELS, GRUPO_OPTIONS } from "../../lib/constants";
 import {
   computeDriverDocumentAlerts,
-  computeDriverKmRanking,
-  filterToMainAreas,
   isReperibilidadNoDisponibleHoy,
 } from "../../lib/dashboardStats";
 import { listDocumentsRequest } from "../../lib/documents.api";
 import { driverInScope, getNotificationScopeRequest } from "../../lib/notifications.api";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
+import { getKmRankingRequest } from "../../lib/finanzas.api";
 import { listRecordsByMonthRequest } from "../../lib/records.api";
 import { currentMonth } from "../../lib/finanzas";
 import { listDriversProgressRequest } from "../../lib/metas.api";
-import { nivelLabel, userAreaKeys } from "../../lib/roles";
+import { nivelLabel } from "../../lib/roles";
 import { listUsersRequest } from "../../lib/users.api";
 
 const areaLabel = (value) => AREA_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
@@ -401,14 +400,13 @@ const CenterSummaryPanel = ({ drivers }) => {
 };
 
 const KM_BREAKDOWN_ROWS = [
-  { key: "EXTRA_PIAZZA", label: "Extras Piazza", multiplier: 1 },
-  { key: "DHL", label: "DHL", multiplier: 2 },
-  { key: "AB_SERVICE", label: "AB Service", multiplier: 2 },
+  { key: "EXTRA_PIAZZA", label: "Extras Piazza" },
+  { key: "DHL", label: "DHL" },
+  { key: "AB_SERVICE", label: "AB Service" },
+  { key: "EXTRAS_STEFANIA", label: "Otros", onlyIfAny: true },
 ];
 
-// Desglose de KM del mes por tipo de servicio, con el x2 de DHL/AB Service
-// visible por separado (ver kmMultiplier en dashboardStats.js) en vez de solo
-// el total ya ponderado.
+// Desglose de KM del mes por tipo de servicio: los mismos km que se pagan (ver getKmRankingForActor en el servidor).
 const DriverKmModal = ({ entry, onClose }) => {
   useEffect(() => {
     const onKeyDown = (e) => e.key === "Escape" && onClose();
@@ -426,17 +424,17 @@ const DriverKmModal = ({ entry, onClose }) => {
       />
       <div className="glass-surface relative z-10 w-full max-w-sm rounded-3xl bg-background p-6">
         <h2 className="text-[17px] font-semibold text-ink-50">{entry.nombre}</h2>
-        <p className="mt-1 text-[13px] text-ink-400">KM recorridos este mes, por tipo de servicio.</p>
+        <p className="mt-1 text-[13px] text-ink-400">KM de este mes por tipo de servicio, los mismos que se pagan.</p>
 
         <div className="mt-4 flex flex-col gap-2">
-          {KM_BREAKDOWN_ROWS.map(({ key, label, multiplier }) => (
+          {KM_BREAKDOWN_ROWS.filter(({ key, onlyIfAny }) => !onlyIfAny || entry.breakdown[key] > 0).map(({ key, label }) => (
             <div
               key={key}
               className="flex items-center justify-between rounded-xl glass-surface-sm px-3 py-2 text-[13px]"
             >
               <span className="text-ink-50">{label}</span>
               <span className="text-ink-300">
-                {fmtKm(entry.breakdown[key])} km{multiplier > 1 ? ` x2 = ${fmtKm(entry.breakdown[key] * multiplier)} km` : ""}
+                {fmtKm(entry.breakdown[key])} km
               </span>
             </div>
           ))}
@@ -455,13 +453,9 @@ const DriverKmModal = ({ entry, onClose }) => {
   );
 };
 
-// Top de choferes por KM recorrido este mes (planificado o real, ver
-// computeDriverKmRanking). Acotado a las 5 areas principales (ver filterToMainAreas),
-// mismo criterio que el resto de la app.
-const DriverRankingPanel = ({ records }) => {
-  const { user } = useAuth();
-  const areaKeys = userAreaKeys(user);
-  const ranking = records ? computeDriverKmRanking(filterToMainAreas(records, areaKeys), "mes").slice(0, 10) : undefined;
+// Top de choferes por KM de este mes: los mismos que se pagan en Pago a choferes (km reales del chofer o circuito del sistema).
+const DriverRankingPanel = ({ ranking: all }) => {
+  const ranking = all ? all.choferes.slice(0, 10) : undefined;
   const [selectedEntry, setSelectedEntry] = useState(null);
 
   return (
@@ -514,6 +508,7 @@ export const DriversPage = () => {
 
   const [drivers, setDrivers] = useState(null);
   const [monthlyRecords, setMonthlyRecords] = useState(null);
+  const [kmRanking, setKmRanking] = useState(null);
   const [documents, setDocuments] = useState(null);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
@@ -556,6 +551,14 @@ export const DriversPage = () => {
     const now = new Date();
     listRecordsByMonthRequest(now.getFullYear(), now.getMonth() + 1)
       .then(setMonthlyRecords)
+      .catch((err) => setError(parseApiError(err).message));
+  }, [isPrivileged, recordsVersion]);
+
+  // Ranking de km: el servidor calcula los mismos km que el pago (se actualiza igual que los registros).
+  useEffect(() => {
+    if (!isPrivileged) return;
+    getKmRankingRequest({ periodo: "mes" })
+      .then(setKmRanking)
       .catch((err) => setError(parseApiError(err).message));
   }, [isPrivileged, recordsVersion]);
 
@@ -820,7 +823,7 @@ export const DriversPage = () => {
           <aside className="flex flex-col gap-5 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1">
             <AttentionPanel drivers={alertDrivers ?? []} documents={documents} />
             <CenterSummaryPanel drivers={drivers} />
-            {!isRrhh && <DriverRankingPanel records={monthlyRecords} />}
+            {!isRrhh && <DriverRankingPanel ranking={kmRanking} />}
           </aside>
         </div>
       )}

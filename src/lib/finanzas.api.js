@@ -11,6 +11,13 @@ export const getFinanzasResumenRequest = (month) =>
 export const getPagosChoferesRequest = (params) =>
   api.get(`${BASE}/pagos`, { params }).then((res) => res.data.data.pagos);
 
+// Ranking de km de choferes y vehiculos: los mismos km que se pagan. periodo: "mes" | "semana"; zona: "MILANO" | "ROMA" (opcional);
+// areas: claves de las areas a contar (por defecto las 5 principales, sin "Otros"). Solo OWNER/ADMIN.
+export const getKmRankingRequest = ({ periodo = "mes", zona, areas } = {}) =>
+  api
+    .get(`${BASE}/ranking-km`, { params: { periodo, zona, areas: areas?.length ? areas.join(",") : undefined } })
+    .then((res) => res.data.data.ranking);
+
 // Velocidad de pago de un chofer (85, 90 o 95 km/h) desde un mes ("AAAA-MM"); se hereda en los meses siguientes. Solo OWNER/ADMIN.
 export const setVelocidadPagoRequest = ({ driverId, month, kmh }) =>
   api.put(`${BASE}/velocidad-pago`, { driverId, month, kmh }).then((res) => res.data.data.velocidadPago);

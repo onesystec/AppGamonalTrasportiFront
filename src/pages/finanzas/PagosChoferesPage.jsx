@@ -121,6 +121,22 @@ const ServiceList = ({ servicios, reglas, location }) =>
     </div>
   );
 
+// Servicios cuyo circuito tiene muchos mas km que los planificados: casi siempre una parada mal ubicada (un nombre o un cliente leido
+// como lugar). Se pagan igual, pero conviene revisar la ruta o anotar los km reales antes de cerrar el mes.
+const KmRevisarList = ({ items }) => (
+  <ul className="flex flex-col gap-1">
+    {items.map((item) => (
+      <li key={item.id} className="text-[12px] text-ink-200">
+        <Link to={`/records/${item.id}`} className="font-semibold text-accent-400 hover:text-accent-300">
+          {item.codigo}
+        </Link>{" "}
+        {item.chofer && <span className="text-ink-400">({item.chofer}) </span>}
+        a {item.destino}: circuito de <b className="text-ink-50">{formatKm(item.km)}</b> contra {formatKm(item.kmPlan)} planificados
+      </li>
+    ))}
+  </ul>
+);
+
 // Fila de un chofer (OWNER/ADMIN): resumen del mes y, al abrirla, sus servicios.
 const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad }) => {
   const [open, setOpen] = useState(false);
@@ -198,6 +214,16 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
           className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
         />
       </button>
+
+      {driver.kmRevisar?.length > 0 && (
+        <div className="border-t border-line/10 bg-warning-500/10 px-5 py-2.5">
+          <p className="mb-1 flex items-center gap-1.5 text-[12px] font-semibold text-warning-500">
+            <AlertTriangleIcon className="h-4 w-4" />
+            Revisar km ({driver.kmRevisar.length})
+          </p>
+          <KmRevisarList items={driver.kmRevisar} />
+        </div>
+      )}
 
       {velocidades.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/10 px-5 py-2.5">
@@ -378,6 +404,20 @@ export const PagosChoferesPage = () => {
               {data.total.salidasReperibilidad === 1 ? "servicio" : "servicios"} ({data.total.salidasNoche ?? 0} de noche,{" "}
               {data.total.salidasReperibilidad - (data.total.salidasNoche ?? 0)} de fin de semana o festivo).
             </p>
+          )}
+
+          {data.total.serviciosKmRevisar > 0 && (
+            <div className="rounded-2xl border border-warning-500/40 bg-warning-500/10 px-5 py-4">
+              <p className="flex items-center gap-2 text-[14px] font-semibold text-warning-500">
+                <AlertTriangleIcon className="h-5 w-5" />
+                {data.total.serviciosKmRevisar} {data.total.serviciosKmRevisar === 1 ? "servicio con km a revisar" : "servicios con km a revisar"}
+              </p>
+              <p className="mb-2 mt-1 text-[12px] text-ink-300">
+                Su circuito es mucho mas largo que los km planificados (posible parada mal ubicada). Se pagan por ese circuito: corrige la
+                ruta del servicio o anota los km reales antes de pagar.
+              </p>
+              <KmRevisarList items={data.porChofer.flatMap((d) => (d.kmRevisar ?? []).map((k) => ({ ...k, chofer: d.nombre })))} />
+            </div>
           )}
 
           <RulesCard reglas={data.reglas} />

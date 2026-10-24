@@ -355,10 +355,8 @@ export const computeMonthlyRevenueTrend = (records, now = new Date()) => {
 
 // Kilometros mes a mes del anio en curso, mismo criterio que computeMonthlyRevenueTrend
 // (anio calendario completo, no el periodo del selector Hoy/Semana/Mes) - para el
-// grafico de tendencia de km del dashboard OWNER. A diferencia de recordKm (usado en
-// los rankings de choferes/vehiculos, donde planificado tiene prioridad a proposito -
-// ver comentario ahi), esto busca reflejar el km real recorrido: si el chofer ya cargo
-// el km real del viaje, se usa ese en vez del planificado original.
+// grafico de tendencia de km del dashboard OWNER. Busca reflejar el km real recorrido:
+// si el chofer ya cargo el km real del viaje, se usa ese en vez del planificado original.
 export const computeMonthlyKmTrend = (records, now = new Date()) => {
   const year = now.getFullYear();
   const buckets = MONTH_LABELS.map((month) => ({ month, km: 0 }));
@@ -417,70 +415,7 @@ export const computeWorkHours = (records, now = new Date()) => {
   };
 };
 
-// DHL/AB Service pesan el doble que Extras Piazza en los rankings de KM (mas
-// exigentes para el chofer/vehiculo que un trayecto de Extras Piazza equivalente).
-// Pedido explicito del negocio, no una medida real de distancia recorrida.
-const kmMultiplier = (record) =>
-  record.spedizzione === "DHL" || record.spedizzione === "AB_SERVICE" ? 2 : 1;
-
-// Km planificados (los que carga admin/owner al crear el servicio) tienen prioridad
-// sobre los reales - reales solo se usa de respaldo para el historico viejo que no
-// tiene planificado cargado.
-const recordKm = (record) => (record.kilometros ?? record.kilometrosReales ?? 0) * kmMultiplier(record);
-
-// Categoria "cruda" (sin el peso x2) por spedizzione, para poder mostrar el
-// desglose en el modal de detalle - un registro sin spedizzione reconocido se
-// trata como Extras Piazza (mismo criterio que kmMultiplier).
-const kmCategory = (record) =>
-  record.spedizzione === "DHL" || record.spedizzione === "AB_SERVICE"
-    ? record.spedizzione
-    : isExtrasStefaniaRecord(record)
-      ? "EXTRAS_STEFANIA"
-      : "EXTRA_PIAZZA";
-
-export const computeDriverKmRanking = (records, period, now = new Date()) => {
-  const scoped = records.filter((r) => isWithinPeriod(r.fechaServicio, period, now));
-  const totals = new Map();
-
-  scoped.forEach((r) => {
-    if (!r.driver?.id) return;
-    const entry = totals.get(r.driver.id) ?? {
-      id: r.driver.id,
-      nombre: `${r.driver.nombre} ${r.driver.apellido}`,
-      km: 0,
-      servicios: 0,
-      breakdown: { EXTRA_PIAZZA: 0, DHL: 0, AB_SERVICE: 0, EXTRAS_STEFANIA: 0 },
-    };
-    entry.km += recordKm(r);
-    entry.servicios += 1;
-    entry.breakdown[kmCategory(r)] += r.kilometros ?? r.kilometrosReales ?? 0;
-    totals.set(r.driver.id, entry);
-  });
-
-  return Array.from(totals.values()).sort((a, b) => b.km - a.km);
-};
-
-export const computeFleetKmUsage = (records, period, now = new Date()) => {
-  const scoped = records.filter((r) => isWithinPeriod(r.fechaServicio, period, now));
-  const totals = new Map();
-
-  scoped.forEach((r) => {
-    if (!r.vehicle?.id) return;
-    const entry = totals.get(r.vehicle.id) ?? {
-      id: r.vehicle.id,
-      nombre: `${r.vehicle.targa}${r.vehicle.modelo ? ` - ${r.vehicle.modelo}` : ""}`,
-      km: 0,
-      servicios: 0,
-      breakdown: { EXTRA_PIAZZA: 0, DHL: 0, AB_SERVICE: 0, EXTRAS_STEFANIA: 0 },
-    };
-    entry.km += recordKm(r);
-    entry.servicios += 1;
-    entry.breakdown[kmCategory(r)] += r.kilometros ?? r.kilometrosReales ?? 0;
-    totals.set(r.vehicle.id, entry);
-  });
-
-  return Array.from(totals.values()).sort((a, b) => b.km - a.km);
-};
+// (El ranking de km de choferes y vehiculos ya no se calcula aqui: lo calcula el servidor con los mismos km que el pago, ver getKmRankingRequest.)
 
 const EXTRAS_PIAZZA_ZONA_LABELS = { MILANO: "Milano", ROMA: "Roma" };
 const SIN_ZONA_KEY = "SIN_ZONA";
