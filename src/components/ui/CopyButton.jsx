@@ -4,7 +4,7 @@ import { CheckIcon, CopyIcon } from "./icons";
 
 // Copia un texto al portapapeles. Usa la API moderna y, si no esta disponible
 // (algunos WebView o http), cae al metodo clasico con un textarea oculto.
-const copyText = async (text) => {
+export const copyText = async (text) => {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);

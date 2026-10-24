@@ -42,6 +42,7 @@ import { FaltantesChips, hasFaltantes } from "../../components/records/Faltantes
 import { EMPTY_RECORD_FILTERS, RecordFilters, countActiveFilters } from "../../components/records/RecordFilters";
 import { ViajeChip } from "../../components/records/ViajeChip";
 import { DesvioChip } from "../../components/records/DesvioChip";
+import { SolicitudesButton } from "../../components/solicitudes/SolicitudesButton";
 import {
   listPendingRecordsRequest,
   listRecordsByDayRequest,
@@ -781,6 +782,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
           {isPrivileged ? (
             <>
               <MonthPicker value={viewDate} onChange={setViewDate} />
+              <SolicitudesButton />
               <button
                 type="button"
                 onClick={() => setShowCompactar(true)}

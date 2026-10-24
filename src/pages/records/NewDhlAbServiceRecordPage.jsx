@@ -18,6 +18,8 @@ import { APLICATIVO_OPTIONS, RECORD_STATUS_OPTIONS, SPEDIZZIONE_OPTIONS, ZONA_OP
 import { useTarifasKm } from "../../hooks/useTarifasKm";
 import { formatCurrency } from "../../lib/format";
 import { createRecordRequest } from "../../lib/records.api";
+import { SolicitudBanner } from "../../components/solicitudes/SolicitudBanner";
+import { findClientByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
 import { DestinoSugerencias } from "../../components/records/DestinoSugerencias";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
@@ -77,11 +79,26 @@ export const NewDhlAbServiceRecordPage = () => {
   // Zona activa en Registros al abrir "Nuevo servicio" (ver RecordsListPage.jsx) pisa
   // el default Milano de INITIAL_FORM, para que crear desde la pestana Roma arranque
   // en Roma igual que crear desde Milano arranca en Milano.
-  const [form, setForm] = useState(() => ({
-    ...INITIAL_FORM,
-    extrasPiazzaZona: location.state?.zona ?? INITIAL_FORM.extrasPiazzaZona,
-    spedizzione: location.state?.spedizzione ?? INITIAL_FORM.spedizzione,
-  }));
+  // Si se abre desde una solicitud de un cliente (Piazza), parte con lo que pidio; al crear el servicio la solicitud queda aceptada.
+  const solicitud = location.state?.solicitud ?? null;
+  const [form, setForm] = useState(() => {
+    const base = {
+      ...INITIAL_FORM,
+      extrasPiazzaZona: location.state?.zona ?? INITIAL_FORM.extrasPiazzaZona,
+      spedizzione: location.state?.spedizzione ?? INITIAL_FORM.spedizzione,
+    };
+    if (!solicitud) return base;
+    const d = solicitudToFormDefaults(solicitud);
+    return {
+      ...base,
+      eta: d.eta,
+      kilometros: d.kilometros,
+      pagoRecibido: d.pagoRecibido,
+      descripcion: d.descripcion,
+      calle: solicitud.destinazione,
+      aplicativo: d.aplicativo.startsWith(`${base.extrasPiazzaZona}_`) ? d.aplicativo : "",
+    };
+  });
   const [drivers, setDrivers] = useState(null);
   const [vehicles, setVehicles] = useState(null);
   const [clients, setClients] = useState(null);
@@ -100,6 +117,8 @@ export const NewDhlAbServiceRecordPage = () => {
         setDrivers(users.filter((u) => u.estado === "ACTIVO"));
         setVehicles(vehiclesData);
         setClients(clientsData);
+        const match = solicitud ? findClientByName(clientsData, solicitud.cliente) : null;
+        if (match) setForm((prev) => (prev.clientId ? prev : { ...prev, clientId: match.id }));
       })
       .catch((err) => setLoadError(parseApiError(err).message));
   }, []);
@@ -139,7 +158,7 @@ export const NewDhlAbServiceRecordPage = () => {
     const codigo = `${form.spedizzione}-${Date.now()}`;
 
     const payload = Object.fromEntries(
-      Object.entries({ ...rest, ...(salidaPayload ? { salida: salidaPayload } : {}), codigo, ciudad, stops: [direccion] }).filter(
+      Object.entries({ ...rest, ...(salidaPayload ? { salida: salidaPayload } : {}), ...(solicitud ? { solicitudId: solicitud.id } : {}), codigo, ciudad, stops: [direccion] }).filter(
         ([key, value]) => key === "stops" || key === "pasaPorBrennero" || key === "pasaPorFrejus" || value !== ""
       )
     );
@@ -147,6 +166,7 @@ export const NewDhlAbServiceRecordPage = () => {
     try {
       const record = await createRecordRequest(payload);
       refreshRecords();
+      if (solicitud) notifySolicitudesChanged();
       // Se preserva backgroundLocation (si esta pantalla se abrio como overlay sobre
       // una lista, ver App.jsx) para que el detalle del registro recien creado
       // tambien se muestre como overlay, en vez de que la lista de fondo se
@@ -223,6 +243,8 @@ export const NewDhlAbServiceRecordPage = () => {
         <h1 className="text-[24px] font-semibold text-ink-50">Nuevo servicio - DHL / AB Service</h1>
         <p className="mt-1 text-[14px] text-ink-300">Completa los datos para crear un servicio.</p>
       </div>
+
+      {solicitud && <SolicitudBanner solicitud={solicitud} clienteEncontrado={Boolean(form.clientId)} />}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
         <GlassCard>

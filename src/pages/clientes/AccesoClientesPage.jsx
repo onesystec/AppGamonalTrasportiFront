@@ -15,7 +15,7 @@ import { parseApiError } from "../../lib/api";
 import { AREA_ACCESS_OPTIONS, AREA_LABEL_BY_KEY } from "../../lib/roles";
 import { listClienteUsersRequest } from "../../lib/cliente.api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
+import { CLIENTE_MODULO_CORTO, CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
 import { createUserRequest, deleteUserRequest, updateUserRequest, uploadUserAvatarRequest } from "../../lib/users.api";
 
 const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteAreas: [], clienteModulos: CLIENTE_MODULOS_DEFAULT, activo: true };
@@ -334,7 +334,7 @@ export const AccesoClientesPage = () => {
                     {(u.clienteModulos ?? []).length === 0 && <span className="text-[12px] text-warning-500">Sin modulos marcados: no ve nada</span>}
                     {(u.clienteModulos ?? []).map((key) => (
                       <span key={key} title={moduloLabel(key)} className="rounded-md bg-accent-500/15 px-1.5 py-0.5 text-[11px] font-medium text-accent-300">
-                        {key === "MAPA" ? "Mapa" : key === "LISTA" ? "Lista" : key === "AVISOS" ? "Avisos" : key === "HISTORIAL" ? "Historial" : key === "FOTOS" ? "Fotos" : "Excel"}
+                        {CLIENTE_MODULO_CORTO[key] ?? key}
                       </span>
                     ))}
                   </span>

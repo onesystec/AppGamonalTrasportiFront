@@ -23,6 +23,8 @@ import { useTarifasKm } from "../../hooks/useTarifasKm";
 import { CATEGORIA_VEHICULO_LABELS } from "../../lib/vehiculos";
 import { formatCurrency } from "../../lib/format";
 import { createRecordRequest } from "../../lib/records.api";
+import { SolicitudBanner } from "../../components/solicitudes/SolicitudBanner";
+import { findClientByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
@@ -66,10 +68,21 @@ export const NewRecordPage = () => {
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   // Mismo criterio que NewDhlAbServiceRecordPage.jsx: la zona activa en Registros al
   // abrir "Nuevo servicio" pisa el default Milano.
-  const [form, setForm] = useState(() => ({
-    ...INITIAL_FORM,
-    extrasPiazzaZona: location.state?.zona ?? INITIAL_FORM.extrasPiazzaZona,
-  }));
+  // Si se abre desde una solicitud de un cliente (Piazza), parte con lo que pidio; al crear el servicio la solicitud queda aceptada.
+  const solicitud = location.state?.solicitud ?? null;
+  const [form, setForm] = useState(() => {
+    const base = { ...INITIAL_FORM, extrasPiazzaZona: location.state?.zona ?? INITIAL_FORM.extrasPiazzaZona };
+    if (!solicitud) return base;
+    const d = solicitudToFormDefaults(solicitud);
+    return {
+      ...base,
+      eta: d.eta,
+      kilometros: d.kilometros,
+      pagoRecibido: d.pagoRecibido,
+      descripcion: d.descripcion,
+      stops: [{ direccion: solicitud.destinazione, cap: "", lat: null, lng: null }],
+    };
+  });
   const [drivers, setDrivers] = useState(null);
   const [vehicles, setVehicles] = useState(null);
   const [clients, setClients] = useState(null);
@@ -95,6 +108,8 @@ export const NewRecordPage = () => {
         setDrivers(users.filter((u) => u.estado === "ACTIVO"));
         setVehicles(vehiclesData);
         setClients(clientsData);
+        const match = solicitud ? findClientByName(clientsData, solicitud.cliente) : null;
+        if (match) setForm((prev) => (prev.clientId ? prev : { ...prev, clientId: match.id }));
       })
       .catch((err) => setLoadError(parseApiError(err).message));
   }, []);
@@ -117,7 +132,7 @@ export const NewRecordPage = () => {
     const { salida, ...formWithoutSalida } = form;
     const salidaPayload = buildSalidaPayload(salida);
     const payload = Object.fromEntries(
-      Object.entries({ ...formWithoutSalida, ...(salidaPayload ? { salida: salidaPayload } : {}), stops: trimmedStops, spedizzione: "EXTRA_PIAZZA" }).filter(
+      Object.entries({ ...formWithoutSalida, ...(salidaPayload ? { salida: salidaPayload } : {}), stops: trimmedStops, spedizzione: "EXTRA_PIAZZA", ...(solicitud ? { solicitudId: solicitud.id } : {}) }).filter(
         ([key, value]) => key === "stops" || key === "pasaPorBrennero" || key === "pasaPorFrejus" || value !== ""
       )
     );
@@ -125,6 +140,7 @@ export const NewRecordPage = () => {
     try {
       const record = await createRecordRequest(payload);
       refreshRecords();
+      if (solicitud) notifySolicitudesChanged();
       // Se preserva backgroundLocation (si esta pantalla se abrio como overlay sobre
       // una lista, ver App.jsx) para que el detalle del registro recien creado
       // tambien se muestre como overlay, en vez de que la lista de fondo se
@@ -184,6 +200,8 @@ export const NewRecordPage = () => {
         <h1 className="text-[24px] font-semibold text-ink-50">Nuevo servicio</h1>
         <p className="mt-1 text-[14px] text-ink-300">Completa los datos para crear un servicio.</p>
       </div>
+
+      {solicitud && <SolicitudBanner solicitud={solicitud} clienteEncontrado={Boolean(form.clientId)} />}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
         <GlassCard>

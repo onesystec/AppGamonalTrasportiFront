@@ -11,6 +11,7 @@ import { AREA_LABEL_BY_KEY } from "../../lib/roles";
 
 const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").then((m) => ({ default: m.ClienteSeguimientoPage })));
 const ClienteHistorialPage = lazy(() => import("./ClienteHistorialPage").then((m) => ({ default: m.ClienteHistorialPage })));
+const ClienteRegistroPage = lazy(() => import("./ClienteRegistroPage").then((m) => ({ default: m.ClienteRegistroPage })));
 
 const tabClass = ({ isActive }) =>
   clsx(
@@ -34,6 +35,7 @@ const ClienteShell = () => {
   const subtitulo = user?.cliente?.nombre ? nombrePersona : spedizioni;
   const verSeguimiento = modulos.includes("MAPA") || modulos.includes("LISTA");
   const verHistorial = modulos.includes("HISTORIAL");
+  const verRegistro = modulos.includes("REGISTRO");
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
 
   return (
@@ -60,6 +62,11 @@ const ClienteShell = () => {
                 Historial
               </NavLink>
             )}
+            {verRegistro && (
+              <NavLink to="/cliente/registro" className={tabClass}>
+                Registro
+              </NavLink>
+            )}
           </nav>
           <button
             type="button"
@@ -83,12 +90,13 @@ const ClienteShell = () => {
   );
 };
 
-// Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el historial; si no, un aviso.
+// Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el historial o el registro; si no, un aviso.
 const ClienteInicio = () => {
   const { user } = useAuth();
   const modulos = user?.clienteModulos ?? [];
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
   if (modulos.includes("HISTORIAL")) return <Navigate to="/cliente/historial" replace />;
+  if (modulos.includes("REGISTRO")) return <Navigate to="/cliente/registro" replace />;
   return (
     <p className="px-1 py-10 text-center text-[14px] text-ink-300">
       Tu usuario todavia no tiene secciones activadas. Pidele a Gamonal Trasporti que te las active.
@@ -101,6 +109,7 @@ export const ClienteApp = () => (
     <Route element={<ClienteShell />}>
       <Route path="/cliente" element={<ClienteInicio />} />
       <Route path="/cliente/historial" element={<ClienteHistorialPage />} />
+      <Route path="/cliente/registro" element={<ClienteRegistroPage />} />
       <Route path="*" element={<Navigate to="/cliente" replace />} />
     </Route>
   </Routes>
