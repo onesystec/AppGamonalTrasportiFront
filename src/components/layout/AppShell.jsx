@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import logo from "../../assets/logo.webp";
 import { roleText } from "../../lib/roles";
 import { setListSearch, useListSearch } from "../../lib/listSearchStore";
+import { isEmbedded } from "../../lib/embedded";
 import { useAuth } from "../../context/AuthContext";
 import { AppUpdateProvider, useAppUpdate } from "../../context/AppUpdateContext";
 import { NotificationsProvider } from "../../context/NotificationsContext";
@@ -449,14 +450,16 @@ const AppShellContent = () => {
               iconClassName="h-5 w-5 shrink-0"
             />
 
-            <button
-              type="button"
-              onClick={logout}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            >
-              <LogoutIcon className="h-5 w-5 shrink-0" />
-              Cerrar sesión
-            </button>
+            {!isEmbedded && (
+              <button
+                type="button"
+                onClick={logout}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <LogoutIcon className="h-5 w-5 shrink-0" />
+                Cerrar sesión
+              </button>
+            )}
           </div>
         </aside>
 

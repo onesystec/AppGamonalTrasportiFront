@@ -6,6 +6,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { isEmbedded } from "../../lib/embedded";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
 
@@ -83,9 +84,12 @@ const ClienteShell = () => {
       >
         <ThemeIcon className="h-[18px] w-[18px]" />
       </button>
-      <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">
-        Cerrar sesion
-      </button>
+      {/* Dentro de OneSystec la sesion se cierra desde OneSystec, no desde aqui. */}
+      {!isEmbedded && (
+        <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">
+          Cerrar sesion
+        </button>
+      )}
     </>
   );
 

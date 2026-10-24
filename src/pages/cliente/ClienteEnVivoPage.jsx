@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { PageLoader } from "../../components/ui/PageLoader";
+import { FullscreenMap } from "../../components/ui/FullscreenMap";
 import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -142,7 +143,7 @@ export const ClienteEnVivoPage = () => {
           </div>
 
           <div className="order-1 overflow-hidden rounded-2xl border border-line/10 lg:order-2">
-            <div className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
+            <FullscreenMap className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
               {!isLoaded ? (
                 <div className="flex h-full items-center justify-center">
                   <Spinner className="h-6 w-6 border-line/20 border-t-line" />
@@ -182,7 +183,7 @@ export const ClienteEnVivoPage = () => {
                   ))}
                 </GoogleMap>
               )}
-            </div>
+            </FullscreenMap>
           </div>
         </div>
       )}

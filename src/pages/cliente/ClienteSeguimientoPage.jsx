@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "../../components/ui/Alert";
 import { PageLoader } from "../../components/ui/PageLoader";
+import { FullscreenMap } from "../../components/ui/FullscreenMap";
 import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -248,7 +249,7 @@ export const ClienteSeguimientoPage = () => {
 
           {verMapa && (
             <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2")}>
-              <div className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
+              <FullscreenMap className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
                 {selected && cargandoRuta && hayMapa && (
                   <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-900 shadow-md">
                     <Spinner className="h-3.5 w-3.5 border-gray-300 border-t-gray-700" />
@@ -341,7 +342,7 @@ export const ClienteSeguimientoPage = () => {
                     ))}
                   </GoogleMap>
                 )}
-              </div>
+              </FullscreenMap>
               {vehiculos.length === 0 && enCamino.length > 0 && (
                 <p className="border-t border-line/10 px-4 py-2.5 text-[13px] text-ink-300">
                   Todavia no hay posicion de tus vehiculos en el mapa. Aparecen apenas empiezan a transmitir.
