@@ -55,6 +55,9 @@ import {
 import { kmRecorrido } from "../../lib/km";
 
 
+// DHL (Milano y Roma) y AB Service se pagan automaticamente: no entran en "Solo sin cobrar" (solo Extras Piazza y Otros).
+const AREAS_PAGO_AUTOMATICO = new Set(["dhl-milano", "dhl-roma", "ab-service"]);
+
 const TAB_OPTIONS = [
   { value: "en_proceso", label: "En proceso" },
   { value: "terminados", label: "Terminados" },
@@ -741,7 +744,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
 
   const summaryDays = summary ? groupSummaryByDay(summary.filter(matchesArea)) : null;
   const unpaidVisibleRecords = unpaidRecords
-    ?.filter((r) => matchesArea(r) && r.pagoRecibido == null)
+    ?.filter((r) => matchesArea(r) && !AREAS_PAGO_AUTOMATICO.has(classifyRecord(r)) && r.pagoRecibido == null)
     .sort((a, b) => new Date(a.fechaServicio) - new Date(b.fechaServicio));
 
   // Al abrir un mes se despliega solo el dia mas reciente (un unico pedido) para no mostrar
@@ -938,7 +941,9 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                   </div>
                 ) : unpaidVisibleRecords.length === 0 ? (
                   <p className="py-4 text-center text-[14px] text-ink-300">
-                    Ningun servicio sin cobrar este mes en {AREAS_BY_KEY[areaKey]?.label ?? "ninguna area"}.
+                    {AREAS_PAGO_AUTOMATICO.has(areaKey)
+                      ? `${AREAS_BY_KEY[areaKey].label} se paga automaticamente: no hay servicios sin cobrar.`
+                      : `Ningun servicio sin cobrar este mes en ${AREAS_BY_KEY[areaKey]?.label ?? "ninguna area"}.`}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
