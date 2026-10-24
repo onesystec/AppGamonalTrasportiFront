@@ -76,14 +76,17 @@ const ClienteShell = () => {
 
   const acciones = (
     <>
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-line/10 hover:text-ink-50"
-      >
-        <ThemeIcon className="h-[18px] w-[18px]" />
-      </button>
+      {/* Dentro de OneSystec el tema se elige alli. */}
+      {!isEmbedded && (
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-ink-300 hover:bg-line/10 hover:text-ink-50"
+        >
+          <ThemeIcon className="h-[18px] w-[18px]" />
+        </button>
+      )}
       {/* Dentro de OneSystec la sesion se cierra desde OneSystec, no desde aqui. */}
       {!isEmbedded && (
         <button type="button" onClick={logout} className="rounded-full px-3 py-2 text-[13px] font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50">

@@ -18,3 +18,21 @@ export const notifyParentFullscreen = (value) => {
     // Sin padre al que avisar: el mapa igual ocupa todo el marco.
   }
 };
+
+// OneSystec manda su tema (claro/oscuro) y aqui se sigue: dentro de OneSystec no hay un tema propio que elegir. Solo se cree al padre directo.
+export const onParentTheme = (callback) => {
+  if (!isEmbedded) return () => {};
+  const onMessage = (event) => {
+    if (event.source !== window.parent) return;
+    const data = event.data;
+    if (data?.source === "onesystec" && data.type === "theme" && (data.value === "dark" || data.value === "light")) callback(data.value);
+  };
+  window.addEventListener("message", onMessage);
+  // La app tarda en arrancar (entra con SSO): se avisa al padre cuando ya escucha para que mande el tema de nuevo.
+  try {
+    window.parent.postMessage({ source: "gamonal-driver", type: "ready" }, "*");
+  } catch {
+    // Sin padre al que avisar: se queda con su tema.
+  }
+  return () => window.removeEventListener("message", onMessage);
+};

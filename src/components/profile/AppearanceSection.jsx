@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useTheme } from "../../context/ThemeContext";
+import { isEmbedded } from "../../lib/embedded";
 import { PALETTES } from "../../lib/themes";
 import { CheckCircleIcon, MoonIcon, SunIcon } from "../ui/icons";
 
@@ -37,6 +38,8 @@ export const AppearanceSection = () => {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Dentro de OneSystec el modo (claro/oscuro) es el de OneSystec; aqui solo se elige la paleta. */}
+      {!isEmbedded && (
       <div>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-ink-400">Modo</p>
         <div role="radiogroup" aria-label="Modo" className="grid grid-cols-3 gap-2.5">
@@ -63,6 +66,7 @@ export const AppearanceSection = () => {
           })}
         </div>
       </div>
+      )}
 
       <div>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-ink-400">Paleta de color</p>

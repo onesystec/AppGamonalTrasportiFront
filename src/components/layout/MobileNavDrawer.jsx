@@ -124,18 +124,20 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
             {updateDot}
           </NavLink>
 
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          >
-            {theme === "dark" ? (
-              <SunIcon className="h-5 w-5 shrink-0" />
-            ) : (
-              <MoonIcon className="h-5 w-5 shrink-0" />
-            )}
-            {theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-          </button>
+          {!isEmbedded && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
+              {theme === "dark" ? (
+                <SunIcon className="h-5 w-5 shrink-0" />
+              ) : (
+                <MoonIcon className="h-5 w-5 shrink-0" />
+              )}
+              {theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+            </button>
+          )}
 
           {!isEmbedded && (
             <button

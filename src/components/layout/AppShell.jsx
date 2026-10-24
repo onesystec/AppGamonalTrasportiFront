@@ -168,6 +168,9 @@ const ThemeToggleButton = ({ className, iconClassName, label }) => {
   const Icon = theme === "dark" ? SunIcon : MoonIcon;
   const text = theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
 
+  // Dentro de OneSystec el tema se elige alli.
+  if (isEmbedded) return null;
+
   return (
     <button type="button" onClick={toggleTheme} aria-label={text} title={text} className={className}>
       <Icon className={iconClassName ?? "h-[18px] w-[18px]"} />

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { isEmbedded, onParentTheme } from "../lib/embedded";
 import { DEFAULT_PALETTE, PALETTE_IDS } from "../lib/themes";
 
 const ThemeContext = createContext(null);
@@ -51,6 +52,8 @@ const applyMode = (mode) => {
   const root = document.documentElement;
   root.classList.toggle("dark", mode === "dark");
   root.classList.toggle("light", mode === "light");
+  // Dentro de OneSystec el tema es el de OneSystec: no se guarda, para no cambiar el de quien abre esta app por su cuenta.
+  if (isEmbedded) return;
   try {
     localStorage.setItem(STORAGE_KEY, mode);
   } catch {
@@ -59,6 +62,7 @@ const applyMode = (mode) => {
 };
 
 const storePreference = (preference) => {
+  if (isEmbedded) return;
   try {
     localStorage.setItem(PREFERENCE_KEY, preference);
   } catch {
@@ -104,6 +108,9 @@ export const ThemeProvider = ({ children }) => {
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
   }, [preference]);
+
+  // Dentro de OneSystec el modo lo manda OneSystec.
+  useEffect(() => onParentTheme((mode) => setThemePreference(mode)), [setThemePreference]);
 
   const setTheme = useCallback(
     (mode) => {
