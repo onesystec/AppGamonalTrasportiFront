@@ -129,6 +129,53 @@ const ServicioItem = ({ s, active, onSelect }) => {
   );
 };
 
+// Servicio asignado que todavia no salio: sin GPS ni llegada estimada, solo lo que esta planificado.
+const ProgramadoItem = ({ s }) => {
+  const tipo = tipoMeta(s.tipo);
+  return (
+    <li>
+      <div className="rounded-xl border border-line/10 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tipo.color }} />
+            <span className="truncate text-[13px] font-semibold tracking-wide text-ink-50">{s.codigo}</span>
+          </span>
+          <span className="shrink-0 rounded-full border border-line/15 px-2 py-0.5 text-[10.5px] font-medium text-ink-300">{tipo.label}</span>
+        </div>
+        <p className="mt-1 truncate text-[12px] text-ink-300">
+          {s.chofer.nombre} · {s.vehiculo ?? "Sin vehículo"}
+        </p>
+        <p className="truncate text-[12px] text-ink-300">{s.destino}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-[13px] font-semibold text-ink-50">
+            {s.salidaPlan ? `Sale ${diaHoraRoma(s.salidaPlan)}` : "Sin salir"}
+          </span>
+          <span className="text-[11.5px] text-ink-400">ETA {diaHoraRoma(s.etaPlan)}</span>
+          {s.sinSalir && (
+            <span className="text-[11.5px] font-semibold" style={{ color: SEGUIMIENTO_COLOR_RETRASO }}>
+              Aún sin iniciar
+            </span>
+          )}
+        </div>
+        {s.chofer.telefono && (
+          <a href={`tel:${s.chofer.telefono}`} className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-semibold text-accent-400 hover:text-accent-300">
+            <PhoneIcon className="h-3.5 w-3.5" />
+            Llamar al chofer
+          </a>
+        )}
+      </div>
+    </li>
+  );
+};
+
+// Hora de Roma; con el dia delante si no es hoy.
+const diaHoraRoma = (value) => {
+  const date = new Date(value);
+  const dia = (d) => d.toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+  if (dia(date) === dia(new Date())) return horaRoma(value);
+  return `${date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Rome" })} ${horaRoma(value)}`;
+};
+
 // Linea de tiempo de un viaje compactado: el orden de los servicios y la hora aproximada de llegada a cada uno.
 const LineaDeTiempo = ({ servicio, onSelect }) => (
   <div className="glass-surface absolute inset-x-3 bottom-3 z-10 rounded-2xl px-4 pb-3 pt-2.5">
@@ -198,6 +245,8 @@ export const SeguimientoPage = () => {
   const [ruta, setRuta] = useState(null);
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [estadoFilter, setEstadoFilter] = useState("todos");
+  // "camino": los que ya salieron (con GPS); "programados": asignados que todavia no salieron.
+  const [vista, setVista] = useState("camino");
   const [query, setQuery] = useState("");
   const [showPeajes, setShowPeajes] = useState(true);
   // Por defecto no se muestran los servicios con muchas horas de retraso (olvidados, sin cerrar): "Ver antiguos" los trae para poder cerrarlos.
@@ -230,6 +279,7 @@ export const SeguimientoPage = () => {
   }, [isPrivileged, verAntiguos]);
 
   const servicios = useMemo(() => data?.servicios ?? [], [data]);
+  const programados = useMemo(() => data?.programados ?? [], [data]);
   const selected = useMemo(() => servicios.find((s) => s.id === selectedId) ?? null, [servicios, selectedId]);
 
   // Ruta del servicio elegido: se vuelve a pedir en cada refresco (la que falta cambia con la posicion).
@@ -251,17 +301,18 @@ export const SeguimientoPage = () => {
     };
   }, [selectedId, data]);
 
+  const enProgramados = vista === "programados";
   const tipoCounts = useMemo(() => {
     const counts = {};
-    servicios.forEach((s) => {
+    (enProgramados ? programados : servicios).forEach((s) => {
       counts[s.tipo] = (counts[s.tipo] ?? 0) + 1;
     });
     return counts;
-  }, [servicios]);
+  }, [servicios, programados, enProgramados]);
 
   const tipoTabs = useMemo(
     () => [
-      { key: "todos", label: "General", count: servicios.length, color: null },
+      { key: "todos", label: "General", count: (enProgramados ? programados : servicios).length, color: null },
       ...SEGUIMIENTO_TIPOS.filter((t) => t.key !== "otros" || tipoCounts.otros).map((t) => ({
         key: t.key,
         label: t.label,
@@ -269,13 +320,21 @@ export const SeguimientoPage = () => {
         color: t.color,
       })),
     ],
-    [servicios, tipoCounts]
+    [servicios, programados, enProgramados, tipoCounts]
   );
 
   const inTipo = useMemo(
     () => (tipoFilter === "todos" ? servicios : servicios.filter((s) => s.tipo === tipoFilter)),
     [servicios, tipoFilter]
   );
+  const programadosVisibles = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return programados.filter((s) => {
+      if (tipoFilter !== "todos" && s.tipo !== tipoFilter) return false;
+      if (!q) return true;
+      return [s.codigo, s.chofer.nombre, s.vehiculo, s.destino, s.cliente].some((v) => v?.toLowerCase().includes(q));
+    });
+  }, [programados, tipoFilter, query]);
   const sinGpsCount = inTipo.filter((s) => s.sinGps).length;
   const tardeCount = inTipo.filter(retrasado).length;
 
@@ -348,7 +407,7 @@ export const SeguimientoPage = () => {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Seguimiento</h1>
-          <p className="mt-1 text-[14px] text-ink-300">Servicios en camino, en vivo: dónde están y a qué hora llegan.</p>
+          <p className="mt-1 text-[14px] text-ink-300">Servicios en camino, en vivo, y los programados que aún no salieron.</p>
         </div>
         <MapSectionTabs />
       </div>
@@ -364,7 +423,7 @@ export const SeguimientoPage = () => {
               <header className="flex items-center justify-between gap-2 border-b border-line/10 px-4 py-3">
                 <h2 className="flex items-center gap-2 text-[14px] font-semibold text-ink-50">
                   <TruckIcon className="h-4 w-4 text-ink-300" />
-                  Servicios en camino <span className="font-normal text-ink-400">({inTipo.length})</span>
+                  Servicios <span className="font-normal text-ink-400">({enProgramados ? programadosVisibles.length : inTipo.length})</span>
                 </h2>
                 <button
                   type="button"
@@ -376,6 +435,25 @@ export const SeguimientoPage = () => {
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
               </header>
+
+              <div className="flex gap-1 border-b border-line/10 px-3 py-2.5">
+                {[
+                  { key: "camino", label: "En camino", count: servicios.length },
+                  { key: "programados", label: "Programados", count: programados.length },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setVista(tab.key)}
+                    aria-pressed={vista === tab.key}
+                    className={`flex-1 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      vista === tab.key ? "bg-accent-500/25 text-ink-50" : "text-ink-300 hover:bg-line/10"
+                    }`}
+                  >
+                    {tab.label} {tab.count}
+                  </button>
+                ))}
+              </div>
 
               <div className="flex flex-wrap gap-1.5 border-b border-line/10 px-3 py-2.5">
                 {tipoTabs.map((tab) => (
@@ -408,7 +486,7 @@ export const SeguimientoPage = () => {
                     className="glass-input w-full rounded-lg py-2 pl-9 pr-3 text-[13px] text-ink-50"
                   />
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className={`flex flex-wrap gap-1.5 ${enProgramados ? "hidden" : ""}`}>
                   {[
                     { key: "todos", label: "Todos", count: inTipo.length, dot: null },
                     { key: "sinGps", label: "Sin GPS", count: sinGpsCount, dot: SEGUIMIENTO_COLOR_SIN_GPS },
@@ -432,7 +510,7 @@ export const SeguimientoPage = () => {
                 </div>
               </div>
 
-              {(data?.ocultos?.antiguos > 0 || verAntiguos) && (
+              {!enProgramados && (data?.ocultos?.antiguos > 0 || verAntiguos) && (
                 <div className="flex items-center justify-between gap-2 border-b border-line/10 px-4 py-2 text-[11px] text-ink-300">
                   <span>
                     {verAntiguos
@@ -454,6 +532,14 @@ export const SeguimientoPage = () => {
                   <li className="flex justify-center py-6">
                     <Spinner className="h-5 w-5 border-line/20 border-t-line" />
                   </li>
+                ) : enProgramados ? (
+                  programadosVisibles.length === 0 ? (
+                    <li className="px-3 py-6 text-center text-[13px] text-ink-400">
+                      {programados.length === 0 ? "No hay servicios programados pendientes de salir." : "Sin resultados."}
+                    </li>
+                  ) : (
+                    programadosVisibles.map((s) => <ProgramadoItem key={s.id} s={s} />)
+                  )
                 ) : visible.length === 0 ? (
                   <li className="px-3 py-6 text-center text-[13px] text-ink-400">
                     {servicios.length === 0 ? "No hay servicios en camino ahora." : "Sin resultados."}
@@ -489,7 +575,7 @@ export const SeguimientoPage = () => {
               className="glass-surface absolute left-3 top-3 z-10 flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-ink-50 transition-colors hover:bg-line/10"
             >
               <TruckIcon className="h-4 w-4 text-ink-300" />
-              Servicios ({inTipo.length})
+              Servicios ({inTipo.length + programados.length})
               {sinGpsCount > 0 && (
                 <span className="rounded-full bg-[#ff3b57] px-1.5 text-[11px] font-bold text-white">{sinGpsCount}</span>
               )}
