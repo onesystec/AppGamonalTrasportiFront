@@ -55,7 +55,7 @@ export const previewShift = ({ inicio, fin, esperaMin = 0, pausaMin = 0 }, rates
   const horasNoche = round((nocheMin * factor) / 60);
   const esperaHoras = round(espera / 60);
 
-  // Reperibilidad: el servicio sale en fin de semana o festivo (fecha de la hora de inicio).
+  // Reperibilidad: el servicio sale en fin de semana o festivo (fecha de la hora de inicio) o es de noche.
   let reperibilidad = null;
   if (rates?.reperibilidad) {
     const day = inicio.slice(0, 10);
@@ -63,6 +63,12 @@ export const previewShift = ({ inicio, fin, esperaMin = 0, pausaMin = 0 }, rates
     const weekday = ((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7) + 1; // 1 = lunes ... 7 = domingo
     if (rates.reperibilidad.festivosCuentan && (rates.festivos ?? []).includes(day)) reperibilidad = "FESTIVO";
     else if (!rates.reperibilidad.diasLaborales.includes(weekday)) reperibilidad = "FIN_DE_SEMANA";
+    // De noche: sale fuera de la banda de dia o pasa la mayor parte de la jornada en la noche (mismo criterio que el servidor).
+    else if (rates.reperibilidad.nocheCuenta) {
+      const startOfDay = ((start % 1440) + 1440) % 1440;
+      const sale = startOfDay >= dayStart && startOfDay < nightStart;
+      if (!sale || nocheMin > diaMin) reperibilidad = "NOCHE";
+    }
   }
   const extra = reperibilidad ? rates.reperibilidad.extraEur : 0;
   const pago = rates

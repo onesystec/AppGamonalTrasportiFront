@@ -653,7 +653,7 @@ export const HorasAprobacionPage = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[14px] text-ink-300">
           Horas que enviaron los choferes. Hasta que las apruebes se les paga por kilometros; al aprobarlas
-          cuentan por hora, de dia o de noche (la reperibilidad de fin de semana y festivos se suma en ambos casos).
+          cuentan por hora, de dia o de noche (la reperibilidad de fin de semana, festivos y servicios de noche se suma en ambos casos).
         </p>
         <SegmentedControl options={FILTERS} value={estado} onChange={setEstado} />
       </div>

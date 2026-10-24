@@ -40,8 +40,8 @@ export const PayRulesCard = ({ reglas, title = "Como se calcula" }) => {
       </span>
       {reglas.reperibilidad && (
         <span>
-          Reperibilidad: <b className="text-ink-50">+{formatCurrency(reglas.reperibilidad.extraEur)}</b> por servicio que
-          sale en fin de semana o festivo
+          Reperibilidad: <b className="text-ink-50">+{formatCurrency(reglas.reperibilidad.extraEur)}</b> por servicio fuera del
+          horario laboral: sale en fin de semana o festivo{reglas.reperibilidad.nocheCuenta ? ", o es de noche (sale de noche o pasa la mayor parte en la noche)" : ""}
         </span>
       )}
       {reglas.redondeoHoras > 0 && <span>Horas redondeadas a {nf(reglas.redondeoHoras * 60)} min</span>}

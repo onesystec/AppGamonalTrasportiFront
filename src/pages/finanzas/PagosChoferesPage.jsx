@@ -175,7 +175,7 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
             {driver.horas > 0 && ` - ${nf(driver.horas)} h`}
             {driver.esperaHoras > 0 && ` - ${nf(driver.esperaHoras)} h de espera`}
             {driver.salidasReperibilidad > 0 &&
-              ` - ${driver.salidasReperibilidad} ${driver.salidasReperibilidad === 1 ? "salida" : "salidas"} de reperibilidad (+${formatCurrency(driver.pagoReperibilidad)})`}
+              ` - ${driver.salidasReperibilidad} ${driver.salidasReperibilidad === 1 ? "salida" : "salidas"} de reperibilidad${driver.salidasNoche > 0 ? ` (${driver.salidasNoche} de noche)` : ""} (+${formatCurrency(driver.pagoReperibilidad)})`}
             {driver.horasPorAprobar > 0 && ` - ${driver.horasPorAprobar} con horas por aprobar`}
           </span>
           {driver.asistencia && (
@@ -371,6 +371,14 @@ export const PagosChoferesPage = () => {
               color="#22d3ee"
             />
           </div>
+
+          {data.total.salidasReperibilidad > 0 && (
+            <p className="text-[13px] text-ink-300">
+              Reperibilidad del mes: <b className="text-ink-50">{formatCurrency(data.total.reperibilidad)}</b> en {data.total.salidasReperibilidad}{" "}
+              {data.total.salidasReperibilidad === 1 ? "servicio" : "servicios"} ({data.total.salidasNoche ?? 0} de noche,{" "}
+              {data.total.salidasReperibilidad - (data.total.salidasNoche ?? 0)} de fin de semana o festivo).
+            </p>
+          )}
 
           <RulesCard reglas={data.reglas} />
 
