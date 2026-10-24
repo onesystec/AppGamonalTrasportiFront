@@ -1,7 +1,7 @@
 import { api } from "./api";
 
 // Usuario cliente (Piazza): sus solicitudes de servicio.
-export const listSolicitudesClienteRequest = () => api.get("/cliente/solicitudes").then((res) => res.data.data.items);
+export const listSolicitudesClienteRequest = (month) => api.get("/cliente/solicitudes", { params: { month } }).then((res) => res.data.data.items);
 export const createSolicitudRequest = (payload) => api.post("/cliente/solicitudes", payload).then((res) => res.data.data);
 export const updateSolicitudRequest = (id, payload) => api.patch(`/cliente/solicitudes/${id}`, payload).then((res) => res.data.data);
 export const deleteSolicitudRequest = (id) => api.delete(`/cliente/solicitudes/${id}`).then((res) => res.data.data);

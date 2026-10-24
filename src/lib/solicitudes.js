@@ -55,11 +55,23 @@ export const formatFechaHora = (value) => {
 
 const kmText = (km) => String(Math.round(km * 10) / 10).replace(".", ",");
 
+// KM destino tal cual se muestra: el numero o, si lo escrito no era un numero (ej. "NAVETTA HP"), ese texto.
+export const kmDeSolicitud = (s) => (s.km != null ? kmText(s.km) : (s.kmTexto ?? null));
+
+// "KEVIN, DAVID" -> "@KEVIN @DAVID" (como se avisa en el grupo de WhatsApp a quien retira).
+const menciones = (autRitiro) =>
+  (autRitiro ?? "")
+    .split(/[,/&]|\s+y\s+/i)
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .map((n) => `@${n}`)
+    .join(" ");
+
 // Mensaje listo para pegar en WhatsApp. Devuelve { text, missing }: missing son los datos que la plantilla pide y la solicitud no tiene
 // (el mensaje se arma igual, sin esas lineas).
 //  - DHL (Milano y Roma): cliente / PER destinazione / ETA / KM / A CHI ASSEGNO? (+ el numero de Milano o Roma si se eligio).
-//  - AB Service: la descripcion del servicio (Varie) tal cual, KM, ETA, las notas (Varie 2) y la hora limite de entrega.
-//  - Extra Piazza: como DHL, con las notas al final.
+//  - AB Service: la descripcion del envio tal cual, KM (el Totale), ETA, las menciones de quien retira (Aut. ritiro) y la hora limite de entrega.
+//  - Extra Piazza: como DHL, con la nota (Varie) al final.
 export const buildWhatsappMessage = (s, now = new Date()) => {
   const missing = [];
   const p = romeParts(s.fechaHora);
@@ -67,38 +79,47 @@ export const buildWhatsappMessage = (s, now = new Date()) => {
   const hora = `${p.hour}.${p.minute}`;
   const diaCorto = `${p.day}/${p.month}`;
   const etaLine = `ETA ORE ${hora}${hoy ? "" : ` DEL ${diaCorto}`}`;
-  let kmLine = null;
-  if (s.km != null) kmLine = `KM ${kmText(s.km)}`;
-  else missing.push("KM");
 
   const cliente = (s.cliente ?? "").trim();
   const destino = (s.destinazione ?? "").trim();
   const varie = (s.varie ?? "").trim();
-  const varie2 = (s.varie2 ?? "").trim();
+  const descripcion = (s.descripcion ?? "").trim();
+  const km = kmDeSolicitud(s);
+  if (km == null) missing.push("KM");
 
   if (s.servicio === "AB_SERVICE") {
-    if (!varie) missing.push("Varie (descripcion del servicio)");
+    if (!descripcion) missing.push("Descripcion del envio");
+    const mencion = menciones(s.autRitiro);
+    if (!mencion) missing.push("Aut. ritiro");
     // "19.00" se dice "19": las horas en punto sin minutos.
     const limite = p.minute === "00" ? String(Number(p.hour)) : hora;
-    const lines = [varie || null, kmLine, etaLine, varie2 || null, `CONSEGNI ${hoy ? "OGGI" : `IL ${diaCorto}`} ENTRO LE ${limite}`];
+    const lines = [descripcion || null, km != null ? `KM ${km}` : null, etaLine, mencion || null, `CONSEGNI ${hoy ? "OGGI" : `IL ${diaCorto}`} ENTRO LE ${limite}`];
     return { text: lines.filter(Boolean).join("\n"), missing };
   }
 
   const per = /^per\s/i.test(destino) ? destino : `PER ${destino}`;
+  // Un KM que no es numero (NAVETTA HP) va solo, sin la palabra KM.
+  const kmLine = km == null ? null : s.km != null ? `KM ${km}` : km.toUpperCase();
   const lines = [cliente.toUpperCase(), per.toUpperCase(), etaLine, kmLine];
-  if (s.servicio === "EXTRA_PIAZZA") {
-    return { text: [...lines, varie || null, varie2 || null].filter(Boolean).join("\n"), missing };
-  }
+  if (s.servicio === "EXTRA_PIAZZA") return { text: [...lines, varie || null].filter(Boolean).join("\n"), missing };
   const asigno = `A CHI ASSEGNO?${s.aplicativo ? ` ${APLICATIVO_LABELS[s.aplicativo] ?? s.aplicativo}` : ""}`;
   return { text: [...lines.filter(Boolean), "", asigno].join("\n"), missing };
 };
+
+// El texto de KM que no es numero (NAVETTA HP) no tiene campo en el servicio real: va a la descripcion.
+const kmTextoSuelto = (s) => (s.kmTexto ? `KM: ${s.kmTexto}` : null);
 
 // Valores que una solicitud pone de partida en el formulario real del servicio (la oficina completa el resto).
 export const solicitudToFormDefaults = (s) => ({
   eta: toRomeInput(s.fechaHora),
   kilometros: s.km != null ? String(s.km) : "",
   pagoRecibido: s.pagato != null ? String(s.pagato) : "",
-  descripcion: [s.varie, s.varie2].filter((v) => v && v.trim()).join("\n") || `Solicitud de ${s.cliente}`,
+  // Varie 2 es lo que se cobra aparte (ej. espera onsite): queda como costo de espera.
+  costoEspera: s.varie2 != null ? String(s.varie2) : "",
+  descripcion:
+    [s.descripcion, s.varie, kmTextoSuelto(s), s.autRitiro ? `Aut. ritiro: ${s.autRitiro}` : null, s.pagato50 ? "Pagato al 50%" : null]
+      .filter((v) => v && String(v).trim())
+      .join("\n") || `Solicitud de ${s.cliente}`,
   aplicativo: s.aplicativo ?? "",
 });
 

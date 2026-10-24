@@ -8,11 +8,14 @@ export const SolicitudBanner = ({ solicitud, clienteEncontrado }) => (
     <span className="block font-semibold text-accent-300">Completando una solicitud de {solicitud.empresa ?? solicitud.creadoPor ?? "un cliente"}</span>
     <span className="mt-1 block">
       {solicitud.servicioLabel} · {solicitud.cliente} · {solicitud.destinazione} · {formatFechaHora(solicitud.fechaHora)}
-      {solicitud.km != null ? ` · ${solicitud.km} km` : ""}
+      {solicitud.km != null ? ` · ${solicitud.km} km` : solicitud.kmTexto ? ` · ${solicitud.kmTexto}` : ""}
       {solicitud.pagato != null ? ` · Pagato ${formatCurrency(solicitud.pagato)} (queda como monto recibido)` : ""}
+      {solicitud.pagato50 ? " · Pagato al 50%" : ""}
     </span>
+    {solicitud.autRitiro && <span className="mt-1 block text-ink-300">Aut. ritiro: {solicitud.autRitiro}</span>}
     {solicitud.varie && <span className="mt-1 block whitespace-pre-line text-ink-300">{solicitud.varie}</span>}
-    {solicitud.varie2 && <span className="mt-1 block whitespace-pre-line text-ink-300">{solicitud.varie2}</span>}
+    {solicitud.varie2 != null && <span className="mt-1 block text-ink-300">Varie 2: {formatCurrency(solicitud.varie2)} (queda como costo de espera)</span>}
+    {solicitud.descripcion && <span className="mt-1 block whitespace-pre-line text-ink-300">{solicitud.descripcion}</span>}
     {!clienteEncontrado && (
       <span className="mt-1 block text-warning-500">El cliente «{solicitud.cliente}» no esta en la lista: elige uno o crealo en el campo Cliente.</span>
     )}

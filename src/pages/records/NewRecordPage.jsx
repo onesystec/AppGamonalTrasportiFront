@@ -79,6 +79,7 @@ export const NewRecordPage = () => {
       eta: d.eta,
       kilometros: d.kilometros,
       pagoRecibido: d.pagoRecibido,
+      costoEspera: d.costoEspera,
       descripcion: d.descripcion,
       stops: [{ direccion: solicitud.destinazione, cap: "", lat: null, lng: null }],
     };

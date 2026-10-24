@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import clsx from "clsx";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -10,7 +12,9 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { startVisibleInterval } from "../../lib/polling";
-import { formatFechaHora } from "../../lib/solicitudes";
+import { currentMonth } from "../../lib/finanzas";
+import { formatCurrency } from "../../lib/format";
+import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS } from "../../lib/solicitudes";
 import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib/solicitudes.api";
 
 const REFRESH_MS = 60 * 1000;
@@ -78,9 +82,88 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
   );
 };
 
-// Registro limitado de Piazza: pide servicios a la oficina con pocos datos. La oficina los completa y acepta; aqui se ve en que estado esta cada uno.
+// Columnas de cada hoja del Excel mensual: DHL Milano / Extra Piazza, DHL Roma (+ Pagato al 50%) y AB Service (+ Aut. ritiro, y el Totale en km).
+const col = (key, label, render, { align = "left", total } = {}) => ({ key, label, render, align, total });
+const COL_CLIENTE = col("cliente", "Cliente", (s) => s.cliente);
+const COL_DESTINO = col("destinazione", "Destinazione", (s) => s.destinazione);
+const COL_FECHA = col("fecha", "Data", (s) => formatFechaHora(s.fechaHora));
+const COL_FORNITORE = col("fornitore", "Fornitore", (s) => s.fornitore);
+const COL_PAGATO = col("pagato", "Pagato", (s) => (s.pagato != null ? formatCurrency(s.pagato) : ""), { align: "right", total: (s) => s.pagato ?? 0 });
+const COL_VARIE = col("varie", "Varie", (s) => s.varie ?? "");
+const COL_VARIE2 = col("varie2", "Varie 2", (s) => (s.varie2 != null ? formatCurrency(s.varie2) : ""), { align: "right", total: (s) => s.varie2 ?? 0 });
+
+const COLUMNAS = {
+  DHL_MILANO: [COL_CLIENTE, COL_DESTINO, COL_FECHA, COL_FORNITORE, col("km", "KM destino", (s) => kmDeSolicitud(s) ?? "", { align: "right" }), COL_PAGATO, COL_VARIE, COL_VARIE2],
+  DHL_ROMA: [
+    COL_CLIENTE,
+    COL_DESTINO,
+    COL_FECHA,
+    COL_FORNITORE,
+    col("km", "KM destino", (s) => kmDeSolicitud(s) ?? "", { align: "right" }),
+    COL_PAGATO,
+    col("pagato50", "Pagato al 50%", (s) => (s.pagato50 ? "SI" : "")),
+    COL_VARIE,
+    COL_VARIE2,
+  ],
+  AB_SERVICE: [COL_CLIENTE, COL_DESTINO, COL_FECHA, col("autRitiro", "Aut. ritiro", (s) => s.autRitiro ?? ""), COL_FORNITORE, col("km", "Totale", (s) => kmDeSolicitud(s) ?? "", { align: "right" }), COL_PAGATO, COL_VARIE, COL_VARIE2],
+};
+COLUMNAS.EXTRA_PIAZZA = COLUMNAS.DHL_MILANO;
+
+// Los registros del mes por servicio, con las columnas del Excel y los totales de abajo (pagato y varie 2), como en cada hoja.
+const TablaRegistros = ({ items, servicio, onSelect }) => {
+  const columnas = COLUMNAS[servicio];
+  const totales = columnas.filter((c) => c.total).map((c) => ({ key: c.key, label: c.label, value: items.reduce((sum, s) => sum + c.total(s), 0) }));
+  return (
+    <div className="glass-surface overflow-x-auto rounded-2xl">
+      <table className="w-full min-w-[720px] border-collapse text-[13px]">
+        <thead>
+          <tr className="border-b border-line/15 text-[11px] uppercase tracking-wide text-ink-400">
+            {columnas.map((c) => (
+              <th key={c.key} className={clsx("whitespace-nowrap px-3 py-2.5 font-semibold", c.align === "right" ? "text-right" : "text-left")}>
+                {c.label}
+              </th>
+            ))}
+            <th className="px-3 py-2.5 text-left font-semibold">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((s) => (
+            <tr key={s.id} onClick={() => onSelect(s.id)} className="cursor-pointer border-b border-line/10 text-ink-100 transition-colors last:border-0 hover:bg-line/[0.07]">
+              {columnas.map((c) => (
+                <td key={c.key} className={clsx("px-3 py-2.5", c.align === "right" ? "whitespace-nowrap text-right" : "text-left", c.key === "cliente" && "font-semibold text-ink-50")}>
+                  {c.render(s)}
+                </td>
+              ))}
+              <td className="px-3 py-2.5">
+                <EstadoPill estado={s.estado} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {items.length === 0 && <p className="px-4 py-8 text-center text-[13px] text-ink-300">Sin registros de este servicio en el mes.</p>}
+      {items.length > 0 && (
+        <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-line/15 px-4 py-2.5 text-[13px] text-ink-300">
+          {totales.map((t) => (
+            <span key={t.key}>
+              Total {t.label}: <strong className="text-ink-50">{formatCurrency(t.value)}</strong>
+            </span>
+          ))}
+          <span>
+            Total: <strong className="text-ink-50">{formatCurrency(totales.reduce((sum, t) => sum + t.value, 0))}</strong>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Registro limitado de Piazza: pide servicios a la oficina con pocos datos y los ve por mes, ordenados como las hojas del Excel (DHL Milano, DHL Roma,
+// AB Service). La oficina los completa y los acepta; aqui se ve en que estado esta cada uno.
 export const ClienteRegistroPage = () => {
   const { user } = useAuth();
+  const [month, setMonth] = useState(currentMonth);
+  const [servicio, setServicio] = useState("DHL_MILANO");
   const [items, setItems] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(null); // null | { solicitud?: Solicitud }
@@ -88,61 +171,65 @@ export const ClienteRegistroPage = () => {
 
   const load = useCallback(
     () =>
-      listSolicitudesClienteRequest()
+      listSolicitudesClienteRequest(month)
         .then((list) => {
           setItems(list);
           setError("");
         })
         .catch((err) => setError(parseApiError(err).message)),
-    []
+    [month]
   );
 
   useEffect(() => {
+    setItems(null);
     load();
     return startVisibleInterval(load, REFRESH_MS);
   }, [load]);
+
+  const porServicio = useMemo(() => Object.fromEntries(SOLICITUD_SERVICIOS.map((t) => [t.value, (items ?? []).filter((s) => s.servicio === t.value)])), [items]);
 
   if (!user?.clienteModulos?.includes("REGISTRO")) return <Navigate to="/cliente" replace />;
 
   const selected = items?.find((s) => s.id === selectedId) ?? null;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold text-ink-50">Registro</h1>
           <p className="text-[13px] text-ink-300">Tus servicios pedidos a Gamonal Trasporti. La oficina los completa y los acepta.</p>
         </div>
-        <Button className="!w-auto px-5 py-2.5" onClick={() => setForm({})}>
-          <PlusIcon className="h-4 w-4" />
-          Nuevo registro
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <MonthSelector month={month} onChange={setMonth} allowFuture />
+          <Button className="!w-auto px-5 py-2.5" onClick={() => setForm({})}>
+            <PlusIcon className="h-4 w-4" />
+            Nuevo registro
+          </Button>
+        </div>
+      </div>
+
+      <div role="tablist" aria-label="Servicios" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {SOLICITUD_SERVICIOS.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            role="tab"
+            aria-selected={servicio === t.value}
+            onClick={() => setServicio(t.value)}
+            className={clsx(
+              "shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition-colors",
+              servicio === t.value ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"
+            )}
+          >
+            {t.label}
+            {items && <span className="ml-1.5 opacity-70">{porServicio[t.value].length}</span>}
+          </button>
+        ))}
       </div>
 
       <Alert>{error}</Alert>
       {!items && !error && <PageLoader />}
-      {items?.length === 0 && <p className="py-10 text-center text-[14px] text-ink-300">Todavia no cargaste ningun registro.</p>}
-
-      <ul className="flex flex-col gap-2">
-        {(items ?? []).map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              onClick={() => setSelectedId(s.id)}
-              className="glass-surface-sm flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-line/10"
-            >
-              <span className="min-w-0 flex-1 basis-48">
-                <span className="block truncate text-[15px] font-semibold text-ink-50">{s.cliente}</span>
-                <span className="block truncate text-[13px] text-ink-300">{s.destinazione}</span>
-              </span>
-              <span className="text-[13px] text-ink-300">{formatFechaHora(s.fechaHora)}</span>
-              <span className="rounded-md bg-line/15 px-1.5 py-0.5 text-[11px] font-medium text-ink-100">{s.servicioLabel}</span>
-              {s.km != null && <span className="text-[13px] text-ink-300">{s.km} km</span>}
-              <EstadoPill estado={s.estado} />
-            </button>
-          </li>
-        ))}
-      </ul>
+      {items && <TablaRegistros items={porServicio[servicio]} servicio={servicio} onSelect={setSelectedId} />}
 
       {selected && !form && (
         <VistaRapida
@@ -164,7 +251,11 @@ export const ClienteRegistroPage = () => {
             onSaved={(saved) => {
               setForm(null);
               setSelectedId(saved.id);
-              load();
+              setServicio(saved.servicio);
+              // Un registro con fecha de otro mes se ve en ese mes.
+              const savedMonth = new Date(saved.fechaHora).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+              if (savedMonth !== month) setMonth(savedMonth);
+              else load();
             }}
           />
         </Modal>

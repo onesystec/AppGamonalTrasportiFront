@@ -94,6 +94,7 @@ export const NewDhlAbServiceRecordPage = () => {
       eta: d.eta,
       kilometros: d.kilometros,
       pagoRecibido: d.pagoRecibido,
+      costoEspera: d.costoEspera,
       descripcion: d.descripcion,
       calle: solicitud.destinazione,
       aplicativo: d.aplicativo.startsWith(`${base.extrasPiazzaZona}_`) ? d.aplicativo : "",
