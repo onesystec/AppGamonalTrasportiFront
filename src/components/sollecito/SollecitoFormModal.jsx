@@ -15,6 +15,7 @@ const emptyForm = (s) => ({
   numeroAtto: s?.numeroAtto ?? "",
   fechaCarta: s?.fechaCarta ?? "",
   fechaTransito: s?.fechaTransito ?? "",
+  fechaLimitePago: s?.fechaLimitePago ?? "",
   targa: s?.targa ?? "",
   numerosMancato: (s?.numerosMancato ?? []).join(", "),
   importe: s?.importe != null ? String(s.importe).replace(".", ",") : "",
@@ -135,6 +136,14 @@ export const SollecitoFormModal = ({ open, sollecito, onClose, onSaved }) => {
             value={form.fechaTransito}
             onChange={set("fechaTransito")}
             error={err("fechaTransito")}
+          />
+          <TextField
+            id="sol-limite"
+            label="Ultimo dia de pago"
+            type="date"
+            value={form.fechaLimitePago}
+            onChange={set("fechaLimitePago")}
+            error={err("fechaLimitePago")}
           />
           <TextField
             id="sol-targa"
