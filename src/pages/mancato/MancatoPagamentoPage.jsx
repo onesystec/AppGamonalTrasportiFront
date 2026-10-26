@@ -2,8 +2,6 @@ import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
-import { MancatoKpi } from "../../components/mancato/MancatoKpi";
-import { MancatoSidebar } from "../../components/mancato/MancatoSidebar";
 import { MancatoTotalAnual } from "../../components/mancato/MancatoTotalAnual";
 import { ReevaluarMancatosModal } from "../../components/mancato/ReevaluarMancatosModal";
 import { Alert } from "../../components/ui/Alert";
@@ -18,13 +16,10 @@ import {
   ChevronDownIcon,
   ClockIcon,
   DotsIcon,
-  EuroIcon,
-  FileTextIcon,
   FilterIcon,
   PlusIcon,
   RefreshIcon,
   SearchIcon,
-  UsersIcon,
 } from "../../components/ui/icons";
 import { MancatoChoferPage } from "./MancatoChoferPage";
 import { useAuth } from "../../context/AuthContext";
@@ -32,11 +27,8 @@ import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
 import {
-  ASIGNACION_FILTER_OPTIONS,
   MANCATO_ESTADOS_PAGAMENTO,
-  addDaysToDay,
   asignacionInfo,
-  romeToday,
   sitioWebHref,
 } from "../../lib/mancato";
 import {
@@ -61,53 +53,22 @@ const EMPTY_FILTERS = {
   asignacion: "",
   q: "",
   orden: "",
+  vence: "",
 };
 
-// "vencen" no es un orden sino un atajo: muestra solo los que vencen hoy o mañana (sin pagar).
-const VENCEN_HOY_MANANA = "vencen";
 const ORDEN_OPTIONS = [
   { value: "", label: "Mas urgentes" },
-  { value: VENCEN_HOY_MANANA, label: "Vencen hoy y mañana" },
   { value: "recientes", label: "Mas recientes" },
   { value: "antiguos", label: "Mas antiguos" },
   { value: "monto", label: "Mayor monto" },
 ];
 
-// Atajos de fecha (sobre la fecha del aviso). La semana va de lunes a domingo.
-const weekStart = (day) => {
-  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 = domingo
-  return addDaysToDay(day, -((weekday + 6) % 7));
-};
-const periodoRange = (periodo) => {
-  const today = romeToday();
-  const monthStart = `${today.slice(0, 7)}-01`;
-  switch (periodo) {
-    case "hoy":
-      return { from: today, to: today };
-    case "semana":
-      return { from: weekStart(today), to: addDaysToDay(weekStart(today), 6) };
-    case "semana_pasada":
-      return { from: addDaysToDay(weekStart(today), -7), to: addDaysToDay(weekStart(today), -1) };
-    case "mes": {
-      const [year, month] = today.split("-").map(Number);
-      const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
-      return { from: monthStart, to: `${today.slice(0, 7)}-${String(last).padStart(2, "0")}` };
-    }
-    case "mes_pasado": {
-      const to = addDaysToDay(monthStart, -1);
-      return { from: `${to.slice(0, 7)}-01`, to };
-    }
-    default:
-      return { from: "", to: "" };
-  }
-};
-const PERIODO_OPTIONS = [
-  { value: "", label: "Todas las fechas" },
-  { value: "hoy", label: "Hoy" },
-  { value: "semana", label: "Esta semana" },
-  { value: "semana_pasada", label: "Semana pasada" },
-  { value: "mes", label: "Este mes" },
-  { value: "mes_pasado", label: "Mes pasado" },
+// Filtro aparte del orden: solo los sin pagar que vencen ese dia.
+const VENCE_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "HOY", label: "Vencen hoy" },
+  { value: "MANANA", label: "Vencen mañana" },
+  { value: "HOY_MANANA", label: "Vencen hoy y mañana" },
 ];
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
@@ -636,13 +597,13 @@ const MancatoOficinaPage = () => {
       to: filters.to || undefined,
       fueraDePlazo: filters.fueraDePlazo ? "true" : undefined,
       asignacion: filters.asignacion || undefined,
-      vence: filters.orden === VENCEN_HOY_MANANA ? "HOY_MANANA" : undefined,
+      vence: filters.vence || undefined,
     }),
-    [filters.q, filters.driverId, filters.targa, filters.from, filters.to, filters.fueraDePlazo, filters.asignacion, filters.orden]
+    [filters.q, filters.driverId, filters.targa, filters.from, filters.to, filters.fueraDePlazo, filters.asignacion, filters.vence]
   );
   const params = useDebounced(rawParams, 350);
   const paramsKey = JSON.stringify(params);
-  const ordenParam = filters.orden && filters.orden !== VENCEN_HOY_MANANA ? filters.orden : undefined;
+  const ordenParam = filters.orden || undefined;
   const listParams = useMemo(() => ({ ...params, orden: ordenParam }), [params, ordenParam]);
 
   // "vence" ya cuenta como filtro dentro de params.
@@ -701,20 +662,6 @@ const MancatoOficinaPage = () => {
     // mesesKey resume mesesParams (ver arriba).
   }, [grupo, mesesKey, version]);
 
-  const periodoSeleccionado = useMemo(() => {
-    if (!filters.from && !filters.to) return "";
-    const match = PERIODO_OPTIONS.find((o) => {
-      if (!o.value) return false;
-      const range = periodoRange(o.value);
-      return range.from === filters.from && range.to === filters.to;
-    });
-    return match ? match.value : "personalizado";
-  }, [filters.from, filters.to]);
-  const setPeriodo = (periodo) => {
-    if (periodo === "personalizado") return;
-    setFilters((prev) => ({ ...prev, ...periodoRange(periodo) }));
-  };
-
   const setMes = (mes) =>
     setFilters((prev) => ({ ...prev, from: mes ? mesStart(mes) : "", to: mes ? mesEnd(mes) : "" }));
 
@@ -730,8 +677,6 @@ const MancatoOficinaPage = () => {
     { value: "", label: "Todos" },
     ...MANCATO_ESTADOS_PAGAMENTO.map((e) => ({ value: e.value, label: e.label })),
   ];
-
-  const antiguedad = stats ? Math.round(stats.antiguedadMediaDias) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -763,10 +708,8 @@ const MancatoOficinaPage = () => {
       {!summary && !error && <PageLoader />}
 
       {summary && stats && (
-        // En laptop (menos de 1800px) la columna derecha pasa arriba de la lista, en 3 paneles
-        // en fila, para que la tabla use todo el ancho. En monitor grande queda a la derecha.
-        <div className="grid grid-cols-1 gap-6 min-[1800px]:grid-cols-[minmax(0,1fr)_340px] min-[1800px]:grid-rows-[auto_1fr]">
-          <div className="flex min-w-0 flex-col gap-6 min-[1800px]:col-start-1 min-[1800px]:row-start-1">
+        <div className="flex flex-col gap-6">
+          <div className="flex min-w-0 flex-col gap-6">
             {/* Total del año (y del mes elegido) */}
             {stats.totales && (
               <MancatoTotalAnual
@@ -780,52 +723,6 @@ const MancatoOficinaPage = () => {
                 }
               />
             )}
-
-            {/* Indicadores */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
-              <MancatoKpi
-                icon={EuroIcon}
-                label="Total por pagar"
-                value={formatCurrency(stats.totalPorPagar)}
-                deltaPct={stats.totalPorPagarDeltaPct}
-                deltaLabel="vs. mes anterior"
-                detail="Vencidos y pendientes"
-                color="#ff3b57"
-              />
-              <MancatoKpi
-                icon={FileTextIcon}
-                label="Avisos por pagar"
-                value={stats.avisosAbiertos}
-                detail={`de ${stats.avisosTotales} totales`}
-                color="#ff8a1a"
-              />
-              {isPrivileged ? (
-                <MancatoKpi
-                  icon={UsersIcon}
-                  label="Choferes con deuda"
-                  value={stats.choferesConDeuda}
-                  detail={`de ${stats.totalChoferes ?? 0} choferes`}
-                  color="#a78bfa"
-                />
-              ) : (
-                <MancatoKpi
-                  icon={UsersIcon}
-                  label="Vencen en 3 dias"
-                  value={stats.recomendacion.porVencer3Dias}
-                  detail="Pagalos a tiempo"
-                  color="#a78bfa"
-                />
-              )}
-              <MancatoKpi
-                icon={ClockIcon}
-                label="Antiguedad media"
-                value={`${antiguedad} ${antiguedad === 1 ? "dia" : "dias"}`}
-                deltaPct={stats.antiguedadMediaDeltaPct}
-                deltaLabel="vs. mes anterior"
-                detail="Desde la fecha del aviso"
-                color="#22d3ee"
-              />
-            </div>
 
             {/* Filtros */}
             <div className="glass-surface-sm rounded-2xl p-4">
@@ -903,20 +800,6 @@ const MancatoOficinaPage = () => {
                     ))}
                   </datalist>
                 </div>
-                <div className="min-w-[160px] flex-[1_1_160px]">
-                  <Select
-                    id="filtro-periodo"
-                    label="Fecha"
-                    options={[
-                      ...PERIODO_OPTIONS,
-                      ...(periodoSeleccionado === "personalizado"
-                        ? [{ value: "personalizado", label: "Rango personalizado" }]
-                        : []),
-                    ]}
-                    value={periodoSeleccionado}
-                    onChange={(e) => setPeriodo(e.target.value)}
-                  />
-                </div>
                 {/* Rango de fechas a mano (sobre la fecha del aviso). Sirve para un solo dia
                     (mismo dia en las dos) o para un rango; se puede dejar uno vacio. */}
                 <TextField
@@ -937,17 +820,15 @@ const MancatoOficinaPage = () => {
                   onChange={(e) => setFilter("to", e.target.value)}
                   className="min-w-[150px] flex-[1_1_150px]"
                 />
-                {isPrivileged && (
-                  <div className="min-w-[170px] flex-[1_1_170px]">
-                    <Select
-                      id="filtro-asignacion"
-                      label="Servicio"
-                      options={ASIGNACION_FILTER_OPTIONS}
-                      value={filters.asignacion}
-                      onChange={(e) => setFilter("asignacion", e.target.value)}
-                    />
-                  </div>
-                )}
+                <div className="min-w-[170px] flex-[1_1_170px]">
+                  <Select
+                    id="filtro-vence"
+                    label="Vencimiento"
+                    options={VENCE_OPTIONS}
+                    value={filters.vence}
+                    onChange={(e) => setFilter("vence", e.target.value)}
+                  />
+                </div>
                 <div className="min-w-[150px] flex-[1_1_150px]">
                   <Select
                     id="filtro-orden"
@@ -969,11 +850,13 @@ const MancatoOficinaPage = () => {
               </div>
             </div>
 
-            {/* Atajo "Vencen hoy y mañana": cuantos son y cuanto suman */}
-            {filters.orden === VENCEN_HOY_MANANA && (
+            {/* Atajo de vencimiento: cuantos son y cuanto suman */}
+            {filters.vence && (
               <div className="glass-surface-sm flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-l-4 border-l-warning-500 px-5 py-4">
                 <ClockIcon className="h-5 w-5 shrink-0 text-warning-500" />
-                <span className="text-[15px] font-semibold text-ink-50">Vencen hoy y mañana</span>
+                <span className="text-[15px] font-semibold text-ink-50">
+                  {VENCE_OPTIONS.find((o) => o.value === filters.vence)?.label}
+                </span>
                 <span className="rounded-full bg-warning-500/20 px-2.5 py-0.5 text-[12px] font-semibold text-warning-500">
                   {summary.PENDIENTE?.count ?? 0}
                 </span>
@@ -1010,15 +893,7 @@ const MancatoOficinaPage = () => {
             </div>
           </div>
 
-          <MancatoSidebar
-            stats={stats}
-            summary={summary}
-            isPrivileged={isPrivileged}
-            onSeeDetails={(estado) => setFilter("estado", estado)}
-            className="order-last xl:order-none xl:grid xl:grid-cols-3 xl:items-start min-[1800px]:col-start-2 min-[1800px]:row-span-2 min-[1800px]:row-start-1 min-[1800px]:flex"
-          />
-
-          <div className="flex min-w-0 flex-col gap-6 min-[1800px]:col-start-1 min-[1800px]:row-start-2">
+          <div className="flex min-w-0 flex-col gap-6">
             {grupo === "mes" ? (
               <div className="flex flex-col gap-4">
                 {meses === null && <PageLoader />}
