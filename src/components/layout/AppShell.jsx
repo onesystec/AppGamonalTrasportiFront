@@ -427,13 +427,7 @@ const AppShellContent = () => {
         </header>
       )}
 
-      <div className="relative z-10 sm:flex">
-        {/* Sidebar fija a la izquierda en desktop; en celular se reemplaza por el
-            header + nav inferior de abajo. Navy fijo (no cambia con el tema),
-            igual que el sidebar del style pack. */}
-        {/* Espacio que ocupa el menu en la pagina: ancho completo si esta fijado, franja de iconos si no. */}
-        <div aria-hidden="true" className={clsx("hidden shrink-0 transition-[width] duration-200 sm:block", sidebarPinned ? "sm:w-60" : "sm:w-16")} />
-
+      {/* Menu lateral (desktop). Va fuera del contenedor de abajo para quedar por encima de la barra superior al desplegarse. */}
         {/* Desplegado sin fijar: un clic fuera lo cierra. */}
         {sidebarOpen && !sidebarPinned && (
           <button
@@ -590,6 +584,14 @@ const AppShellContent = () => {
             )}
           </div>
         </aside>
+
+      <div className="relative z-10 sm:flex">
+        {/* Sidebar fija a la izquierda en desktop; en celular se reemplaza por el
+            header + nav inferior de abajo. Navy fijo (no cambia con el tema),
+            igual que el sidebar del style pack. */}
+        {/* Espacio que ocupa el menu en la pagina: ancho completo si esta fijado, franja de iconos si no. */}
+        <div aria-hidden="true" className={clsx("hidden shrink-0 transition-[width] duration-200 sm:block", sidebarPinned ? "sm:w-60" : "sm:w-16")} />
+
 
         <div className="min-w-0 flex-1">
           <header className="flex items-center justify-between gap-4 px-4 py-6 sm:hidden">
