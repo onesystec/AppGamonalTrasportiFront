@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { roleText } from "../../lib/roles";
@@ -208,30 +208,68 @@ const MapPinIcon = (props) => (
   </svg>
 );
 
+const ChevronSideIcon = ({ left, ...props }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d={left ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"} />
+  </svg>
+);
+
+const PinIcon = ({ filled, ...props }) => (
+  <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M9 4h6l-1 6 3 3H7l3-3-1-6z" />
+    <path d="M12 16v5" />
+  </svg>
+);
+
+// Menu fijado o no (cada navegador lo recuerda). Sin fijar se ve solo la franja de iconos.
+const SIDEBAR_PIN_KEY = "gt_sidebar_pinned";
+const readPinned = () => {
+  try {
+    return localStorage.getItem(SIDEBAR_PIN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const savePinned = (value) => {
+  try {
+    localStorage.setItem(SIDEBAR_PIN_KEY, value ? "1" : "0");
+  } catch {
+    // Sin almacenamiento: solo dura esta sesion.
+  }
+};
+
+// Clases de una fila del menu lateral; "compact" = franja de iconos (sin texto).
+const sidebarRowClass = (active, compact) =>
+  clsx(
+    "relative flex items-center rounded-xl py-2.5 text-[14px] font-medium transition-colors",
+    compact ? "justify-center px-0" : "gap-3 px-3",
+    active
+      ? clsx(
+          "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:w-[3px] before:rounded-r-full before:bg-sidebar-active",
+          compact ? "before:-left-2" : "before:-left-4"
+        )
+      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+  );
+
 // Nav vertical fija a la izquierda para pantallas de desktop (sm y mas anchas).
 // En celular se usa la BottomNavTab de mas abajo en su lugar.
 // Seccion "Recursos Humanos": junta Busta paga y Memorandums (cada uno con su ruta de siempre), asi que se marca activa en cualquiera de las dos.
 const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums"];
 const inPaths = (pathname, paths) => paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-const SidebarNavTab = ({ to, label, icon: Icon, match }) => {
+const SidebarNavTab = ({ to, label, icon: Icon, match, compact }) => {
   const { pathname } = useLocation();
   return (
-  <NavLink
-    to={to}
-    end={to === "/"}
-    className={({ isActive }) =>
-      clsx(
-        "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-        isActive || (match && inPaths(pathname, match))
-          ? "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r-full before:bg-sidebar-active"
-          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-      )
-    }
-  >
-    <Icon className="h-5 w-5 shrink-0" />
-    {label}
-  </NavLink>
+    <NavLink
+      to={to}
+      end={to === "/"}
+      title={compact ? label : undefined}
+      aria-label={compact ? label : undefined}
+      className={({ isActive }) => sidebarRowClass(isActive || (match && inPaths(pathname, match)), compact)}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!compact && label}
+    </NavLink>
   );
 };
 
@@ -295,6 +333,17 @@ const AppShellContent = () => {
   // Recursos Humanos: solo Choferes, Vehiculos y Busta paga.
   const isRrhh = user?.cargo === "RRHH";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Menu lateral (desktop): fijado (empuja el contenido) o desplegable encima del contenido.
+  const [sidebarPinned, setSidebarPinned] = useState(readPinned);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarExpanded = sidebarPinned || sidebarOpen;
+  const compact = !sidebarExpanded;
+  const togglePinned = () => {
+    const next = !sidebarPinned;
+    setSidebarPinned(next);
+    savePinned(next);
+    setSidebarOpen(false);
+  };
   const [searchText, setSearchText] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -321,6 +370,11 @@ const AppShellContent = () => {
     setSearchText("");
   };
 
+  // Al ir a otra seccion se cierra el menu desplegado (si no esta fijado).
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   useLocationSharing();
   useGpsRespaldo();
   usePushNotifications();
@@ -333,7 +387,7 @@ const AppShellContent = () => {
           deslizantes de formularios en z-30) para que nada la tape nunca. Ademas de la
           campanita, es donde va cualquier otro boton global que se agregue a futuro. */}
       {isPrivileged && (
-        <header className="fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-between gap-4 border-b border-line/10 bg-background px-6 sm:left-60 sm:flex">
+        <header className={clsx("fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-between gap-4 border-b border-line/10 bg-background px-6 sm:flex", sidebarPinned ? "sm:left-60" : "sm:left-16")}>
           <form onSubmit={handleSearch} role="search" className="relative w-full max-w-md">
             <SearchIcon className="pointer-events-none absolute left-4 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-ink-400" />
             <input
@@ -368,7 +422,7 @@ const AppShellContent = () => {
       )}
 
       {showDriverBar && (
-        <header className="fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-end gap-3 border-b border-line/10 bg-background px-6 sm:left-60 sm:flex">
+        <header className={clsx("fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-end gap-3 border-b border-line/10 bg-background px-6 sm:flex", sidebarPinned ? "sm:left-60" : "sm:left-16")}>
           <DriverModeSwitch />
         </header>
       )}
@@ -377,69 +431,123 @@ const AppShellContent = () => {
         {/* Sidebar fija a la izquierda en desktop; en celular se reemplaza por el
             header + nav inferior de abajo. Navy fijo (no cambia con el tema),
             igual que el sidebar del style pack. */}
-        <aside className="hidden sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-60 sm:shrink-0 sm:flex-col sm:justify-between sm:border-r sm:border-sidebar-border sm:bg-sidebar sm:px-4 sm:py-6">
+        {/* Espacio que ocupa el menu en la pagina: ancho completo si esta fijado, franja de iconos si no. */}
+        <div aria-hidden="true" className={clsx("hidden shrink-0 transition-[width] duration-200 sm:block", sidebarPinned ? "sm:w-60" : "sm:w-16")} />
+
+        {/* Desplegado sin fijar: un clic fuera lo cierra. */}
+        {sidebarOpen && !sidebarPinned && (
+          <button
+            type="button"
+            aria-label="Ocultar menu"
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-40 hidden cursor-default bg-black/20 sm:block"
+          />
+        )}
+
+        <aside
+          className={clsx(
+            "group hidden sm:fixed sm:inset-y-0 sm:left-0 sm:z-50 sm:flex sm:h-dvh sm:flex-col sm:justify-between sm:border-r sm:border-sidebar-border sm:bg-sidebar sm:py-6 sm:transition-[width] sm:duration-200",
+            sidebarExpanded ? "sm:w-60 sm:px-4" : "sm:w-16 sm:px-2",
+            sidebarOpen && !sidebarPinned && "sm:shadow-2xl"
+          )}
+        >
+          {/* Flecha para desplegar / ocultar el menu (aparece al pasar el mouse). Con el menu fijado no hace falta. */}
+          {!sidebarPinned && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              aria-label={sidebarOpen ? "Ocultar menu" : "Desplegar menu"}
+              title={sidebarOpen ? "Ocultar menu" : "Desplegar menu"}
+              className={clsx(
+                "absolute -right-3.5 top-20 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-md transition-opacity hover:text-sidebar-active focus:opacity-100",
+                sidebarOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              )}
+            >
+              <ChevronSideIcon left={sidebarOpen} className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Arriba: logo fijo y menu con scroll propio. Abajo (mas abajo): perfil, ajustes y cerrar sesion, siempre a la vista. */}
           <div className="flex min-h-0 flex-1 flex-col">
-            <Link to="/" className="flex shrink-0 items-center gap-3 px-2">
-              <img src={logo} alt="Gamonal Driver 2.0" className="h-10 w-10 shrink-0 rounded-full" />
-              <span className="text-[16px] font-semibold text-sidebar-foreground">
-                Gamonal <span className="text-sidebar-active">Driver 2.0</span>
-              </span>
-            </Link>
+            <div className={clsx("flex shrink-0 items-center", compact ? "justify-center" : "gap-2 px-2")}>
+              <Link to="/" className="flex min-w-0 items-center gap-3" title={compact ? "Gamonal Driver 2.0" : undefined}>
+                <img src={logo} alt="Gamonal Driver 2.0" className="h-10 w-10 shrink-0 rounded-full" />
+                {!compact && (
+                  <span className="text-[16px] font-semibold text-sidebar-foreground">
+                    Gamonal <span className="text-sidebar-active">Driver 2.0</span>
+                  </span>
+                )}
+              </Link>
+              {!compact && (
+                <button
+                  type="button"
+                  onClick={togglePinned}
+                  aria-pressed={sidebarPinned}
+                  aria-label={sidebarPinned ? "Soltar menu" : "Fijar menu"}
+                  title={sidebarPinned ? "Soltar menu (se oculta y deja mas espacio)" : "Fijar menu abierto"}
+                  className={clsx(
+                    "ml-auto rounded-lg p-1.5 transition-colors hover:bg-sidebar-accent",
+                    sidebarPinned ? "text-sidebar-active" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                  )}
+                >
+                  <PinIcon filled={sidebarPinned} className="h-4 w-4" />
+                </button>
+              )}
+            </div>
 
-            <nav className="-mx-4 mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-2 [scrollbar-width:thin]">
+            <nav
+              className={clsx(
+                "mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-2 [scrollbar-width:thin]",
+                compact ? "-mx-2 px-2" : "-mx-4 px-4"
+              )}
+            >
               {isPrivileged ? (
                 <>
-                  <SidebarNavTab to="/" label="Inicio" icon={HomeIcon} />
-                  <SidebarNavTab to="/resumen" label="Resumen" icon={ChecklistIcon} />
-                  <SidebarNavTab to="/records" label="Registros" icon={ListIcon} />
-                  <SidebarNavTab to="/finanzas" label="Finanzas" icon={WalletIcon} />
+                  <SidebarNavTab to="/" label="Inicio" icon={HomeIcon} compact={compact} />
+                  <SidebarNavTab to="/resumen" label="Resumen" icon={ChecklistIcon} compact={compact} />
+                  <SidebarNavTab to="/records" label="Registros" icon={ListIcon} compact={compact} />
+                  <SidebarNavTab to="/finanzas" label="Finanzas" icon={WalletIcon} compact={compact} />
                 </>
               ) : isRrhh ? (
-                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
+                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} compact={compact} />
               ) : (
                 <>
-                  <SidebarNavTab to="/" label="Hoy" icon={HomeIcon} />
-                  <SidebarNavTab to="/mis-servicios" label="Mis servicios" icon={ListIcon} />
-                  <SidebarNavTab to="/mis-horas" label="Mis horas" icon={ClockIcon} />
-                  <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />
-                  <SidebarNavTab to="/calendario" label="Calendario" icon={CalendarIcon} />
-                  <SidebarNavTab to="/finanzas" label="Mis cargos" icon={WalletIcon} />
+                  <SidebarNavTab to="/" label="Hoy" icon={HomeIcon} compact={compact} />
+                  <SidebarNavTab to="/mis-servicios" label="Mis servicios" icon={ListIcon} compact={compact} />
+                  <SidebarNavTab to="/mis-horas" label="Mis horas" icon={ClockIcon} compact={compact} />
+                  <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} compact={compact} />
+                  <SidebarNavTab to="/calendario" label="Calendario" icon={CalendarIcon} compact={compact} />
+                  <SidebarNavTab to="/finanzas" label="Mis cargos" icon={WalletIcon} compact={compact} />
                 </>
               )}
-              {(isPrivileged || isRrhh) && <SidebarNavTab to="/choferes" label="Choferes" icon={UsersIcon} />}
+              {(isPrivileged || isRrhh) && <SidebarNavTab to="/choferes" label="Choferes" icon={UsersIcon} compact={compact} />}
               {isPrivileged ? (
-                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
+                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} compact={compact} />
               ) : (
-                !isRrhh && <SidebarNavTab to="/memorandums" label="Memorándums" icon={FileTextIcon} />
+                !isRrhh && <SidebarNavTab to="/memorandums" label="Memorándums" icon={FileTextIcon} compact={compact} />
               )}
-              {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} />}
-              {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} />}
-              {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} />}
-              {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} />}
-              {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} />}
-              {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} />}
-              {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} />}
+              {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} compact={compact} />}
+              {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} compact={compact} />}
+              {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} compact={compact} />}
+              {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} compact={compact} />}
+              {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} compact={compact} />}
+              {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} compact={compact} />}
+              {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} compact={compact} />}
             </nav>
           </div>
 
           <div className="flex shrink-0 flex-col gap-1 border-t border-sidebar-border pt-3">
             <NavLink
               to="/profile"
-              className={({ isActive }) =>
-                clsx(
-                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r-full before:bg-sidebar-active"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-                )
-              }
+              title={compact ? "Mi perfil" : undefined}
+              aria-label={compact ? "Mi perfil" : undefined}
+              className={({ isActive }) => sidebarRowClass(isActive, compact)}
             >
               <UserIcon className="h-5 w-5 shrink-0" />
-              Mi perfil
+              {!compact && "Mi perfil"}
             </NavLink>
 
-            {user?.cargo === "CHOFER" && (
+            {user?.cargo === "CHOFER" && !compact && (
               <div className="px-3 py-1">
                 <NotificationsBell variant="sidebar" />
               </div>
@@ -447,23 +555,21 @@ const AppShellContent = () => {
 
             <NavLink
               to="/ajustes"
-              className={({ isActive }) =>
-                clsx(
-                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-[3px] before:rounded-r-full before:bg-sidebar-active"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-                )
-              }
+              title={compact ? "Ajustes de la app" : undefined}
+              aria-label={compact ? "Ajustes de la app" : undefined}
+              className={({ isActive }) => sidebarRowClass(isActive, compact)}
             >
               <SettingsIcon className="h-5 w-5 shrink-0" />
-              Ajustes de la app
-              <UpdateDot />
+              {!compact && "Ajustes de la app"}
+              {!compact && <UpdateDot />}
             </NavLink>
 
             <ThemeToggleButton
-              label
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              label={!compact}
+              className={clsx(
+                "flex items-center rounded-xl py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                compact ? "justify-center px-0" : "gap-3 px-3"
+              )}
               iconClassName="h-5 w-5 shrink-0"
             />
 
@@ -471,10 +577,15 @@ const AppShellContent = () => {
               <button
                 type="button"
                 onClick={logout}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                title={compact ? "Cerrar sesión" : undefined}
+                aria-label={compact ? "Cerrar sesión" : undefined}
+                className={clsx(
+                  "flex items-center rounded-xl py-2.5 text-left text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  compact ? "justify-center px-0" : "gap-3 px-3"
+                )}
               >
                 <LogoutIcon className="h-5 w-5 shrink-0" />
-                Cerrar sesión
+                {!compact && "Cerrar sesión"}
               </button>
             )}
           </div>
