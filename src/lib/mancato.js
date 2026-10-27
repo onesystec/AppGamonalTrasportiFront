@@ -44,8 +44,26 @@ export const MANCATO_OBSERVADO = {
   edge: "border-l-[#a78bfa]",
 };
 
-// Estados de la pantalla de Mancato Pagamento (con Observado).
-export const MANCATO_ESTADOS_PAGAMENTO = [MANCATO_ESTADOS[0], MANCATO_ESTADOS[1], MANCATO_OBSERVADO, MANCATO_ESTADOS[2]];
+// Historial vencidos: sin pagar y vencidos hace mas de 2 meses (el servidor los pasa solos). Quedan
+// aparte para que "Vencidos" muestre solo lo reciente que hay que atender.
+export const MANCATO_HISTORIAL_VENCIDO = {
+  value: "HISTORIAL_VENCIDO",
+  label: "Historial vencido",
+  plural: "Historial vencidos",
+  dot: "bg-ink-400",
+  pill: "bg-line/15 text-ink-300 ring-1 ring-line/30",
+  text: "text-ink-300",
+  edge: "border-l-ink-400",
+};
+
+// Estados de la pantalla de Mancato Pagamento (con Observado e Historial vencidos).
+export const MANCATO_ESTADOS_PAGAMENTO = [
+  MANCATO_ESTADOS[0],
+  MANCATO_ESTADOS[1],
+  MANCATO_OBSERVADO,
+  MANCATO_HISTORIAL_VENCIDO,
+  MANCATO_ESTADOS[2],
+];
 
 export const MANCATO_ESTADO_BY_VALUE = Object.fromEntries(MANCATO_ESTADOS_PAGAMENTO.map((e) => [e.value, e]));
 

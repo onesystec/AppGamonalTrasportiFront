@@ -532,6 +532,7 @@ const MesAccordion = ({ mes, params, filters, ...rest }) => {
           <EstadoMini count={mes.VENCIDO.count} label="vencidos" tone="bg-danger-500/15 text-danger-500" />
           <EstadoMini count={mes.PENDIENTE.count} label="pendientes" tone="bg-warning-500/15 text-warning-500" />
           <EstadoMini count={mes.OBSERVADO?.count ?? 0} label="observados" tone="bg-[#a78bfa]/15 text-[#a78bfa]" />
+          <EstadoMini count={mes.HISTORIAL_VENCIDO?.count ?? 0} label="historial vencidos" tone="bg-line/15 text-ink-300" />
           <EstadoMini count={mes.PAGADO.count} label="pagados" tone="bg-success-500/15 text-success-500" />
         </>
       }
@@ -562,8 +563,22 @@ const MancatoOficinaPage = () => {
   useEffect(() => {
     if (asignacionParam !== null) setFilters((prev) => ({ ...prev, asignacion: asignacionParam }));
   }, [asignacionParam]);
-  // En celular arrancan cerrados (ocupan media pantalla); en escritorio, abiertos.
-  const [filtersOpen, setFiltersOpen] = useState(() => window.innerWidth >= 1024);
+  // Panel de filtros (se abre con el boton "Filtros"); un clic fuera lo cierra.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef(null);
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const onDown = (e) => {
+      if (filtersRef.current && !filtersRef.current.contains(e.target)) setFiltersOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setFiltersOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [filtersOpen]);
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -708,8 +723,8 @@ const MancatoOficinaPage = () => {
       {!summary && !error && <PageLoader />}
 
       {summary && stats && (
-        <div className="flex flex-col gap-6">
-          <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-3">
             {/* Total del año (y del mes elegido) */}
             {stats.totales && (
               <MancatoTotalAnual
@@ -724,47 +739,72 @@ const MancatoOficinaPage = () => {
               />
             )}
 
-            {/* Filtros */}
-            <div className="glass-surface-sm rounded-2xl p-4">
-              <div className={clsx("flex items-center justify-between gap-3", filtersOpen && "mb-3")}>
+            {/* Una sola barra: buscador + boton "Filtros" (abre un panel con el resto) + agrupar por mes o estado */}
+            <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2">
+              <TextField
+                id="filtro-q"
+                icon={SearchIcon}
+                placeholder="Buscar numero, targa, chofer o comentario"
+                aria-label="Buscar"
+                value={filters.q}
+                onChange={(e) => setFilter("q", e.target.value)}
+                className="min-w-[220px] flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                aria-expanded={filtersOpen}
+                className={clsx(
+                  "flex items-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium transition-colors hover:bg-line/10",
+                  filtersOpen || activeFilterCount > 0 ? "text-ink-50" : "text-ink-300"
+                )}
+              >
+                <FilterIcon className="h-4 w-4" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[11px] font-semibold text-accent-300">
+                    {activeFilterCount}
+                  </span>
+                )}
+                <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+              </button>
+              {hasActiveFilters && (
                 <button
                   type="button"
-                  onClick={() => setFiltersOpen((prev) => !prev)}
-                  aria-expanded={filtersOpen}
-                  className="flex items-center gap-2 text-[13px] font-medium text-ink-300 hover:text-ink-50"
+                  onClick={clearFilters}
+                  title="Limpiar filtros"
+                  className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10"
                 >
-                  <FilterIcon className="h-4 w-4" />
-                  Filtros
-                  {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[11px] font-semibold text-accent-300">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                  <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+                  <RefreshIcon className="h-4 w-4" />
+                  <span className="hidden md:inline">Limpiar</span>
                 </button>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="flex items-center gap-1.5 rounded-lg glass-input px-3 py-1.5 text-[12px] font-medium text-ink-50 hover:bg-line/10"
-                  >
-                    <RefreshIcon className="h-3.5 w-3.5" />
-                    Limpiar filtros
-                  </button>
-                )}
-              </div>
+              )}
+              <SegmentedControl
+                options={[
+                  { value: "mes", label: "Por mes" },
+                  { value: "estado", label: "Por estado" },
+                ]}
+                value={grupo}
+                onChange={setGrupo}
+              />
 
-              <div className={clsx("flex flex-wrap items-end gap-3", !filtersOpen && "hidden")}>
-                <TextField
-                  id="filtro-q"
-                  label="Buscar"
-                  icon={SearchIcon}
-                  placeholder="Numero, targa, chofer o comentario"
-                  value={filters.q}
-                  onChange={(e) => setFilter("q", e.target.value)}
-                  className="min-w-[240px] flex-[2_1_260px]"
-                />
-                <div className="min-w-[150px] flex-[1_1_150px]">
+              {filtersOpen && (
+                <div className="glass-surface absolute right-0 top-full z-30 mt-2 grid w-full max-w-[640px] grid-cols-1 gap-3 rounded-2xl bg-background p-4 shadow-2xl sm:grid-cols-2">
+                {grupo === "mes" && (
+                  <div className="min-w-0">
+                    <Select
+                      id="filtro-mes"
+                      label="Mes"
+                      options={[
+                        { value: "", label: customRange ? "Rango personalizado" : "Todos los meses" },
+                        ...mesesOpciones.map((m) => ({ value: m.mes, label: `${mesLabel(m.mes)} (${m.count})` })),
+                      ]}
+                      value={mesSeleccionado}
+                      onChange={(e) => setMes(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="min-w-0">
                   <Select
                     id="filtro-estado"
                     label="Estado"
@@ -774,7 +814,7 @@ const MancatoOficinaPage = () => {
                   />
                 </div>
                 {isPrivileged && (
-                  <div className="min-w-[170px] flex-[1_1_170px]">
+                  <div className="min-w-0">
                     <Select
                       id="filtro-chofer"
                       label="Chofer"
@@ -784,7 +824,7 @@ const MancatoOficinaPage = () => {
                     />
                   </div>
                 )}
-                <div className="min-w-[130px] flex-[1_1_130px]">
+                <div className="min-w-0">
                   <TextField
                     id="filtro-targa"
                     label="Targa"
@@ -809,7 +849,7 @@ const MancatoOficinaPage = () => {
                   value={filters.from}
                   max={filters.to || undefined}
                   onChange={(e) => setFilter("from", e.target.value)}
-                  className="min-w-[150px] flex-[1_1_150px]"
+                  className="min-w-0"
                 />
                 <TextField
                   id="filtro-hasta"
@@ -818,9 +858,9 @@ const MancatoOficinaPage = () => {
                   value={filters.to}
                   min={filters.from || undefined}
                   onChange={(e) => setFilter("to", e.target.value)}
-                  className="min-w-[150px] flex-[1_1_150px]"
+                  className="min-w-0"
                 />
-                <div className="min-w-[170px] flex-[1_1_170px]">
+                <div className="min-w-0">
                   <Select
                     id="filtro-vence"
                     label="Vencimiento"
@@ -829,7 +869,7 @@ const MancatoOficinaPage = () => {
                     onChange={(e) => setFilter("vence", e.target.value)}
                   />
                 </div>
-                <div className="min-w-[150px] flex-[1_1_150px]">
+                <div className="min-w-0">
                   <Select
                     id="filtro-orden"
                     label="Ordenar por"
@@ -838,7 +878,7 @@ const MancatoOficinaPage = () => {
                     onChange={(e) => setFilter("orden", e.target.value)}
                   />
                 </div>
-                <label className="flex min-w-[210px] flex-[1_1_210px] cursor-pointer items-center gap-2.5 rounded-xl glass-input px-4 py-3 text-[14px] text-ink-50">
+                <label className="flex cursor-pointer items-center gap-2.5 self-end rounded-xl glass-input px-4 py-3 text-[14px] text-ink-50">
                   <input
                     type="checkbox"
                     checked={filters.fueraDePlazo}
@@ -847,12 +887,13 @@ const MancatoOficinaPage = () => {
                   />
                   Registrados fuera de plazo
                 </label>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Atajo de vencimiento: cuantos son y cuanto suman */}
             {filters.vence && (
-              <div className="glass-surface-sm flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-l-4 border-l-warning-500 px-5 py-4">
+              <div className="glass-surface-sm flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-l-4 border-l-warning-500 px-4 py-2.5">
                 <ClockIcon className="h-5 w-5 shrink-0 text-warning-500" />
                 <span className="text-[15px] font-semibold text-ink-50">
                   {VENCE_OPTIONS.find((o) => o.value === filters.vence)?.label}
@@ -860,37 +901,12 @@ const MancatoOficinaPage = () => {
                 <span className="rounded-full bg-warning-500/20 px-2.5 py-0.5 text-[12px] font-semibold text-warning-500">
                   {summary.PENDIENTE?.count ?? 0}
                 </span>
-                <span className="ml-auto text-[18px] font-semibold text-ink-50">
+                <span className="ml-auto text-[16px] font-semibold text-ink-50">
                   {formatCurrency(summary.PENDIENTE?.total ?? 0)}
                 </span>
               </div>
             )}
 
-            {/* Agrupar por mes (con selector) o por estado */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <SegmentedControl
-                options={[
-                  { value: "mes", label: "Por mes" },
-                  { value: "estado", label: "Por estado" },
-                ]}
-                value={grupo}
-                onChange={setGrupo}
-              />
-              {grupo === "mes" && (
-                <div className="w-full sm:w-64">
-                  <Select
-                    id="filtro-mes"
-                    label="Mes"
-                    options={[
-                      { value: "", label: customRange ? "Rango personalizado" : "Todos los meses" },
-                      ...mesesOpciones.map((m) => ({ value: m.mes, label: `${mesLabel(m.mes)} (${m.count})` })),
-                    ]}
-                    value={mesSeleccionado}
-                    onChange={(e) => setMes(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-6">
@@ -930,7 +946,8 @@ const MancatoOficinaPage = () => {
                     params={listParams}
                     version={version}
                     defaultOpen={
-                      (summary[estado.value]?.count ?? 0) > 0 && (hasActiveFilters || estado.value !== "PAGADO")
+                      (summary[estado.value]?.count ?? 0) > 0 &&
+                      (hasActiveFilters || (estado.value !== "PAGADO" && estado.value !== "HISTORIAL_VENCIDO"))
                     }
                     showDriver={isPrivileged}
                     vehiclesByTarga={vehiclesByTarga}
