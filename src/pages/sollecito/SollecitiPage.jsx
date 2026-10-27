@@ -97,7 +97,16 @@ const PlazoLinea = ({ s }) => {
   );
 };
 
-const ROW_GRID = "lg:grid-cols-[minmax(150px,1.1fr)_minmax(180px,1.6fr)_minmax(110px,0.8fr)_minmax(110px,0.8fr)_minmax(90px,0.6fr)_250px]";
+const ROW_GRID = "lg:grid-cols-[minmax(150px,1.1fr)_minmax(200px,1.7fr)_minmax(110px,0.8fr)_80px_minmax(90px,0.6fr)_250px]";
+
+// El numero con el que se paga: el de sollecito; si la carta no lo trae, el (primer) N. de mancato.
+const numeroPago = (s) => {
+  if (s.numeroSollecito) return { label: "Sollecito", value: s.numeroSollecito, extra: 0 };
+  if (s.numerosMancato.length) {
+    return { label: "Mancato", value: s.numerosMancato[0], extra: s.numerosMancato.length - 1 };
+  }
+  return null;
+};
 
 // Fila de la lista (como en Mancato Pagamento). Al hacer clic se abre el detalle completo.
 const SollecitoRow = ({ s, busy, onOpen, onEstado }) => {
@@ -105,6 +114,7 @@ const SollecitoRow = ({ s, busy, onOpen, onEstado }) => {
   const stop = (e) => e.stopPropagation();
   const targas = s.targas?.length ? s.targas : s.targa ? [s.targa] : [];
   const nMancatos = s.numerosMancato.length;
+  const numero = numeroPago(s);
   return (
     <div
       role="button"
@@ -124,17 +134,24 @@ const SollecitoRow = ({ s, busy, onOpen, onEstado }) => {
         <PlazoLinea s={s} />
       </div>
 
-      {/* Autopista y atto */}
+      {/* Autopista y numero para pagar (sollecito o mancato) */}
       <div className="min-w-0">
-        <span className="block truncate text-[13px] font-medium text-ink-50" title={s.emisor}>
+        <span className="block truncate text-[12px] text-ink-400" title={s.emisor}>
           {s.emisor}
         </span>
-        <span className="flex min-w-0 items-center gap-1">
-          <span className="truncate text-[12px] text-ink-300">Atto {s.numeroAtto}</span>
-          <span onClick={stop}>
-            <CopyButton value={s.numeroAtto} label="Copiar atto" />
+        {numero ? (
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="truncate text-[13px] font-medium text-ink-50">
+              {numero.label} N. {numero.value}
+              {numero.extra > 0 && <span className="font-normal text-ink-400"> +{numero.extra}</span>}
+            </span>
+            <span onClick={stop}>
+              <CopyButton value={numero.value} label="Copiar numero" />
+            </span>
           </span>
-        </span>
+        ) : (
+          <span className="block text-[13px] text-ink-500">Sin numero</span>
+        )}
       </div>
 
       {/* Targa(s) */}
@@ -148,15 +165,11 @@ const SollecitoRow = ({ s, busy, onOpen, onEstado }) => {
         {targas.length > 1 && <span className="block truncate text-[11px] text-ink-400">{targas.join(", ")}</span>}
       </div>
 
-      {/* Mancatos que reclama */}
-      <div className="min-w-0">
-        <span className="block text-[13px] text-ink-50">
-          {nMancatos} {nMancatos === 1 ? "mancato" : "mancatos"}
-        </span>
-        {s.fechaTransito && (
-          <span className="block text-[11px] text-ink-400">Transito {formatDateOnly(s.fechaTransito)}</span>
-        )}
-      </div>
+      {/* Cuantos mancatos reclama */}
+      <span className="text-[13px] text-ink-50 lg:text-center">
+        <span className="lg:hidden">Mancatos: </span>
+        {nMancatos}
+      </span>
 
       {/* Importe */}
       <span className="text-[14px] font-semibold text-ink-50 lg:text-right">
@@ -206,9 +219,9 @@ const EstadoGrupo = ({ estado, items, resumen, defaultOpen, busyId, onOpen, onEs
             <>
               <div className={clsx("hidden px-4 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-ink-400 lg:grid lg:gap-3", ROW_GRID)}>
                 <span>Fecha</span>
-                <span>Autopista / atto</span>
+                <span>Autopista / N. para pagar</span>
                 <span>Targa</span>
-                <span>Mancatos</span>
+                <span className="text-center">Mancatos</span>
                 <span className="text-right">Importe</span>
                 <span />
               </div>
@@ -247,8 +260,10 @@ const SollecitoDetail = ({ s, location, busy, onClose, onEstado, onEdit, onDelet
           <div className="min-w-0">
             <span className="block text-[12px] text-ink-400">{s.emisor}</span>
             <span className="flex items-center gap-1">
-              <h2 className="break-words text-[20px] font-semibold text-ink-50">Atto {s.numeroAtto}</h2>
-              <CopyButton value={s.numeroAtto} label="Copiar atto" iconClassName="h-4 w-4" />
+              <h2 className="break-words text-[20px] font-semibold text-ink-50">
+                {s.numeroSollecito ? `Sollecito N. ${s.numeroSollecito}` : `Atto ${s.numeroAtto}`}
+              </h2>
+              <CopyButton value={s.numeroSollecito || s.numeroAtto} label="Copiar numero" iconClassName="h-4 w-4" />
             </span>
           </div>
           <button
@@ -267,6 +282,8 @@ const SollecitoDetail = ({ s, location, busy, onClose, onEstado, onEdit, onDelet
         </div>
 
         <div className="flex flex-col gap-2.5 rounded-2xl bg-line/[0.05] p-4">
+          <DetailRow label="N. de sollecito">{s.numeroSollecito || "-"}</DetailRow>
+          <DetailRow label="Atto">{s.numeroAtto}</DetailRow>
           <DetailRow label="Fecha de la carta">{formatDateOnly(s.fechaCarta)}</DetailRow>
           <DetailRow label="Fecha del transito">{s.fechaTransito ? formatDateOnly(s.fechaTransito) : "-"}</DetailRow>
           <DetailRow label="Ultimo dia de pago">
@@ -434,7 +451,7 @@ export const SollecitiPage = () => {
           id="sol-q"
           label="Buscar"
           icon={SearchIcon}
-          placeholder="Atto, N. de mancato, targa o emisor"
+          placeholder="N. de sollecito, N. de mancato, targa o autopista"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="min-w-[220px] flex-[2_1_260px]"

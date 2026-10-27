@@ -13,6 +13,7 @@ const EMISORES = ["SATAP - Autostrada A4 Torino-Milano", "Milano Serravalle - Mi
 const emptyForm = (s) => ({
   emisor: s?.emisor ?? "",
   numeroAtto: s?.numeroAtto ?? "",
+  numeroSollecito: s?.numeroSollecito ?? "",
   fechaCarta: s?.fechaCarta ?? "",
   fechaTransito: s?.fechaTransito ?? "",
   fechaLimitePago: s?.fechaLimitePago ?? "",
@@ -118,6 +119,14 @@ export const SollecitoFormModal = ({ open, sollecito, onClose, onSaved }) => {
             value={form.numeroAtto}
             onChange={set("numeroAtto")}
             error={err("numeroAtto")}
+          />
+          <TextField
+            id="sol-numero"
+            label="N. de sollecito (para pagar)"
+            placeholder="Ej. 77260122105"
+            value={form.numeroSollecito}
+            onChange={set("numeroSollecito")}
+            error={err("numeroSollecito")}
           />
           <TextField
             id="sol-importe"
