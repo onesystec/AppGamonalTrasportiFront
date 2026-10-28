@@ -5,7 +5,8 @@ import { DEFAULT_PALETTE, EMBEDDED_DEFAULT_PALETTE, PALETTE_IDS } from "../lib/t
 const ThemeContext = createContext(null);
 
 const STORAGE_KEY = "gt-theme";
-const PALETTE_STORAGE_KEY = "gt-palette";
+// Dentro de OneSystec la paleta se guarda aparte: lo que se hubiera elegido antes al abrir esta app por su cuenta no la pisa.
+const PALETTE_STORAGE_KEY = isEmbedded ? "gt-palette-onesystec" : "gt-palette";
 // Lo que eligio el usuario: "light", "dark" o "system" (sigue al celular). STORAGE_KEY guarda el modo ya resuelto
 // (lo lee index.html antes de pintar para no parpadear).
 const PREFERENCE_KEY = "gt-theme-pref";

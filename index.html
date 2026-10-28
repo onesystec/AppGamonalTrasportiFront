@@ -20,9 +20,10 @@
             theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
           }
           document.documentElement.classList.add(theme);
-          var palette = localStorage.getItem("gt-palette");
-          // Dentro de OneSystec (en un marco) la paleta por defecto es Oceano; lo que el usuario haya elegido manda.
-          if (!palette && window.self !== window.top) palette = "oceano";
+          // Dentro de OneSystec (en un marco) la paleta se guarda aparte y por defecto es Oceano; lo que el usuario elija manda.
+          var framed = window.self !== window.top;
+          var palette = localStorage.getItem(framed ? "gt-palette-onesystec" : "gt-palette");
+          if (!palette && framed) palette = "oceano";
           if (palette && palette !== "clasico") {
             document.documentElement.setAttribute("data-palette", palette);
           }
