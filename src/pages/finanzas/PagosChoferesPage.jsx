@@ -6,6 +6,7 @@ import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { Switch } from "../../components/ui/Switch";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
 import {
@@ -21,7 +22,7 @@ import { useAuth } from "../../context/AuthContext";
 import { PayRulesCard } from "../../components/horas/PayRulesCard";
 import { parseApiError } from "../../lib/api";
 import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../lib/finanzas";
-import { downloadPresenciasRequest, getPagosChoferesRequest, setVelocidadPagoRequest } from "../../lib/finanzas.api";
+import { downloadPresenciasRequest, getPagosChoferesRequest, setPagoAparteRequest, setVelocidadPagoRequest } from "../../lib/finanzas.api";
 import { downloadBlob } from "../../lib/csv";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
@@ -72,7 +73,7 @@ const nf = (value) => Number(value).toLocaleString("es-AR", { maximumFractionDig
 const RulesCard = ({ reglas }) => <PayRulesCard reglas={reglas} />;
 
 // Tabla de servicios de un chofer en el mes, con el calculo de cada pago.
-const ServiceList = ({ servicios, reglas, location }) =>
+const ServiceList = ({ servicios, reglas, location, marcarAparte = false }) =>
   servicios.length === 0 ? (
     <p className="px-3 py-4 text-[14px] text-ink-400">No hay servicios pagables en este mes.</p>
   ) : (
@@ -103,6 +104,11 @@ const ServiceList = ({ servicios, reglas, location }) =>
             {s.modo === "KM" && s.kmFuente !== "SIN_DATO" && s.kmFuente !== "TRASPASO_SIN_KM" && (
               <span className="ml-1.5 rounded bg-line/10 px-1.5 py-0.5 text-[10px] text-ink-400">
                 {kmSourceLabel(s.kmFuente)}
+              </span>
+            )}
+            {marcarAparte && s.fueraHorario && (
+              <span className="ml-1.5 rounded bg-accent-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-accent-300">
+                Aparte del basico
               </span>
             )}
             {s.kmFuente === "TRASPASO_SIN_KM" && (
@@ -138,7 +144,7 @@ const KmRevisarList = ({ items }) => (
 );
 
 // Fila de un chofer (OWNER/ADMIN): resumen del mes y, al abrirla, sus servicios.
-const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad }) => {
+const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad, canEditAparte, onPagoAparte, savingAparte }) => {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState({ servicios: null, loading: false, error: "" });
   // Km/h con los que se calcula su pago: al cambiarlos, el detalle ya abierto se vuelve a pedir.
@@ -193,7 +199,6 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
             {driver.salidasReperibilidad > 0 &&
               ` - ${driver.salidasReperibilidad} ${driver.salidasReperibilidad === 1 ? "salida" : "salidas"} de reperibilidad${driver.salidasNoche > 0 ? ` (${driver.salidasNoche} de noche)` : ""} (+${formatCurrency(driver.pagoReperibilidad)})`}
             {driver.horasPorAprobar > 0 && ` - ${driver.horasPorAprobar} con horas por aprobar`}
-            {driver.pagaFueraHorario === false && " - sin horas fuera de horario ni reperibilidad aparte"}
           </span>
           {driver.asistencia && (
             <span className="block text-[12px] text-ink-400">
@@ -226,6 +231,46 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
         </div>
       )}
 
+      {reglas.reperibilidad && (
+        <div className="flex flex-col gap-3 border-t border-line/10 px-5 py-3">
+          <Switch
+            id={`aparte-${driver.driverId}`}
+            label="Pago aparte del basico"
+            description={
+              canEditAparte
+                ? "Activado: el trabajo fuera del horario laboral (noche, fin de semana y festivo) y la reperibilita se muestran y se pagan aparte. Apagado: todo va junto en un solo total."
+                : "Solo un Admin puede cambiarlo. Activado: lo de fuera de horario y la reperibilita se pagan aparte; apagado: todo va junto."
+            }
+            checked={Boolean(driver.pagoAparte)}
+            onChange={(activo) => onPagoAparte(driver.driverId, activo)}
+            disabled={!canEditAparte || savingAparte}
+          />
+          {driver.pagoAparte && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="rounded-xl bg-line/[0.06] px-3.5 py-2.5">
+                <span className="block text-[11px] uppercase tracking-wide text-ink-400">Basico (horario laboral)</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.basico)}</span>
+                <span className="block text-[11.5px] text-ink-400">Servicios de lunes a viernes de dia, mas la espera</span>
+              </div>
+              <div className="rounded-xl bg-accent-500/10 px-3.5 py-2.5">
+                <span className="block text-[11px] uppercase tracking-wide text-accent-300">Aparte del basico</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.aparte?.total ?? 0)}</span>
+                <span className="block text-[11.5px] text-ink-300">
+                  {driver.aparte?.servicios > 0
+                    ? `${driver.aparte.servicios} ${driver.aparte.servicios === 1 ? "servicio" : "servicios"} fuera de horario: ${formatCurrency(driver.aparte.base)} de trabajo + ${formatCurrency(driver.aparte.reperibilidad)} de reperibilita${driver.aparte.espera > 0 ? ` + ${formatCurrency(driver.aparte.espera)} de espera` : ""}`
+                    : "Sin servicios fuera de horario este mes"}
+                </span>
+              </div>
+              <div className="rounded-xl bg-line/[0.06] px-3.5 py-2.5">
+                <span className="block text-[11px] uppercase tracking-wide text-ink-400">Total a pagar</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.total)}</span>
+                <span className="block text-[11.5px] text-ink-400">Basico + aparte</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {velocidades.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/10 px-5 py-2.5">
           <span className="text-[12px] text-ink-300">Velocidad de pago (km/h)</span>
@@ -254,7 +299,7 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
             </div>
           )}
           {detail.servicios && (
-            <ServiceList servicios={detail.servicios} reglas={{ ...reglas, kmBloque: kmh }} location={location} />
+            <ServiceList servicios={detail.servicios} reglas={{ ...reglas, kmBloque: kmh }} location={location} marcarAparte={Boolean(driver.pagoAparte)} />
           )}
         </div>
       )}
@@ -273,6 +318,7 @@ export const PagosChoferesPage = () => {
   const [formato, setFormato] = useState(readFormato);
   const [downloading, setDownloading] = useState(false);
   const [savingVelocidad, setSavingVelocidad] = useState(null);
+  const [savingAparte, setSavingAparte] = useState(null);
 
   // Velocidad de pago de un chofer en el mes mostrado: se guarda y se vuelve a pedir el pago con el valor nuevo.
   const changeVelocidad = async (driverId, kmh) => {
@@ -285,6 +331,20 @@ export const PagosChoferesPage = () => {
       setError(parseApiError(err).message);
     } finally {
       setSavingVelocidad(null);
+    }
+  };
+
+  // Pago aparte del basico de un chofer (solo el Admin): se guarda y se vuelve a pedir el pago con el reparto nuevo (el total no cambia).
+  const changePagoAparte = async (driverId, activo) => {
+    setSavingAparte(driverId);
+    setError("");
+    try {
+      await setPagoAparteRequest({ driverId, activo });
+      setData(await getPagosChoferesRequest({ month }));
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setSavingAparte(null);
     }
   };
 
@@ -399,6 +459,14 @@ export const PagosChoferesPage = () => {
             />
           </div>
 
+          {data.porChofer.some((c) => c.pagoAparte) && (
+            <p className="text-[13px] text-ink-300">
+              Pago aparte del basico:{" "}
+              <b className="text-ink-50">{formatCurrency(data.porChofer.filter((c) => c.pagoAparte).reduce((sum, c) => sum + (c.aparte?.total ?? 0), 0))}</b>{" "}
+              ({data.porChofer.filter((c) => c.pagoAparte).map((c) => c.nombre).join(", ")}). Los demas choferes cobran todo el trabajo junto en un solo total.
+            </p>
+          )}
+
           {data.total.salidasReperibilidad > 0 && (
             <p className="text-[13px] text-ink-300">
               Reperibilidad del mes: <b className="text-ink-50">{formatCurrency(data.total.reperibilidad)}</b> en {data.total.salidasReperibilidad}{" "}
@@ -449,6 +517,9 @@ export const PagosChoferesPage = () => {
                   velocidades={data.velocidadesPago ?? []}
                   onVelocidad={changeVelocidad}
                   savingVelocidad={savingVelocidad === driver.driverId}
+                  canEditAparte={user?.cargo === "OWNER"}
+                  onPagoAparte={changePagoAparte}
+                  savingAparte={savingAparte === driver.driverId}
                 />
               ))}
             </div>

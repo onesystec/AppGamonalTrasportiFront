@@ -83,7 +83,6 @@ const toFormState = (driver) => ({
   responsableTipo: driver.responsableTipo ?? "",
   areasPermitidas: driver.areasPermitidas ?? [],
   nivelChofer: driver.nivelChofer ?? "",
-  pagaFueraHorario: driver.pagaFueraHorario === true,
   estado: driver.estado ?? "",
   fechaNacimiento: toDateInputValue(driver.fechaNacimiento),
   vehiculoAsignadoId: driver.vehiculoAsignadoId ?? "",
@@ -260,7 +259,7 @@ export const DriverDetailPage = () => {
     setFieldErrors({});
     setSaveSuccess(false);
 
-    const ROLE_FIELDS = ["responsableTipo", "areasPermitidas", "nivelChofer", "pagaFueraHorario"];
+    const ROLE_FIELDS = ["responsableTipo", "areasPermitidas", "nivelChofer"];
     const RRHH_FIELDS = ["nombre", "apellido", "correoElectronico", "numeroCelular", "fechaNacimiento", "estado", "vehiculoAsignadoId"];
     const payload = Object.fromEntries(
       Object.entries(form).filter(
@@ -269,8 +268,6 @@ export const DriverDetailPage = () => {
     );
     // El nivel se puede quitar (null). Sub-rol y areas del Responsable solo las define un Admin.
     if (!isRrhh) payload.nivelChofer = form.nivelChofer || null;
-    // Si las horas fuera del horario laboral y la reperibilita se cuentan aparte del basico: solo lo define el Admin.
-    if (user.cargo === "OWNER" && driver.cargo === "CHOFER") payload.pagaFueraHorario = form.pagaFueraHorario;
     if (user.cargo === "OWNER" && form.cargo === "ADMIN") {
       if (!form.responsableTipo && driver.cargo !== "ADMIN") {
         setSaving(false);
@@ -464,13 +461,6 @@ export const DriverDetailPage = () => {
               <DriverStat label="Sub-rol" value={responsableTipoLabel(driver.responsableTipo)} />
             )}
             <DriverStat label="Nivel de chofer" value={nivelLabel(driver.nivelChofer)} />
-            {user.cargo === "OWNER" && driver.cargo === "CHOFER" && (
-              <DriverStat
-                label="Horas fuera de horario y reperibilita"
-                value={driver.pagaFueraHorario ? "Se cuentan aparte del basico" : "No se cuentan aparte"}
-                tone={driver.pagaFueraHorario ? "green" : "red"}
-              />
-            )}
             <DriverStat label="Grupo" value={driver.grupo ? GRUPO_LABELS[driver.grupo] : null} />
             <DriverStat label="Area" value={areaLabel(driver.area)} />
             <DriverStat
@@ -583,25 +573,6 @@ export const DriverDetailPage = () => {
                   onChange={(v) => setField("nivelChofer", v)}
                   error={fieldErrors.nivelChofer?.[0]}
                 />
-              )}
-              {user.cargo === "OWNER" && driver.cargo === "CHOFER" && (
-                <label htmlFor="pagaFueraHorario" className="flex cursor-pointer items-start gap-3 sm:col-span-2">
-                  <input
-                    id="pagaFueraHorario"
-                    type="checkbox"
-                    checked={form.pagaFueraHorario}
-                    onChange={(e) => setField("pagaFueraHorario", e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-line/20 bg-transparent accent-accent-500"
-                  />
-                  <span>
-                    <span className="block text-[14px] font-medium text-ink-50">
-                      Las horas fuera del horario laboral y la reperibilita se cuentan aparte del basico
-                    </span>
-                    <span className="mt-0.5 block text-[12px] text-ink-400">
-                      Si esta marcada, los servicios de noche, fin de semana y festivo se pagan con el recargo de noche y el extra de reperibilita. Si no, se pagan como un servicio normal.
-                    </span>
-                  </span>
-                </label>
               )}
               <SearchableSelect
                 id="vehiculoAsignadoId"

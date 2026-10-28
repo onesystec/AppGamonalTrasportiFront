@@ -22,6 +22,10 @@ export const getKmRankingRequest = ({ periodo = "mes", zona, areas } = {}) =>
 export const setVelocidadPagoRequest = ({ driverId, month, kmh }) =>
   api.put(`${BASE}/velocidad-pago`, { driverId, month, kmh }).then((res) => res.data.data.velocidadPago);
 
+// Pago aparte del basico de un chofer (el trabajo fuera de horario y la reperibilita se muestran y pagan aparte): activarlo o apagarlo. Solo el Admin.
+export const setPagoAparteRequest = ({ driverId, activo }) =>
+  api.put(`${BASE}/pago-aparte`, { driverId, activo }).then((res) => res.data.data.pagoAparte);
+
 // Planilla de presencias del mes (Excel, una plaza por chofer). formato: "decimal" (6,68) o "hhmm" (6:41). Solo OWNER/ADMIN.
 export const downloadPresenciasRequest = ({ month, formato }) =>
   api.get(`${BASE}/presencias`, { params: { month, formato }, responseType: "blob" }).then((res) => res.data);
