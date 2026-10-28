@@ -5,6 +5,9 @@ export const getClienteMeRequest = () => api.get("/cliente/me").then((res) => re
 
 export const getClienteEnVivoRequest = () => api.get("/cliente/en-vivo").then((res) => res.data.data);
 
+// Disponibilitá del cliente: targas libres u ocupadas por dia y cuantos choferes estan libres (sin nombres ni motivos). params: { desde, hasta }.
+export const getClienteDisponibilidadRequest = (params) => api.get("/cliente/disponibilidad", { params }).then((res) => res.data.data.disponibilidad);
+
 export const getClienteSeguimientoRequest = () => api.get("/cliente/seguimiento").then((res) => res.data.data.seguimiento);
 
 // Recorrido que le falta a la furgoneta hasta la parada del cliente (null si ya llego o no hay posicion).

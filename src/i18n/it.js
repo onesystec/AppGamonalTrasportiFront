@@ -131,7 +131,7 @@ export const it = {
   "form.shipmentDescription": "Descrizione della spedizione (Customer, Shipment, Ship To... per il messaggio WhatsApp)",
   "form.saveChanges": "Salva le modifiche",
   "form.send": "Invia richiesta",
-  "disp.title": "Disponibilitá",
+  "disp.title": "Disponibilità",
   "disp.subtitle": "Chi e quale veicolo è libero ogni giorno: gli autisti in base al calendario dei permessi e ai servizi, i veicoli in base ai servizi e al loro stato.",
   "disp.view.choferes": "Autisti",
   "disp.view.vehiculos": "Veicoli",
@@ -170,5 +170,10 @@ export const it = {
   "disp.letra.DESCANSO": "R",
   "disp.letra.MANTENIMIENTO": "O",
   "disp.letra.FUERA_DE_SERVICIO": "X",
+  "nav.availability": "Disponibilità",
+  "disp.client.subtitle": "Quali veicoli sono liberi ogni giorno e quanti autisti sono disponibili.",
+  "disp.client.busy": "Non disponibile",
+  "disp.client.driversFree": "Autisti liberi (su {n})",
+  "disp.client.noVehicles": "Non ci sono veicoli da mostrare.",
   // @@END
 };

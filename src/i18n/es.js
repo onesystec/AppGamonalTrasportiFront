@@ -171,5 +171,10 @@ export const es = {
   "disp.letra.DESCANSO": "D",
   "disp.letra.MANTENIMIENTO": "M",
   "disp.letra.FUERA_DE_SERVICIO": "X",
+  "nav.availability": "Disponibilidad",
+  "disp.client.subtitle": "Qué vehículos están libres cada día y cuántos choferes hay disponibles.",
+  "disp.client.busy": "No disponible",
+  "disp.client.driversFree": "Choferes libres (de {n})",
+  "disp.client.noVehicles": "No hay vehículos para mostrar.",
   // @@END
 };

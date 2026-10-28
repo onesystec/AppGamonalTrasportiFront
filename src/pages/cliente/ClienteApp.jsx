@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { PageLoader } from "../../components/ui/PageLoader";
-import { ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
+import { CalendarIcon, ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useT } from "../../i18n/index.jsx";
@@ -15,6 +15,7 @@ const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").the
 const ClienteHistorialPage = lazy(() => import("./ClienteHistorialPage").then((m) => ({ default: m.ClienteHistorialPage })));
 const ClienteRegistroPage = lazy(() => import("./ClienteRegistroPage").then((m) => ({ default: m.ClienteRegistroPage })));
 
+const ClienteDisponibilidadPage = lazy(() => import("./ClienteDisponibilidadPage").then((m) => ({ default: m.ClienteDisponibilidadPage })));
 const ClienteEnVivoPage = lazy(() => import("./ClienteEnVivoPage").then((m) => ({ default: m.ClienteEnVivoPage })));
 
 const itemClass = ({ isActive }) =>
@@ -38,6 +39,7 @@ const buildNav = (modulos) => {
     ...(verSeguimiento ? [{ to: "/cliente", label: "nav.tracking", icon: RouteIcon, end: true }] : []),
   ];
   const otras = [
+    ...(modulos.includes("DISPONIBILIDAD") ? [{ to: "/cliente/disponibilidad", label: "nav.availability", icon: CalendarIcon }] : []),
     ...(modulos.includes("HISTORIAL") ? [{ to: "/cliente/historial", label: "nav.history", icon: FileTextIcon }] : []),
     ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : []),
   ];
@@ -165,6 +167,7 @@ const ClienteInicio = () => {
   const modulos = user?.clienteModulos ?? [];
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
   if (modulos.includes("EN_VIVO")) return <Navigate to="/cliente/en-vivo" replace />;
+  if (modulos.includes("DISPONIBILIDAD")) return <Navigate to="/cliente/disponibilidad" replace />;
   if (modulos.includes("HISTORIAL")) return <Navigate to="/cliente/historial" replace />;
   if (modulos.includes("REGISTRO")) return <Navigate to="/cliente/registro" replace />;
   return (
@@ -179,6 +182,7 @@ export const ClienteApp = () => (
     <Route element={<ClienteShell />}>
       <Route path="/cliente" element={<ClienteInicio />} />
       <Route path="/cliente/en-vivo" element={<ClienteEnVivoPage />} />
+      <Route path="/cliente/disponibilidad" element={<ClienteDisponibilidadPage />} />
       <Route path="/cliente/historial" element={<ClienteHistorialPage />} />
       <Route path="/cliente/registro" element={<ClienteRegistroPage />} />
       <Route path="*" element={<Navigate to="/cliente" replace />} />

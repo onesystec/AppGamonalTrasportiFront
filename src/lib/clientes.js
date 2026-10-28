@@ -8,9 +8,10 @@ export const CLIENTE_MODULOS = [
   { key: "FOTOS", label: "Fotos de entrega y bolla", hint: "Se ven desde el historial" },
   { key: "EXCEL", label: "Descargar sus servicios en Excel", hint: "Se descarga desde el historial" },
   { key: "EN_VIVO", label: "Mapa En Vivo: posicion de los vehiculos en tiempo real", hint: "Todos los vehiculos del Mapa de la oficina, solo con la targa (sin chofer ni servicio)" },
+  { key: "DISPONIBILIDAD", label: "Disponibilitá: que vehiculos y cuantos choferes estan libres cada dia", hint: "Targas libres u ocupadas por dia y cuantos choferes hay libres, sin nombres ni motivos" },
   { key: "REGISTRO", label: "Registro limitado: pedir servicios a la oficina", hint: "Carga cliente, destinazione, fecha, km y pagato; la oficina los acepta y completa" },
 ];
-export const CLIENTE_MODULO_CORTO = { MAPA: "Mapa", LISTA: "Lista", AVISOS: "Avisos", HISTORIAL: "Historial", FOTOS: "Fotos", EXCEL: "Excel", REGISTRO: "Registro", EN_VIVO: "En vivo" };
+export const CLIENTE_MODULO_CORTO = { MAPA: "Mapa", LISTA: "Lista", AVISOS: "Avisos", HISTORIAL: "Historial", FOTOS: "Fotos", EXCEL: "Excel", REGISTRO: "Registro", EN_VIVO: "En vivo", DISPONIBILIDAD: "Disponibilitá" };
 export const CLIENTE_MODULOS_DEFAULT = ["MAPA", "LISTA", "AVISOS"];
 
 // Fotos y Excel salen del historial: marcarlos marca tambien el historial, y quitar el historial los quita.
