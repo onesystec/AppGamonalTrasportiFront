@@ -231,20 +231,8 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
         </div>
       )}
 
-      {reglas.reperibilidad && (
+      {reglas.reperibilidad && driver.pagoAparte && (
         <div className="flex flex-col gap-3 border-t border-line/10 px-5 py-3">
-          <Switch
-            id={`aparte-${driver.driverId}`}
-            label="Pago aparte del basico"
-            description={
-              canEditAparte
-                ? "Activado: el trabajo fuera del horario laboral (noche, fin de semana y festivo) y la reperibilita se muestran y se pagan aparte. Apagado: todo va junto en un solo total."
-                : "Solo un Admin puede cambiarlo. Activado: lo de fuera de horario y la reperibilita se pagan aparte; apagado: todo va junto."
-            }
-            checked={Boolean(driver.pagoAparte)}
-            onChange={(activo) => onPagoAparte(driver.driverId, activo)}
-            disabled={!canEditAparte || savingAparte}
-          />
           {driver.pagoAparte && (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="rounded-xl bg-line/[0.06] px-3.5 py-2.5">
@@ -292,6 +280,22 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
 
       {open && (
         <div className="border-t border-line/10 px-2 pb-3 pt-1 sm:px-3">
+          {reglas.reperibilidad && (
+            <div className="mb-1 border-b border-line/10 px-3 py-3">
+            <Switch
+              id={`aparte-${driver.driverId}`}
+              label="Pago aparte del basico"
+              description={
+                canEditAparte
+                  ? "Activado: el trabajo fuera del horario laboral (noche, fin de semana y festivo) y la reperibilita se muestran y se pagan aparte. Apagado: todo va junto en un solo total."
+                  : "Solo un Admin puede cambiarlo. Activado: lo de fuera de horario y la reperibilita se pagan aparte; apagado: todo va junto."
+              }
+              checked={Boolean(driver.pagoAparte)}
+              onChange={(activo) => onPagoAparte(driver.driverId, activo)}
+              disabled={!canEditAparte || savingAparte}
+            />
+            </div>
+          )}
           <Alert>{detail.error}</Alert>
           {detail.loading && !detail.servicios && (
             <div className="flex justify-center py-6">
