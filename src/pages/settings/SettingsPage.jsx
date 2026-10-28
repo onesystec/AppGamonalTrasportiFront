@@ -7,9 +7,13 @@ import { GpsRespaldoBlock } from "../../components/profile/GpsRespaldoBlock";
 import { LocationSharingBlock } from "../../components/profile/LocationSharingBlock";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
-import { CheckCircleIcon, DownloadIcon, MapPinIcon, PaletteIcon, RefreshIcon, ShieldIcon } from "../../components/ui/icons";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { CheckCircleIcon, DownloadIcon, GlobeIcon, MapPinIcon, PaletteIcon, RefreshIcon, ShieldIcon } from "../../components/ui/icons";
 import { useAppUpdate } from "../../context/AppUpdateContext";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../i18n/index.jsx";
+import { parseApiError } from "../../lib/api";
+import { updateUserRequest } from "../../lib/users.api";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
 
 const BackgroundGeolocation = registerPlugin("BackgroundGeolocation");
@@ -121,8 +125,44 @@ const UpdateBlock = () => {
   );
 };
 
+const IDIOMAS = [
+  { value: "es", label: "Español" },
+  { value: "it", label: "Italiano" },
+];
+
+// Idioma de la app para el personal de la oficina: se ve al instante y se guarda en la cuenta (vale en todos los dispositivos).
+const IdiomaBlock = () => {
+  const { realUser, setUser } = useAuth();
+  const { language, setLanguage } = useLanguage();
+  const [error, setError] = useState("");
+
+  const change = async (value) => {
+    if (value === language) return;
+    const previous = language;
+    setError("");
+    setLanguage(value);
+    try {
+      await updateUserRequest(realUser.id, { idioma: value });
+      setUser((prev) => (prev ? { ...prev, idioma: value } : prev));
+    } catch (err) {
+      setLanguage(previous);
+      setError(parseApiError(err).message);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Alert>{error}</Alert>
+      <SegmentedControl options={IDIOMAS} value={language} onChange={change} className="self-start" />
+      <p className="text-[12px] text-ink-400">
+        Por ahora solo Disponibilitá está traducida al italiano; el resto de la oficina sigue en español. El idioma se guarda en tu cuenta.
+      </p>
+    </div>
+  );
+};
+
 export const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, realUser } = useAuth();
   const { installed } = useAppUpdate();
   const location = useLocation();
   const [copied, setCopied] = useState(false);
@@ -166,6 +206,12 @@ export const SettingsPage = () => {
       <Section icon={PaletteIcon} title="Apariencia">
         <AppearanceSection />
       </Section>
+
+      {(realUser?.cargo === "OWNER" || realUser?.cargo === "ADMIN") && (
+        <Section icon={GlobeIcon} title="Idioma">
+          <IdiomaBlock />
+        </Section>
+      )}
 
       {isChofer && (
         <Section icon={MapPinIcon} title="Ubicación">

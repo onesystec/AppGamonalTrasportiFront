@@ -301,6 +301,7 @@ const DRAWER_NAV_ITEMS = [
   { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
+  { to: "/disponibilidad", label: "Disponibilitá", icon: ClockIcon },
   { to: "/rrhh", label: "Recursos Humanos", icon: UsersIcon, match: RRHH_PATHS },
   { to: "/vencimientos", label: "Vencimientos", icon: ShieldIcon },
   { to: "/mapa", label: "Mapa", icon: MapPinIcon },
@@ -522,6 +523,7 @@ const AppShellContent = () => {
               )}
               {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} compact={compact} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} compact={compact} />}
+              {isPrivileged && <SidebarNavTab to="/disponibilidad" label="Disponibilitá" icon={ClockIcon} compact={compact} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} compact={compact} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} compact={compact} />}
               {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} compact={compact} />}

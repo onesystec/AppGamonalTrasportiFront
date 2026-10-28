@@ -122,6 +122,9 @@ const ClienteApp = lazy(() => import("./pages/cliente/ClienteApp").then((m) => (
 const AccesoClientesPage = lazy(() =>
   import("./pages/clientes/AccesoClientesPage").then((m) => ({ default: m.AccesoClientesPage })),
 );
+const DisponibilidadPage = lazy(() =>
+  import("./pages/disponibilidad/DisponibilidadPage").then((m) => ({ default: m.DisponibilidadPage })),
+);
 const PermisosPage = lazy(() =>
   import("./pages/calendario/PermisosPage").then((m) => ({ default: m.PermisosPage })),
 );
@@ -285,6 +288,14 @@ function App() {
                 element={
                   <RoleOnly privileged={false}>
                     <MiCalendarioPage />
+                  </RoleOnly>
+                }
+              />
+              <Route
+                path="/disponibilidad"
+                element={
+                  <RoleOnly privileged>
+                    <DisponibilidadPage />
                   </RoleOnly>
                 }
               />

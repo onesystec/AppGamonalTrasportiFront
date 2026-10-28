@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { onParentLanguage } from "../lib/embedded";
 import { es } from "./es";
 import { it } from "./it";
@@ -44,7 +45,11 @@ export const LanguageProvider = ({ children }) => {
   );
 
   const t = useCallback((key, params) => translate(language, key, params), [language]);
-  const value = useMemo(() => ({ language, locale: LOCALES[language], t }), [language, t]);
+  // Idioma elegido por el propio usuario (el personal, en Ajustes de la app): solo "es" o "it".
+  const chooseLanguage = useCallback((value) => {
+    if (value === "es" || value === "it") setLanguage(value);
+  }, []);
+  const value = useMemo(() => ({ language, locale: LOCALES[language], t, setLanguage: chooseLanguage }), [language, t, chooseLanguage]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 
@@ -55,3 +60,14 @@ export const useLanguage = () => {
 };
 
 export const useT = () => useLanguage().t;
+
+// El personal de la oficina (no el cliente, cuyo idioma lo manda OneSystec) usa el idioma guardado en su cuenta, en cualquier dispositivo.
+export const IdiomaSync = () => {
+  const { realUser } = useAuth();
+  const { setLanguage } = useLanguage();
+  const idioma = realUser && realUser.cargo !== "CLIENTE" ? realUser.idioma : null;
+  useEffect(() => {
+    if (idioma) setLanguage(idioma);
+  }, [idioma, setLanguage]);
+  return null;
+};

@@ -5,7 +5,7 @@ import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
-import { LanguageProvider } from "./i18n/index.jsx";
+import { IdiomaSync, LanguageProvider } from "./i18n/index.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -13,6 +13,7 @@ createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
+            <IdiomaSync />
             <App />
           </AuthProvider>
         </LanguageProvider>
