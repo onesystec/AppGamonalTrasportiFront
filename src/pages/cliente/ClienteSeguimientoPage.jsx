@@ -12,7 +12,7 @@ import { parseApiError } from "../../lib/api";
 import { getClienteRutaRequest, getClienteSeguimientoRequest } from "../../lib/cliente.api";
 import { HIDE_POI_STYLES, NIGHT_MODE_STYLES } from "../../lib/mapStyles";
 import { startVisibleInterval } from "../../lib/polling";
-import { horaRoma, minutosTexto } from "../../lib/seguimiento";
+import { horaRoma, minutosTexto, semaforoEta } from "../../lib/seguimiento";
 
 // Mismo arreglo vacio que el resto de los mapas: el script de Google Maps se carga una sola vez.
 const GOOGLE_MAPS_LIBRARIES = [];
@@ -20,55 +20,58 @@ const MILAN_CENTER = { lat: 45.4642, lng: 9.19 };
 const REFRESH_INTERVAL_MS = 30000;
 const MAP_STYLE = { width: "100%", height: "100%" };
 
-// "label" es la clave del texto (i18n).
+// "label" es la clave del texto (i18n). El color lo da el semaforo de la ETA (ver semaforoEta): rojo, naranja o verde.
 const ESTADO = {
-  EN_CAMINO: { label: "track.onTheWay", pill: "bg-accent-500/15 text-accent-300", color: "#2f8dff" },
-  CON_RETRASO: { label: "track.late", pill: "bg-warning-500/15 text-warning-500", color: "#ff8a1a" },
-  LLEGO: { label: "track.arrived", pill: "bg-success-500/15 text-success-500", color: "#22c55e" },
+  EN_CAMINO: { label: "track.onTheWay" },
+  CON_RETRASO: { label: "track.late" },
+  LLEGO: { label: "track.arrived" },
+};
+
+const SEMAFORO = {
+  rojo: { pill: "bg-danger-500/15 text-danger-500", text: "text-danger-500", edge: "border-l-danger-500", color: "#ef4444" },
+  naranja: { pill: "bg-warning-500/15 text-warning-500", text: "text-warning-500", edge: "border-l-warning-500", color: "#ff8a1a" },
+  verde: { pill: "bg-success-500/15 text-success-500", text: "text-success-500", edge: "border-l-success-500", color: "#22c55e" },
 };
 
 const Targa = ({ children }) => (
   <span className="inline-block rounded-md border border-line/30 px-2 py-0.5 text-[12px] font-bold tracking-wider text-ink-50">{children}</span>
 );
 
-// Una linea que dice si va a tiempo o cuantos minutos se atraso.
-const puntualidadTexto = (s, t) => {
-  if (s.estado === "LLEGO") return t("track.arrivedAt", { time: horaRoma(s.llegoAt) });
-  if (s.retrasoMin >= 5) return t("track.delay", { time: minutosTexto(s.retrasoMin) });
-  return t("track.onTime");
-};
-
-const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando }) => {
+const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando, now }) => {
   const t = useT();
   const estado = ESTADO[s.estado];
+  const semaforo = SEMAFORO[semaforoEta(s, now)];
   return (
     <button
       type="button"
       onClick={() => onSelect(s.id)}
       className={clsx(
-        "glass-surface flex w-full flex-col gap-1.5 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-line/[0.06]",
+        "glass-surface flex w-full flex-col gap-0.5 rounded-xl border-l-4 px-3 py-2 text-left transition-colors hover:bg-line/[0.06]",
+        semaforo.edge,
         selected && "ring-2 ring-accent-500/60"
       )}
     >
-      <span className="flex flex-wrap items-center gap-2">
+      <span className="flex items-center gap-2">
         <Targa>{s.targa ?? t("track.noPlate")}</Targa>
-        <span className="text-[12px] text-ink-400">{s.codigo}</span>
-        <span className={clsx("ml-auto rounded-full px-2.5 py-0.5 text-[12px] font-medium", estado.pill)}>
-          {verLista ? (s.estado === "LLEGO" ? t("track.arrived") : s.estado === "CON_RETRASO" ? t("track.delay", { time: minutosTexto(s.retrasoMin) }) : t(estado.label)) : t(estado.label)}
+        <span className="min-w-0 truncate text-[11px] text-ink-400">{s.codigo}</span>
+        <span className={clsx("ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium", semaforo.pill)}>
+          {verLista && s.estado === "CON_RETRASO" ? t("track.delay", { time: minutosTexto(s.retrasoMin) }) : t(estado.label)}
         </span>
       </span>
-      <span className="text-[14px] font-medium text-ink-50">{s.destino}</span>
+      <span className="line-clamp-1 text-[13px] font-medium text-ink-50" title={s.destino}>
+        {s.destino}
+      </span>
       {verLista && (
-        <span className="text-[13px] text-ink-300">
+        <span className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
           {s.estado === "LLEGO" ? (
-            <>{t("track.arrivedAt", { time: horaRoma(s.llegoAt) })}</>
+            <span className={clsx("font-medium", semaforo.text)}>{t("track.arrivedAt", { time: horaRoma(s.llegoAt) })}</span>
           ) : (
             <>
-              {t("track.estimatedArrival", { time: horaRoma(s.llegadaEstimada) })}
-              {s.minutosRestantes != null && <> · {t("track.remaining", { time: minutosTexto(s.minutosRestantes) })}</>}
-              <span className="block text-[12px] text-ink-400">
-                {t("track.plannedTime", { time: horaRoma(s.etaPlan) })} · {puntualidadTexto(s, t)}
+              <span className={clsx("font-medium", semaforo.text)}>
+                {t("track.estimatedArrival", { time: horaRoma(s.llegadaEstimada) })}
+                {s.minutosRestantes != null && <> · {t("track.remaining", { time: minutosTexto(s.minutosRestantes) })}</>}
               </span>
+              <span className="text-ink-400">{t("track.plannedTime", { time: horaRoma(s.etaPlan) })}</span>
             </>
           )}
         </span>
@@ -209,6 +212,8 @@ export const ClienteSeguimientoPage = () => {
   }, [rutaActual, selected]);
 
   const programados = data?.programados ?? [];
+  const now = Date.now();
+  const colorDe = (servicio) => SEMAFORO[semaforoEta(servicio, now)].color;
   const hayMapa = verMapa && isLoaded;
 
   return (
@@ -226,13 +231,13 @@ export const ClienteSeguimientoPage = () => {
       {data && (
         <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,285px)_1fr] 2xl:grid-cols-[minmax(0,330px)_1fr]")}>
           {verLista && (
-            <div className="order-2 flex flex-col gap-3 lg:order-1">
+            <div className="order-2 flex flex-col gap-2 lg:order-1 lg:max-h-[max(480px,calc(100dvh-11.5rem))] lg:overflow-y-auto lg:pr-1">
               {enCamino.length === 0 && (
                 <p className="glass-surface rounded-2xl px-5 py-6 text-[14px] text-ink-300">{t("track.none")}</p>
               )}
               {verMapa && enCamino.some((s) => s.posicion) && <p className="px-1 text-[12px] text-ink-400">{t("track.tapHint")}</p>}
               {enCamino.map((s) => (
-                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} ruta={selectedId === s.id ? rutaActual : null} cargando={selectedId === s.id && cargandoRuta} />
+                <ServicioCard key={s.id} s={s} selected={selectedId === s.id} onSelect={select} verLista={verLista} verMapa={verMapa} now={now} ruta={selectedId === s.id ? rutaActual : null} cargando={selectedId === s.id && cargandoRuta} />
               ))}
 
               {programados.length > 0 && (
@@ -253,7 +258,7 @@ export const ClienteSeguimientoPage = () => {
           )}
 
           {verMapa && (
-            <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2")}>
+            <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2 lg:self-start")}>
               <FullscreenMap className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
                 {selected && cargandoRuta && hayMapa && (
                   <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-900 shadow-md">
@@ -289,10 +294,10 @@ export const ClienteSeguimientoPage = () => {
                           rutaActual.aproximada
                             ? {
                                 strokeOpacity: 0,
-                                icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: ESTADO[selected.estado].color, scale: 3 }, offset: "0", repeat: "12px" }],
+                                icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: colorDe(selected), scale: 3 }, offset: "0", repeat: "12px" }],
                                 zIndex: 5,
                               }
-                            : { strokeColor: ESTADO[selected.estado].color, strokeOpacity: 0.85, strokeWeight: 5, zIndex: 5 }
+                            : { strokeColor: colorDe(selected), strokeOpacity: 0.85, strokeWeight: 5, zIndex: 5 }
                         }
                       />
                     )}
@@ -306,7 +311,7 @@ export const ClienteSeguimientoPage = () => {
                           scale: 7,
                           fillColor: "#ffffff",
                           fillOpacity: 1,
-                          strokeColor: ESTADO[s.estado].color,
+                          strokeColor: colorDe(s),
                           strokeWeight: 3,
                         }}
                         onClick={() => select(s.id)}
@@ -319,7 +324,7 @@ export const ClienteSeguimientoPage = () => {
                         icon={{
                           path: window.google.maps.SymbolPath.CIRCLE,
                           scale: selectedId === s.id ? 11 : 9,
-                          fillColor: ESTADO[s.estado].color,
+                          fillColor: colorDe(s),
                           fillOpacity: 0.95,
                           strokeColor: "#ffffff",
                           strokeWeight: 2,
@@ -341,7 +346,7 @@ export const ClienteSeguimientoPage = () => {
                           className="w-fit cursor-pointer whitespace-nowrap rounded-md border border-gray-300 bg-white px-2 py-1 text-[12px] font-bold text-gray-900 shadow-md"
                         >
                           {s.targa}
-                          {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold text-orange-600">+{minutosTexto(s.retrasoMin)}</span>}
+                          {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold" style={{ color: colorDe(s) }}>+{minutosTexto(s.retrasoMin)}</span>}
                         </div>
                       </OverlayView>
                     ))}

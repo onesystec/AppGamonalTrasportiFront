@@ -31,6 +31,19 @@ export const FUENTE_GPS_LABEL = {
   SIMULADO: "Sin GPS · recorrido simulado",
 };
 
+// Semaforo de la ETA (la hora prevista del servicio): "rojo" si ya paso o se calcula que llegara despues, "naranja" si faltan 30 minutos
+// o menos, "verde" con mas margen (y cuando ya llego).
+export const SEMAFORO_AVISO_MIN = 30;
+export const semaforoEta = (servicio, now = Date.now()) => {
+  if (servicio.estado === "LLEGO") return "verde";
+  if (servicio.estado === "CON_RETRASO") return "rojo";
+  const plan = servicio.etaPlan ? new Date(servicio.etaPlan).getTime() : NaN;
+  if (Number.isNaN(plan)) return "verde";
+  const margenMin = (plan - now) / 60000;
+  if (margenMin <= 0) return "rojo";
+  return margenMin <= SEMAFORO_AVISO_MIN ? "naranja" : "verde";
+};
+
 export const horaRoma = (value) =>
   value
     ? new Date(value).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Rome" })
