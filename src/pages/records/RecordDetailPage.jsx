@@ -38,6 +38,7 @@ import {
   ZONA_OPTIONS,
   destinoSugerencias,
   salidaPorDefectoLabel,
+  salidaSugerenciasFor,
 } from "../../lib/constants";
 import {
   formatCurrency,
@@ -1526,6 +1527,8 @@ const RecordEditForm = ({
               pasaPorFrejus={form.pasaPorFrejus}
               onPasaPorFrejusChange={(value) => setField("pasaPorFrejus", value)}
               sugerencias={destinoSugerencias(record.spedizzione, record.extrasPiazzaZona)}
+              salidaSugerencias={salidaSugerenciasFor(record.spedizzione)}
+              salidaLabel={record.spedizzione === "EXTRAS_STEFANIA" ? "Salida (lugar de espera inicial)" : undefined}
               salidaPorDefecto={salidaPorDefectoLabel(record.spedizzione, record.extrasPiazzaZona)}
               disabled={saving}
             />

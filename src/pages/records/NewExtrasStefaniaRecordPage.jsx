@@ -18,7 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { RECORD_STATUS_OPTIONS } from "../../lib/constants";
+import { RECORD_STATUS_OPTIONS, salidaSugerenciasFor } from "../../lib/constants";
 import { createRecordRequest } from "../../lib/records.api";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -263,6 +263,8 @@ export const NewExtrasStefaniaRecordPage = () => {
               onChange={(stops) => setField("stops", stops)}
               salida={form.salida}
               onSalidaChange={(salida) => setField("salida", salida)}
+              salidaLabel="Salida (lugar de espera inicial)"
+              salidaSugerencias={salidaSugerenciasFor("EXTRAS_STEFANIA")}
               pasaPorBrennero={form.pasaPorBrennero}
               onPasaPorBrenneroChange={(value) => setField("pasaPorBrennero", value)}
               pasaPorFrejus={form.pasaPorFrejus}

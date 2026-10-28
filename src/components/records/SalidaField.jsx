@@ -16,14 +16,14 @@ export const buildSalidaPayload = (salida) => {
 // "Salida" del servicio: campo de texto libre, en blanco al crear, con atajos de sugerencia. Elegir una
 // sugerencia rellena el texto (y guarda sus coordenadas exactas); si despues se edita el texto, las
 // coordenadas se descartan y la direccion se geocodifica al guardar.
-export const SalidaField = ({ value, onChange, disabled, error, id = "salida", porDefecto = "Via Walter Tobagi, 8 (DHL Milano)" }) => {
-  const selected = SALIDA_SUGERENCIAS.find((s) => value.lat === s.lat && value.lng === s.lng);
+export const SalidaField = ({ value, onChange, disabled, error, id = "salida", label = "Salida", sugerencias = SALIDA_SUGERENCIAS, porDefecto = "Via Walter Tobagi, 8 (DHL Milano)" }) => {
+  const selected = sugerencias.find((s) => value.lat === s.lat && value.lng === s.lng);
 
   return (
     <div>
       <TextField
         id={id}
-        label="Salida"
+        label={label}
         placeholder="Escribe la direccion de salida o elige una sugerencia"
         value={value.direccion}
         disabled={disabled}
@@ -32,7 +32,7 @@ export const SalidaField = ({ value, onChange, disabled, error, id = "salida", p
       />
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[12px] text-ink-400">Sugerencias:</span>
-        {SALIDA_SUGERENCIAS.map((s) => (
+        {sugerencias.map((s) => (
           <button
             key={s.id}
             type="button"

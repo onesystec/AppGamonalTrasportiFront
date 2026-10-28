@@ -14,6 +14,17 @@ export const SALIDA_SUGERENCIAS = [
   { id: "dhl-roma", label: "DHL Roma", direccion: "DHL Roma", lat: 41.87714283318788, lng: 12.359177365097292 },
 ];
 
+// Los dos lugares de espera donde puede empezar un servicio (los mismos de constants/workPlaces.js del backend). En "Otros" (Extras
+// Stefania) se elige desde cual sale; los demas servicios ya lo definen por su tipo y zona.
+export const ESPERA_SUGERENCIAS = [
+  { id: "espera-milano", label: "Espera Milano", direccion: "Lugar de espera Milano", lat: 45.42317626065062, lng: 9.293531695992783 },
+  { id: "espera-roma", label: "Espera Roma", direccion: "Lugar de espera Roma", lat: 41.877128, lng: 12.359183 },
+];
+
+// Atajos del campo "Salida" segun el tipo de servicio: en "Otros" van primero los lugares de espera.
+export const salidaSugerenciasFor = (spedizzione) =>
+  spedizzione === "EXTRAS_STEFANIA" ? [...ESPERA_SUGERENCIAS, ...SALIDA_SUGERENCIAS] : SALIDA_SUGERENCIAS;
+
 // Destinos frecuentes por area (solo atajos: la direccion sigue siendo de texto libre). Traen ubicacion exacta, asi no
 // se buscan en el mapa al guardar. Clave: "SPEDIZZIONE|ZONA".
 export const DESTINO_SUGERENCIAS = {
