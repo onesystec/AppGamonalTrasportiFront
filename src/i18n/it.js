@@ -171,7 +171,7 @@ export const it = {
   "disp.letra.MANTENIMIENTO": "O",
   "disp.letra.FUERA_DE_SERVICIO": "X",
   "nav.availability": "Disponibilità",
-  "disp.client.subtitle": "Quali veicoli sono liberi ogni giorno e quanti autisti sono disponibili.",
+  "disp.client.subtitle": "Quali autisti e quali veicoli sono liberi ogni giorno.",
   "disp.client.busy": "Non disponibile",
   "disp.client.driversFree": "Autisti liberi (su {n})",
   "disp.client.noVehicles": "Non ci sono veicoli da mostrare.",
@@ -182,5 +182,6 @@ export const it = {
   "hist.driver": "Autista",
   "hist.circuit": "Milano/Roma",
   "hist.driverCircuit": "Autista / Milano o Roma",
+  "disp.client.search": "Cerca autista o veicolo",
   // @@END
 };

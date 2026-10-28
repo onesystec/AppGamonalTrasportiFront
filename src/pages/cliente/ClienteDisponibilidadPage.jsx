@@ -15,8 +15,36 @@ import { diaCorto, diaSemana, esFinDeSemana, sumarDias } from "../../lib/disponi
 const RANGOS = [7, 14, 30];
 const todayRome = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
 
-// Disponibilitá del usuario cliente: que vehiculos (solo la targa) estan libres u ocupados cada dia y cuantos choferes hay libres. Sin nombres de
-// choferes, sin motivos y sin servicios de nadie: solo "libre" o "no disponible".
+// Disponibilitá del usuario cliente: que choferes (por nombre) y que vehiculos (por targa) estan libres u ocupados cada dia, y cuantos choferes hay
+// libres. Sin motivos y sin servicios de nadie: solo "libre" o "no disponible".
+
+// Una fila de la tabla: el nombre (o la targa) y una celda por dia, verde si esta libre y roja si no esta disponible.
+const Fila = ({ nombre, ocupados, dias, locale, t, mono = false }) => {
+  const set = new Set(ocupados);
+  return (
+    <tr>
+      <th scope="row" className={clsx("sticky left-0 z-10 max-w-[170px] truncate bg-background py-1 pl-1 pr-3 text-left text-[13px] font-medium text-ink-50", mono && "tracking-wide")}>
+        {nombre}
+      </th>
+      {dias.map((day) => (
+        <td key={day} className="p-0.5">
+          <span
+            title={`${diaCorto(day, locale)} - ${set.has(day) ? t("disp.client.busy") : t("disp.cellFree")}`}
+            className={clsx("block h-8 w-full min-w-[26px] rounded-md", set.has(day) ? "bg-danger-500/30" : "bg-success-500/20")}
+          />
+        </td>
+      ))}
+    </tr>
+  );
+};
+
+const Separador = ({ texto, columnas }) => (
+  <tr>
+    <td colSpan={columnas} className="px-1 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
+      {texto}
+    </td>
+  </tr>
+);
 export const ClienteDisponibilidadPage = () => {
   const { user } = useAuth();
   const { t, locale } = useLanguage();
@@ -43,6 +71,7 @@ export const ClienteDisponibilidadPage = () => {
   const hoy = data?.hoy ?? todayRome();
   const filtro = q.trim().toLowerCase();
   const vehiculos = (data?.vehiculos ?? []).filter((v) => !filtro || v.targa.toLowerCase().includes(filtro));
+  const choferes = (data?.choferes.lista ?? []).filter((c) => !filtro || c.nombre.toLowerCase().includes(filtro));
   const mover = (n) => setDesde((d) => sumarDias(d, n * rango));
 
   return (
@@ -75,9 +104,9 @@ export const ClienteDisponibilidadPage = () => {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={t("disp.searchVehiculo")}
+              placeholder={t("disp.client.search")}
               aria-label={t("disp.search")}
-              className="glass-input w-[170px] rounded-lg py-2 pl-9 pr-3 text-[13px] text-ink-50"
+              className="glass-input w-[210px] rounded-lg py-2 pl-9 pr-3 text-[13px] text-ink-50"
             />
           </div>
         </div>
@@ -121,7 +150,7 @@ export const ClienteDisponibilidadPage = () => {
               </thead>
               <tbody>
                 <tr>
-                  <th scope="row" className="sticky left-0 z-10 max-w-[150px] bg-background py-1.5 pl-1 pr-3 text-left text-[12px] font-semibold text-ink-50">
+                  <th scope="row" className="sticky left-0 z-10 max-w-[170px] bg-background py-1.5 pl-1 pr-3 text-left text-[12px] font-semibold text-ink-50">
                     {t("disp.client.driversFree", { n: data.choferes.total })}
                   </th>
                   {data.dias.map((day) => {
@@ -140,30 +169,19 @@ export const ClienteDisponibilidadPage = () => {
                     );
                   })}
                 </tr>
-                <tr>
-                  <td colSpan={data.dias.length + 1} className="py-1" />
-                </tr>
-                {vehiculos.map((v) => {
-                  const ocupados = new Set(v.ocupados);
-                  return (
-                    <tr key={v.targa}>
-                      <th scope="row" className="sticky left-0 z-10 max-w-[150px] truncate bg-background py-1 pl-1 pr-3 text-left text-[13px] font-medium tracking-wide text-ink-50">
-                        {v.targa}
-                      </th>
-                      {data.dias.map((day) => (
-                        <td key={day} className="p-0.5">
-                          <span
-                            title={`${diaCorto(day, locale)} - ${ocupados.has(day) ? t("disp.client.busy") : t("disp.cellFree")}`}
-                            className={clsx("block h-8 w-full min-w-[26px] rounded-md", ocupados.has(day) ? "bg-danger-500/30" : "bg-success-500/20")}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
+                {choferes.length > 0 && <Separador texto={t("disp.view.choferes")} columnas={data.dias.length + 1} />}
+                {choferes.map((c) => (
+                  <Fila key={c.nombre} nombre={c.nombre} ocupados={c.ocupados} dias={data.dias} locale={locale} t={t} />
+                ))}
+                {vehiculos.length > 0 && <Separador texto={t("disp.view.vehiculos")} columnas={data.dias.length + 1} />}
+                {vehiculos.map((v) => (
+                  <Fila key={v.targa} nombre={v.targa} ocupados={v.ocupados} dias={data.dias} locale={locale} t={t} mono />
+                ))}
               </tbody>
             </table>
-            {vehiculos.length === 0 && <p className="px-2 py-6 text-center text-[13px] text-ink-400">{data.vehiculos.length === 0 ? t("disp.client.noVehicles") : t("disp.noResults")}</p>}
+            {choferes.length === 0 && vehiculos.length === 0 && (
+              <p className="px-2 py-6 text-center text-[13px] text-ink-400">{data.vehiculos.length === 0 && data.choferes.lista.length === 0 ? t("disp.client.noVehicles") : t("disp.noResults")}</p>
+            )}
           </div>
         </>
       )}

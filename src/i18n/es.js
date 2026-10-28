@@ -172,7 +172,7 @@ export const es = {
   "disp.letra.MANTENIMIENTO": "M",
   "disp.letra.FUERA_DE_SERVICIO": "X",
   "nav.availability": "Disponibilidad",
-  "disp.client.subtitle": "Qué vehículos están libres cada día y cuántos choferes hay disponibles.",
+  "disp.client.subtitle": "Qué choferes y qué vehículos están libres cada día.",
   "disp.client.busy": "No disponible",
   "disp.client.driversFree": "Choferes libres (de {n})",
   "disp.client.noVehicles": "No hay vehículos para mostrar.",
@@ -183,5 +183,6 @@ export const es = {
   "hist.driver": "Chofer",
   "hist.circuit": "Milano/Roma",
   "hist.driverCircuit": "Chofer / Milano o Roma",
+  "disp.client.search": "Buscar chofer o vehículo",
   // @@END
 };
