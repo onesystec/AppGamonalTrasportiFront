@@ -217,7 +217,8 @@ export const ClienteSeguimientoPage = () => {
   const hayMapa = verMapa && isLoaded;
 
   return (
-    <div className="flex flex-col gap-4">
+    // En escritorio, con mapa, la vista ocupa justo el alto de la pantalla (el <main> pone 2 rem de margen vertical): el mapa y la lista lo llenan.
+    <div className={clsx("flex flex-col gap-4", verMapa && "lg:h-[calc(100dvh-2rem)] lg:min-h-[520px]")}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[22px] font-semibold text-ink-50">
           {t("track.title")} <span className="ml-2 text-[13px] font-normal text-ink-400">{t("track.refresh")}</span>
@@ -229,9 +230,9 @@ export const ClienteSeguimientoPage = () => {
       {!data && !error && <PageLoader />}
 
       {data && (
-        <div className={clsx("grid grid-cols-1 gap-5", verMapa && verLista && "lg:grid-cols-[minmax(0,285px)_1fr] 2xl:grid-cols-[minmax(0,330px)_1fr]")}>
+        <div className={clsx("grid grid-cols-1 gap-5", verMapa && "lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)]", verMapa && verLista && "lg:grid-cols-[minmax(0,285px)_1fr] 2xl:grid-cols-[minmax(0,330px)_1fr]")}>
           {verLista && (
-            <div className="order-2 flex flex-col gap-2 lg:order-1 lg:max-h-[max(480px,calc(100dvh-11.5rem))] lg:overflow-y-auto lg:pr-1">
+            <div className={clsx("order-2 flex flex-col gap-2 lg:order-1", verMapa && "lg:min-h-0 lg:overflow-y-auto lg:pr-1")}>
               {enCamino.length === 0 && (
                 <p className="glass-surface rounded-2xl px-5 py-6 text-[14px] text-ink-300">{t("track.none")}</p>
               )}
@@ -258,8 +259,8 @@ export const ClienteSeguimientoPage = () => {
           )}
 
           {verMapa && (
-            <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10", verLista && "lg:order-2 lg:self-start")}>
-              <FullscreenMap className="relative h-[42dvh] min-h-[300px] w-full lg:h-[calc(100dvh-11.5rem)] lg:min-h-[480px]">
+            <div className={clsx("order-1 overflow-hidden rounded-2xl border border-line/10 lg:flex lg:min-h-0 lg:flex-col", verLista && "lg:order-2")}>
+              <FullscreenMap className="relative h-[42dvh] min-h-[300px] w-full lg:h-0 lg:min-h-[300px] lg:flex-1">
                 {selected && cargandoRuta && hayMapa && (
                   <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-900 shadow-md">
                     <Spinner className="h-3.5 w-3.5 border-gray-300 border-t-gray-700" />
