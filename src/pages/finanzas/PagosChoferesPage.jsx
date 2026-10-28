@@ -193,6 +193,7 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
             {driver.salidasReperibilidad > 0 &&
               ` - ${driver.salidasReperibilidad} ${driver.salidasReperibilidad === 1 ? "salida" : "salidas"} de reperibilidad${driver.salidasNoche > 0 ? ` (${driver.salidasNoche} de noche)` : ""} (+${formatCurrency(driver.pagoReperibilidad)})`}
             {driver.horasPorAprobar > 0 && ` - ${driver.horasPorAprobar} con horas por aprobar`}
+            {driver.pagaFueraHorario === false && " - sin horas fuera de horario ni reperibilidad aparte"}
           </span>
           {driver.asistencia && (
             <span className="block text-[12px] text-ink-400">
