@@ -3,6 +3,8 @@
 // la interfaz para listarlas: nombre, descripcion y los 5 colores del circulo
 // (en el orden en que aparecen, en sentido horario desde arriba, en el diseno de referencia).
 export const DEFAULT_PALETTE = "clasico";
+// Dentro de OneSystec (en un marco), quien no ha elegido paleta ve esta: los azules de Piazza Spedizioni. Puede cambiarla en su perfil.
+export const EMBEDDED_DEFAULT_PALETTE = "oceano";
 
 export const PALETTES = [
   {

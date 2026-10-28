@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { isEmbedded, onParentTheme } from "../lib/embedded";
-import { DEFAULT_PALETTE, PALETTE_IDS } from "../lib/themes";
+import { DEFAULT_PALETTE, EMBEDDED_DEFAULT_PALETTE, PALETTE_IDS } from "../lib/themes";
 
 const ThemeContext = createContext(null);
 
@@ -42,7 +42,8 @@ const getInitialPreference = () => {
 
 const getInitialPalette = () => {
   const stored = readStored(PALETTE_STORAGE_KEY);
-  return PALETTE_IDS.includes(stored) ? stored : DEFAULT_PALETTE;
+  if (PALETTE_IDS.includes(stored)) return stored;
+  return isEmbedded ? EMBEDDED_DEFAULT_PALETTE : DEFAULT_PALETTE;
 };
 
 // Se aplica al <html> de forma sincrona (antes de re-renderizar) para que los

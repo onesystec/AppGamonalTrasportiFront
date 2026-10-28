@@ -21,6 +21,8 @@
           }
           document.documentElement.classList.add(theme);
           var palette = localStorage.getItem("gt-palette");
+          // Dentro de OneSystec (en un marco) la paleta por defecto es Oceano; lo que el usuario haya elegido manda.
+          if (!palette && window.self !== window.top) palette = "oceano";
           if (palette && palette !== "clasico") {
             document.documentElement.setAttribute("data-palette", palette);
           }
