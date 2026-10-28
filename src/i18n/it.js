@@ -175,5 +175,9 @@ export const it = {
   "disp.client.busy": "Non disponibile",
   "disp.client.driversFree": "Autisti liberi (su {n})",
   "disp.client.noVehicles": "Non ci sono veicoli da mostrare.",
+  "viewer.close": "Chiudi",
+  "viewer.prev": "Foto precedente",
+  "viewer.next": "Foto successiva",
+  "viewer.error": "Impossibile caricare l'immagine.",
   // @@END
 };
