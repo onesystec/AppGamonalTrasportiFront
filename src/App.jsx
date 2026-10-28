@@ -105,6 +105,9 @@ const PagosChoferesPage = lazy(() =>
 const HorasAprobacionPage = lazy(() =>
   import("./pages/finanzas/HorasAprobacionPage").then((m) => ({ default: m.HorasAprobacionPage })),
 );
+const OtrosGastosPage = lazy(() =>
+  import("./pages/finanzas/OtrosGastosPage").then((m) => ({ default: m.OtrosGastosPage })),
+);
 const ParadasPage = lazy(() => import("./pages/finanzas/ParadasPage").then((m) => ({ default: m.ParadasPage })));
 const MiCalendarioPage = lazy(() =>
   import("./pages/calendario/MiCalendarioPage").then((m) => ({ default: m.MiCalendarioPage })),
@@ -335,6 +338,7 @@ function App() {
                 <Route path="multas" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultasPage /></RoleOnly>} />
                 <Route path="multas/new" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
                 <Route path="multas/:id" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultaDetailPage /></RoleOnly>} />
+                <Route path="otros-gastos" element={<OtrosGastosPage />} />
                 <Route path="combustible" element={<CombustiblePage />} />
                 <Route path="combustible/new" element={<NewCombustiblePage />} />
                 <Route path="combustible/:id" element={<CombustibleDetailPage />} />
