@@ -23,6 +23,9 @@ const ESTADO_PILL = {
   ANNULLATO: "bg-danger-500/15 text-danger-500",
 };
 
+// "MILANO_12" -> "Milano 12"; "ROMA_2" -> "Roma 2".
+const aplicativoTexto = (value) => (value ? value.charAt(0) + value.slice(1).toLowerCase().replace("_", " ") : "");
+
 const fechaCorta = (iso) =>
   new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Rome" });
 
@@ -125,11 +128,13 @@ export const ClienteHistorialPage = () => {
     setError("");
     try {
       const { servicios } = await exportClienteServiciosRequest(month);
-      const columnas = ["hist.code", "hist.date", "hist.plate", "hist.destination", "hist.status", "hist.plannedTime", "hist.arrival", "hist.punctuality"].map((key) => t(key));
+      const columnas = ["hist.code", "hist.date", "hist.plate", "hist.driver", "hist.circuit", "hist.destination", "hist.status", "hist.plannedTime", "hist.arrival", "hist.punctuality"].map((key) => t(key));
       const filas = servicios.map((s) => [
         s.codigo,
         fechaCorta(s.fecha),
         s.targa ?? "",
+        s.chofer ?? "",
+        aplicativoTexto(s.aplicativo),
         s.destino,
         estadoTexto(s, t, language),
         horaRoma(s.etaPlan),
@@ -173,12 +178,13 @@ export const ClienteHistorialPage = () => {
 
       {data?.servicios.length > 0 && (
         <div className="glass-surface overflow-x-auto rounded-2xl">
-          <table className="w-full min-w-[640px] border-collapse text-[13px]">
+          <table className="w-full min-w-[760px] border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-line/10 text-left text-[11px] font-medium uppercase tracking-wide text-ink-400">
                 <th className="px-4 py-2.5">{t("hist.date")}</th>
                 <th className="px-2 py-2.5">{t("hist.service")}</th>
                 <th className="px-2 py-2.5">{t("hist.plate")}</th>
+                <th className="px-2 py-2.5">{t("hist.driverCircuit")}</th>
                 <th className="px-2 py-2.5">{t("hist.destination")}</th>
                 <th className="px-2 py-2.5">{t("hist.status")}</th>
                 <th className="px-2 py-2.5">{t("hist.arrival")}</th>
@@ -191,6 +197,10 @@ export const ClienteHistorialPage = () => {
                   <td className="whitespace-nowrap px-4 py-2.5 text-ink-100">{fechaCorta(s.fecha)}</td>
                   <td className="px-2 py-2.5 text-ink-300">{s.codigo}</td>
                   <td className="whitespace-nowrap px-2 py-2.5 font-semibold text-ink-50">{s.targa ?? "—"}</td>
+                  <td className="whitespace-nowrap px-2 py-2.5">
+                    <span className="block text-ink-100">{s.chofer ?? "—"}</span>
+                    {s.aplicativo && <span className="block text-[12px] text-ink-400">{aplicativoTexto(s.aplicativo)}</span>}
+                  </td>
                   <td className="max-w-[280px] px-2 py-2.5 text-ink-100">{s.destino}</td>
                   <td className="px-2 py-2.5">
                     <span className={clsx("whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium", ESTADO_PILL[s.estado] ?? "bg-line/15 text-ink-300")}>

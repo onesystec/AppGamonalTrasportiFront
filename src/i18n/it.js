@@ -179,5 +179,8 @@ export const it = {
   "viewer.prev": "Foto precedente",
   "viewer.next": "Foto successiva",
   "viewer.error": "Impossibile caricare l'immagine.",
+  "hist.driver": "Autista",
+  "hist.circuit": "Milano/Roma",
+  "hist.driverCircuit": "Autista / Milano o Roma",
   // @@END
 };

@@ -180,5 +180,8 @@ export const es = {
   "viewer.prev": "Foto anterior",
   "viewer.next": "Foto siguiente",
   "viewer.error": "No se pudo cargar la imagen.",
+  "hist.driver": "Chofer",
+  "hist.circuit": "Milano/Roma",
+  "hist.driverCircuit": "Chofer / Milano o Roma",
   // @@END
 };
