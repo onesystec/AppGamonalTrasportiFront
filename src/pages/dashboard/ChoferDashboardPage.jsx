@@ -78,6 +78,23 @@ export const ChoferDashboardPage = () => {
     load();
   }, [load]);
 
+  // Los servicios que aun no tienen su estilo de manejo se piden de a uno al GPS en segundo plano: mientras se calcula, se vuelve a consultar
+  // cada tanto (hasta unos 5 minutos) para que el porcentaje aparezca solo.
+  const calculandoEstilo = Boolean(estilo?.calculando);
+  useEffect(() => {
+    if (!calculandoEstilo) return undefined;
+    let tries = 0;
+    const id = setInterval(() => {
+      tries += 1;
+      if (tries > 15) return clearInterval(id);
+      getMyDrivingStyleRequest()
+        .then(setEstilo)
+        .catch(() => {});
+      return undefined;
+    }, 20000);
+    return () => clearInterval(id);
+  }, [calculandoEstilo]);
+
   const actions = useCerrarServicio(load);
 
   if (error) return <Alert>{error}</Alert>;

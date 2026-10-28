@@ -170,7 +170,7 @@ export const RendimientoCard = ({ progress, estilo: estiloData, sinSustentar }) 
               <span className="text-[12px] text-ink-300">
                 {estiloData?.calculando
                   ? "Calculando tu manejo…"
-                  : "Se calcula con las horas de tus servicios"}
+                  : "Se calcula con el GPS de tus servicios"}
               </span>
             </>
           )}
