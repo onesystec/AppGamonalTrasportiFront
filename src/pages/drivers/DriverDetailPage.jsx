@@ -83,7 +83,7 @@ const toFormState = (driver) => ({
   responsableTipo: driver.responsableTipo ?? "",
   areasPermitidas: driver.areasPermitidas ?? [],
   nivelChofer: driver.nivelChofer ?? "",
-  pagaFueraHorario: driver.pagaFueraHorario !== false,
+  pagaFueraHorario: driver.pagaFueraHorario === true,
   estado: driver.estado ?? "",
   fechaNacimiento: toDateInputValue(driver.fechaNacimiento),
   vehiculoAsignadoId: driver.vehiculoAsignadoId ?? "",
@@ -467,8 +467,8 @@ export const DriverDetailPage = () => {
             {user.cargo === "OWNER" && driver.cargo === "CHOFER" && (
               <DriverStat
                 label="Horas fuera de horario y reperibilita"
-                value={driver.pagaFueraHorario === false ? "No se cuentan aparte" : "Se cuentan aparte del basico"}
-                tone={driver.pagaFueraHorario === false ? "red" : "green"}
+                value={driver.pagaFueraHorario ? "Se cuentan aparte del basico" : "No se cuentan aparte"}
+                tone={driver.pagaFueraHorario ? "green" : "red"}
               />
             )}
             <DriverStat label="Grupo" value={driver.grupo ? GRUPO_LABELS[driver.grupo] : null} />
