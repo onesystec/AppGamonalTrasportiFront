@@ -17,3 +17,11 @@ export const quienPagaLabel = (multa) => {
     ? { text: "Descontado", tone: "success" }
     : { text: "A descontar", tone: "warning" };
 };
+
+// A nombre de quien llego el verbale: la S.R.L. o la ditta individuale.
+export const TITULAR_OPTIONS = [
+  { value: "SRL", label: "S.R.L." },
+  { value: "INDIVIDUAL", label: "Individual" },
+];
+
+export const titularLabel = (titular) => TITULAR_OPTIONS.find((o) => o.value === titular)?.label ?? "Sin indicar";
