@@ -18,8 +18,14 @@ import {
   deleteVehicleMantenimientoRequest,
   listVehicleMantenimientosRequest,
   listVehiclesRequest,
+  refreshVehicleKmGpsRequest,
   registerVehicleKmRequest,
 } from "../../lib/vehicles.api";
+
+const todayRome = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+const fechaTexto = (day) => (day ? day.split("-").reverse().join("/") : "");
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const km = (value) => `${Math.round(value).toLocaleString("es-AR")} km`;
 
 const AREA_FILTER_OPTIONS = [
   { value: "ALL", label: "Todas" },
@@ -83,8 +89,12 @@ const VehicleListItem = ({ vehicle, status, selected, onSelect }) => (
 
 const toFormState = (vehicle) => ({
   kmUltimoMantenimiento: vehicle?.kmUltimoMantenimiento ?? "",
+  fechaUltimoMantenimiento: vehicle?.fechaUltimoMantenimiento ?? "",
   kmActual: vehicle?.kmActual ?? "",
 });
+
+// Los km actuales los cuenta solos el GPS cuando el vehiculo tiene el tagliando cargado con su fecha y esta en el GPS (OneSystec).
+const cuentaConGps = (vehicle) => Boolean(vehicle?.fechaLecturaBase) && vehicle.kmGpsEstado !== "SIN_GPS";
 
 export const MecanicaPage = () => {
   const { user } = useAuth();
@@ -95,7 +105,10 @@ export const MecanicaPage = () => {
   const [areaFilter, setAreaFilter] = useState("ALL");
   const [selectedId, setSelectedId] = useState(null);
 
-  const [form, setForm] = useState({ kmUltimoMantenimiento: "", kmActual: "" });
+  const [form, setForm] = useState({ kmUltimoMantenimiento: "", fechaUltimoMantenimiento: "", kmActual: "" });
+  // Conteo de km con el GPS del vehiculo elegido: { loading, estado, pendientes }, y si se esta corrigiendo el odometro a mano.
+  const [gps, setGps] = useState({ loading: false, estado: null, pendientes: 0 });
+  const [corrigiendo, setCorrigiendo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
@@ -135,18 +148,54 @@ export const MecanicaPage = () => {
       .catch((err) => setHistorialError(parseApiError(err).message));
   };
 
+  // Al elegir otro vehiculo se rearma el formulario (no cada vez que llegan km nuevos del GPS: se perderia lo que se esta escribiendo).
   useEffect(() => {
     setForm(toFormState(selectedVehicle));
     setSaveError("");
     setFieldErrors({});
     setSaveSuccess(false);
+    setCorrigiendo(false);
     if (selectedVehicle) {
       loadHistorial(selectedVehicle.id);
     } else {
       setHistorial(null);
       setHistorialError("");
     }
-  }, [selectedVehicle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  // Cuenta los km del GPS del vehiculo elegido: al abrirlo (y despues de guardar el tagliando) se piden los dias que faltan y, mientras queden, se
+  // vuelve a pedir cada pocos segundos hasta completar.
+  const [gpsTick, setGpsTick] = useState(0);
+  const hasBase = Boolean(selectedVehicle?.fechaLecturaBase);
+  useEffect(() => {
+    if (!selectedId || !hasBase) {
+      setGps({ loading: false, estado: null, pendientes: 0 });
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      setGps((prev) => ({ ...prev, loading: true }));
+      for (let attempt = 0; attempt < 40 && !cancelled; attempt += 1) {
+        try {
+          const result = await refreshVehicleKmGpsRequest(selectedId);
+          if (cancelled) return;
+          setVehicles((prev) => prev.map((v) => (v.id === result.vehicle.id ? result.vehicle : v)));
+          const incompleto = result.gps.pendientes > 0 || ["PENDIENTE", "ERROR", "OCUPADO"].includes(result.gps.estado);
+          setGps({ loading: incompleto, estado: result.gps.estado, pendientes: result.gps.pendientes });
+          if (!incompleto) return;
+        } catch {
+          if (cancelled) return;
+          setGps({ loading: true, estado: "ERROR", pendientes: 0 });
+        }
+        await sleep(4000);
+      }
+      if (!cancelled) setGps((prev) => ({ ...prev, loading: false }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, hasBase, gpsTick]);
 
   if (!isPrivileged) return <Navigate to="/" replace />;
 
@@ -157,10 +206,10 @@ export const MecanicaPage = () => {
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const previewStatus = getTagliandoStatus(
-    form.kmUltimoMantenimiento === "" ? null : Number(form.kmUltimoMantenimiento),
-    form.kmActual === "" ? null : Number(form.kmActual)
-  );
+  const gpsMode = cuentaConGps(selectedVehicle);
+  // Con el GPS contando, los km actuales son los del vehiculo (no se escriben); si se corrige el odometro, lo que se escribe.
+  const kmActualParaEstado = gpsMode && !corrigiendo ? selectedVehicle?.kmActual ?? null : form.kmActual === "" ? null : Number(form.kmActual);
+  const previewStatus = getTagliandoStatus(form.kmUltimoMantenimiento === "" ? null : Number(form.kmUltimoMantenimiento), kmActualParaEstado);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -173,12 +222,17 @@ export const MecanicaPage = () => {
 
     const payload = {};
     if (form.kmUltimoMantenimiento !== "") payload.kmUltimoMantenimiento = form.kmUltimoMantenimiento;
-    if (form.kmActual !== "") payload.kmActual = form.kmActual;
+    if (form.fechaUltimoMantenimiento !== "") payload.fechaUltimoMantenimiento = form.fechaUltimoMantenimiento;
+    // Los km actuales solo se mandan a mano si no los cuenta el GPS (o si se esta corrigiendo el odometro).
+    if ((!gpsMode || corrigiendo) && form.kmActual !== "") payload.kmActual = form.kmActual;
 
     try {
       const updated = await registerVehicleKmRequest(selectedVehicle.id, payload);
       setVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+      setForm(toFormState(updated));
+      setCorrigiendo(false);
       setSaveSuccess(true);
+      setGpsTick((n) => n + 1);
       loadHistorial(selectedVehicle.id);
     } catch (err) {
       const parsed = parseApiError(err);
@@ -287,7 +341,7 @@ export const MecanicaPage = () => {
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <TextField
                     id="kmUltimoMantenimiento"
-                    label="KM Ultimo Mantenimiento"
+                    label="KM del ultimo tagliando"
                     type="number"
                     min="0"
                     inputMode="numeric"
@@ -296,19 +350,80 @@ export const MecanicaPage = () => {
                     error={fieldErrors.kmUltimoMantenimiento?.[0]}
                   />
                   <TextField
-                    id="kmActual"
-                    label="KM Actual"
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={form.kmActual}
-                    onChange={handleChange("kmActual")}
-                    error={fieldErrors.kmActual?.[0]}
+                    id="fechaUltimoMantenimiento"
+                    label="Fecha del ultimo tagliando"
+                    type="date"
+                    max={todayRome()}
+                    value={form.fechaUltimoMantenimiento}
+                    onChange={handleChange("fechaUltimoMantenimiento")}
+                    error={fieldErrors.fechaUltimoMantenimiento?.[0]}
                   />
                 </div>
 
+                {gpsMode && !corrigiendo ? (
+                  <div className="rounded-2xl border border-line/10 bg-line/[0.04] px-4 py-3.5">
+                    <span className="block text-[12px] uppercase tracking-wide text-ink-400">KM actual (contados con el GPS)</span>
+                    <span className="block text-[28px] font-semibold leading-tight text-ink-50">
+                      {selectedVehicle.kmActual != null ? km(selectedVehicle.kmActual) : "-"}
+                    </span>
+                    <span className="block text-[13px] text-ink-300">
+                      {selectedVehicle.kmLecturaBase != null && selectedVehicle.kmActual != null
+                        ? `+${km(selectedVehicle.kmActual - selectedVehicle.kmLecturaBase)} desde el ${fechaTexto(selectedVehicle.fechaLecturaBase)} (partiendo de ${km(selectedVehicle.kmLecturaBase)})`
+                        : ""}
+                    </span>
+                    <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-400">
+                      {gps.loading ? (
+                        <span className="flex items-center gap-1.5 text-warning-500">
+                          <Spinner className="h-3.5 w-3.5 border-warning-500/30 border-t-warning-500" />
+                          {gps.estado === "ERROR"
+                            ? "El GPS no respondio; se reintenta solo"
+                            : `Contando los km del GPS${gps.pendientes > 0 ? ` (faltan ${gps.pendientes} ${gps.pendientes === 1 ? "dia" : "dias"})` : ""}...`}
+                        </span>
+                      ) : selectedVehicle.kmGpsActualizadoAt ? (
+                        <span>Actualizado {formatDateTime(selectedVehicle.kmGpsActualizadoAt)}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCorrigiendo(true);
+                          setForm((prev) => ({ ...prev, kmActual: selectedVehicle.kmActual ?? "" }));
+                        }}
+                        className="font-medium text-accent-400 hover:text-accent-300"
+                      >
+                        Corregir con el odometro
+                      </button>
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <TextField
+                      id="kmActual"
+                      label={corrigiendo ? "KM actual del odometro (desde hoy el GPS cuenta a partir de aqui)" : "KM actual"}
+                      type="number"
+                      min="0"
+                      inputMode="numeric"
+                      value={form.kmActual}
+                      onChange={handleChange("kmActual")}
+                      error={fieldErrors.kmActual?.[0]}
+                    />
+                    {corrigiendo && (
+                      <button type="button" onClick={() => setCorrigiendo(false)} className="mt-1.5 text-[12px] font-medium text-accent-400 hover:text-accent-300">
+                        Cancelar la correccion
+                      </button>
+                    )}
+                    {!corrigiendo && selectedVehicle.kmGpsEstado === "SIN_GPS" && (
+                      <p className="mt-1.5 text-[12px] text-ink-400">Este vehiculo no esta en el GPS: los km actuales se cargan a mano.</p>
+                    )}
+                    {!corrigiendo && selectedVehicle.kmGpsEstado !== "SIN_GPS" && !selectedVehicle.fechaLecturaBase && (
+                      <p className="mt-1.5 text-[12px] text-ink-400">
+                        Pon los km y la fecha del ultimo tagliando y el GPS contara los km actuales solo, desde el dia siguiente.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <Button type="submit" loading={saving} className="sm:w-auto sm:px-8">
-                  Guardar KM
+                  {corrigiendo ? "Guardar correccion" : "Guardar tagliando"}
                 </Button>
 
                 <div className="border-t border-line/10 pt-5">
@@ -337,7 +452,8 @@ export const MecanicaPage = () => {
                         >
                           <span className="min-w-0">
                             <span className="block text-ink-50">
-                              Ultimo mantenimiento: {registro.kmUltimoMantenimiento.toLocaleString("es-AR")} km &middot;
+                              Ultimo mantenimiento: {registro.kmUltimoMantenimiento.toLocaleString("es-AR")} km
+                              {registro.fechaMantenimiento ? ` (${fechaTexto(registro.fechaMantenimiento)})` : ""} &middot;
                               {" "}Actual: {registro.kmActual.toLocaleString("es-AR")} km
                             </span>
                             <span className="block text-ink-400">

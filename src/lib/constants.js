@@ -250,7 +250,8 @@ export const TAGLIANDO_KM_URGENTE = 1500; // <= esto (o vencido): hacer tagliand
 export const getTagliandoStatus = (kmUltimoMantenimiento, kmActual) => {
   if (kmUltimoMantenimiento == null || kmActual == null) return null;
 
-  const usado = kmActual - kmUltimoMantenimiento;
+  // Redondeado a km enteros: con el GPS los km actuales llevan decimales.
+  const usado = Math.round(kmActual - kmUltimoMantenimiento);
   const restante = TAGLIANDO_INTERVALO_KM - usado;
 
   if (restante <= TAGLIANDO_KM_URGENTE) {

@@ -68,6 +68,9 @@ export const deleteVehicleRequest = (id) => api.delete(`/vehiculos/${id}`);
 export const registerVehicleKmRequest = (id, data) =>
   api.post(`/vehiculos/${id}/mantenimiento`, data).then((res) => res.data.data.vehicle);
 
+// Cuenta ahora los km del GPS desde el ultimo tagliando (pide solo los dias que faltan). Devuelve { vehicle, gps: { estado, pendientes, kmGps } }.
+export const refreshVehicleKmGpsRequest = (id) => api.post(`/vehiculos/${id}/km-gps`).then((res) => res.data.data);
+
 export const listVehicleMantenimientosRequest = (id) =>
   api.get(`/vehiculos/${id}/mantenimiento`).then((res) => res.data.data.mantenimientos);
 
