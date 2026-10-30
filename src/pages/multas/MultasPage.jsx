@@ -3,9 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
-import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { SugerenciaChip, useRowSuggestions } from "../../components/multas/MultaSugerencia";
-import { MultasSidebar } from "../../components/multas/MultasSidebar";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -13,16 +11,12 @@ import { Select } from "../../components/ui/Select";
 import { Spinner } from "../../components/ui/Spinner";
 import { TextField } from "../../components/ui/TextField";
 import {
-  CalendarIcon,
   ChevronDownIcon,
-  ClockIcon,
   CloseIcon,
   DotsIcon,
-  EuroIcon,
   ExpandIcon,
   FileTextIcon,
   FilterIcon,
-  GavelIcon,
   ImageIcon,
   PlusIcon,
   RefreshIcon,
@@ -33,9 +27,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
-import { MULTA_ESTADOS, QUIEN_PAGA_OPTIONS, quienPagaLabel } from "../../lib/multas";
+import { MULTA_ESTADOS, QUIEN_PAGA_OPTIONS, TITULAR_OPTIONS, quienPagaLabel, titularLabel } from "../../lib/multas";
 import {
-  getMultaStatsRequest,
   getMultaSummaryRequest,
   listMultasRequest,
   updateMultaRequest,
@@ -53,8 +46,20 @@ const EMPTY_FILTERS = {
   to: "",
   quienPaga: "",
   descuentoPendiente: false,
+  titular: "",
   q: "",
   orden: "",
+};
+
+const TITULAR_FILTER_OPTIONS = [
+  { value: "", label: "Todos" },
+  ...TITULAR_OPTIONS,
+  { value: "SIN", label: "Sin indicar" },
+];
+
+const TITULAR_TONE = {
+  SRL: "bg-accent-500/15 text-accent-300",
+  INDIVIDUAL: "bg-[#a78bfa]/15 text-[#a78bfa]",
 };
 
 const ORDEN_OPTIONS = [
@@ -92,11 +97,11 @@ const useDebounced = (value, ms) => {
   return debounced;
 };
 
-// Columnas de la tabla (escritorio), en este orden: Estado, Chofer responsable, Targa, Recepcion, Vencimiento, Costo, N. verbale,
+// Columnas de la tabla (escritorio), en este orden: Estado, Chofer responsable, Titular (SRL / Individual), Targa, Recepcion, Vencimiento, Costo, N. verbale,
 // ¿Chofer pago?, Foto o PDF y el menu. Anchos fijos: si la pantalla no alcanza, la tabla se desliza de costado en vez de apretar
 // los datos unos contra otros.
-const TABLE_COLS = "lg:grid-cols-[130px_210px_100px_110px_140px_105px_180px_140px_72px_40px]";
-const TABLE_MIN_WIDTH = "lg:min-w-[1400px]";
+const TABLE_COLS = "lg:grid-cols-[130px_210px_96px_100px_110px_140px_105px_180px_140px_72px_40px]";
+const TABLE_MIN_WIDTH = "lg:min-w-[1500px]";
 
 const plazoParts = (m) => {
   if (m.estado === "PAGADO") {
@@ -286,6 +291,18 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
         </div>
       )}
 
+      {/* Titular del verbale */}
+      <div>
+        <span
+          className={clsx(
+            "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium",
+            TITULAR_TONE[multa.titular] ?? "bg-line/10 text-ink-400"
+          )}
+        >
+          {titularLabel(multa.titular)}
+        </span>
+      </div>
+
       {/* Targa */}
       <span className="whitespace-nowrap text-[13px] font-medium tracking-wide text-ink-50">{multa.targa}</span>
 
@@ -417,6 +434,7 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
               >
                 <span className={headerClass}>Estado</span>
                 {showDriver && <span className={headerClass}>Chofer responsable</span>}
+                <span className={headerClass}>Titular</span>
                 <span className={headerClass}>Targa</span>
                 <span className={headerClass}>Recepcion</span>
                 <span className={headerClass}>Vencimiento</span>
@@ -619,12 +637,25 @@ const MultasOficinaPage = () => {
   const { version, refresh } = useDataRefresh("multas");
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  // En celular arrancan cerrados (ocupan media pantalla); en escritorio, abiertos.
-  const [filtersOpen, setFiltersOpen] = useState(() => window.innerWidth >= 1024);
+  // Panel de filtros (se abre con el boton "Filtros", igual que en Mancato Pagamento); un clic fuera lo cierra.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef(null);
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const onDown = (e) => {
+      if (filtersRef.current && !filtersRef.current.contains(e.target)) setFiltersOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setFiltersOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [filtersOpen]);
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
   // Estado que se esta viendo en pantalla completa (null = la pantalla de siempre).
   const [expandedEstado, setExpandedEstado] = useState(null);
@@ -640,7 +671,7 @@ const MultasOficinaPage = () => {
 
   const setFilter = (field, value) => setFilters((prev) => ({ ...prev, [field]: value }));
 
-  // Los filtros que mueven numeros (resumen, KPIs, grafico). El estado y el orden solo
+  // Los filtros que cambian los totales de cada acordeon. El estado y el orden solo
   // cambian que acordeones se ven y como se ordenan las filas.
   const rawParams = useMemo(
     () => ({
@@ -651,8 +682,18 @@ const MultasOficinaPage = () => {
       to: filters.to || undefined,
       quienPaga: filters.quienPaga || undefined,
       descuentoPendiente: filters.descuentoPendiente ? "true" : undefined,
+      titular: filters.titular || undefined,
     }),
-    [filters.q, filters.driverId, filters.targa, filters.from, filters.to, filters.quienPaga, filters.descuentoPendiente]
+    [
+      filters.q,
+      filters.driverId,
+      filters.targa,
+      filters.from,
+      filters.to,
+      filters.quienPaga,
+      filters.descuentoPendiente,
+      filters.titular,
+    ]
   );
   const params = useDebounced(rawParams, 350);
   const paramsKey = JSON.stringify(params);
@@ -664,11 +705,10 @@ const MultasOficinaPage = () => {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getMultaSummaryRequest(params), getMultaStatsRequest(params)])
-      .then(([summaryData, statsData]) => {
+    getMultaSummaryRequest(params)
+      .then((summaryData) => {
         if (!cancelled) {
           setSummary(summaryData);
-          setStats(statsData);
           setError("");
         }
       })
@@ -683,9 +723,6 @@ const MultasOficinaPage = () => {
 
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
-  // Lo que dispara "Ver detalles" de los paneles de la derecha: aplica ese filtro.
-  const applyFilter = (patch) => setFilters((prev) => ({ ...EMPTY_FILTERS, ...patch, q: prev.q }));
-
   const visibleEstados = MULTA_ESTADOS.filter((e) => !filters.estado || e.value === filters.estado);
   const driverOptions = [
     { value: "", label: "Todos" },
@@ -697,133 +734,72 @@ const MultasOficinaPage = () => {
   ];
   const quienPagaOptions = [{ value: "", label: "Todos" }, ...QUIEN_PAGA_OPTIONS.map((o) => ({ value: o.value, label: o.label.replace(/^(Si|No), /, "") }))];
 
-  const antiguedad = stats ? Math.round(stats.antiguedadMediaDias) : 0;
-
   return (
     <div className="flex flex-col gap-6">
       {/* Encabezado */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <p className="max-w-xl text-[14px] text-ink-300">
-              {isPrivileged
-                ? "Controla las multas de la flota: vencimientos, pagos y lo que hay que descontar a los choferes."
-                : "Tus multas: estado, vencimiento y si se te va a descontar."}
-            </p>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="glass-surface-sm flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-ink-300">
-            <CalendarIcon className="h-4 w-4 shrink-0" />
-            <input
-              type="date"
-              aria-label="Recepcion desde"
-              value={filters.from}
-              max={filters.to || undefined}
-              onChange={(e) => setFilter("from", e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-ink-50 outline-none"
-            />
-            <span>-</span>
-            <input
-              type="date"
-              aria-label="Recepcion hasta"
-              value={filters.to}
-              min={filters.from || undefined}
-              onChange={(e) => setFilter("to", e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-ink-50 outline-none"
-            />
-          </div>
-          {isPrivileged && (
-            <Link to="/finanzas/multas/new" state={{ backgroundLocation: location }}>
-              <Button className="w-full sm:w-auto sm:px-6">
-                <PlusIcon className="h-4 w-4" />
-                Nueva multa
-              </Button>
-            </Link>
-          )}
-        </div>
+          Controla las multas de la flota: vencimientos, pagos y lo que hay que descontar a los choferes.
+        </p>
+        {isPrivileged && (
+          <Link to="/finanzas/multas/new" state={{ backgroundLocation: location }}>
+            <Button className="w-full sm:w-auto sm:px-6">
+              <PlusIcon className="h-4 w-4" />
+              Nueva multa
+            </Button>
+          </Link>
+        )}
       </div>
 
       <Alert>{error}</Alert>
       {!summary && !error && <PageLoader />}
 
-      {summary && stats && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex min-w-0 flex-col gap-6">
-            {/* Indicadores */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
-              <MancatoKpi
-                icon={EuroIcon}
-                label="Total por pagar"
-                value={formatCurrency(stats.totalPorPagar)}
-                deltaPct={stats.totalPorPagarDeltaPct}
-                deltaLabel="vs. mes anterior"
-                detail="Vencidas y pendientes"
-                color="#ff3b57"
-              />
-              <MancatoKpi
-                icon={GavelIcon}
-                label="Multas por pagar"
-                value={stats.multasAbiertas}
-                detail={`de ${stats.multasTotales} totales`}
-                color="#ff8a1a"
-              />
-              <MancatoKpi
-                icon={FileTextIcon}
-                label="A descontar"
-                value={formatCurrency(stats.aDescontar.total)}
-                detail={`${stats.aDescontar.count} ${stats.aDescontar.count === 1 ? "multa" : "multas"} sin descontar`}
-                color="#a78bfa"
-              />
-              <MancatoKpi
-                icon={ClockIcon}
-                label="Antiguedad media"
-                value={`${antiguedad} ${antiguedad === 1 ? "dia" : "dias"}`}
-                deltaPct={stats.antiguedadMediaDeltaPct}
-                deltaLabel="vs. mes anterior"
-                detail="Desde la recepcion"
-                color="#22d3ee"
-              />
-            </div>
+      {summary && (
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Una sola barra: buscador + boton "Filtros" (abre un panel con el resto), como en Mancato Pagamento */}
+          <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2">
+            <TextField
+              id="filtro-q"
+              icon={SearchIcon}
+              placeholder="Buscar verbale, targa, chofer o comentario"
+              aria-label="Buscar"
+              value={filters.q}
+              onChange={(e) => setFilter("q", e.target.value)}
+              className="min-w-[220px] flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-expanded={filtersOpen}
+              className={clsx(
+                "flex items-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium transition-colors hover:bg-line/10",
+                filtersOpen || activeFilterCount > 0 ? "text-ink-50" : "text-ink-300"
+              )}
+            >
+              <FilterIcon className="h-4 w-4" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[11px] font-semibold text-accent-300">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+            </button>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                title="Limpiar filtros"
+                className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10"
+              >
+                <RefreshIcon className="h-4 w-4" />
+                <span className="hidden md:inline">Limpiar</span>
+              </button>
+            )}
 
-            {/* Filtros */}
-            <div className="glass-surface-sm rounded-2xl p-4">
-              <div className={clsx("flex items-center justify-between gap-3", filtersOpen && "mb-3")}>
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen((prev) => !prev)}
-                  aria-expanded={filtersOpen}
-                  className="flex items-center gap-2 text-[13px] font-medium text-ink-300 hover:text-ink-50"
-                >
-                  <FilterIcon className="h-4 w-4" />
-                  Filtros
-                  {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[11px] font-semibold text-accent-300">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                  <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
-                </button>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="flex items-center gap-1.5 rounded-lg glass-input px-3 py-1.5 text-[12px] font-medium text-ink-50 hover:bg-line/10"
-                  >
-                    <RefreshIcon className="h-3.5 w-3.5" />
-                    Limpiar filtros
-                  </button>
-                )}
-              </div>
-
-              <div className={clsx("flex flex-wrap items-end gap-3", !filtersOpen && "hidden")}>
-                <TextField
-                  id="filtro-q"
-                  label="Buscar"
-                  icon={SearchIcon}
-                  placeholder="Verbale, targa, chofer o comentario"
-                  value={filters.q}
-                  onChange={(e) => setFilter("q", e.target.value)}
-                  className="min-w-[240px] flex-[2_1_260px]"
-                />
-                <div className="min-w-[140px] flex-[1_1_140px]">
+            {filtersOpen && (
+              <div className="glass-surface absolute right-0 top-full z-30 mt-2 grid w-full max-w-[640px] grid-cols-1 gap-3 rounded-2xl bg-background p-4 shadow-2xl sm:grid-cols-2">
+                <div className="min-w-0">
                   <Select
                     id="filtro-estado"
                     label="Estado"
@@ -832,8 +808,17 @@ const MultasOficinaPage = () => {
                     onChange={(e) => setFilter("estado", e.target.value)}
                   />
                 </div>
+                <div className="min-w-0">
+                  <Select
+                    id="filtro-titular"
+                    label="Titular"
+                    options={TITULAR_FILTER_OPTIONS}
+                    value={filters.titular}
+                    onChange={(e) => setFilter("titular", e.target.value)}
+                  />
+                </div>
                 {isPrivileged && (
-                  <div className="min-w-[170px] flex-[1_1_170px]">
+                  <div className="min-w-0">
                     <Select
                       id="filtro-chofer"
                       label="Chofer"
@@ -843,7 +828,7 @@ const MultasOficinaPage = () => {
                     />
                   </div>
                 )}
-                <div className="min-w-[130px] flex-[1_1_130px]">
+                <div className="min-w-0">
                   <TextField
                     id="filtro-targa"
                     label="Targa"
@@ -859,7 +844,26 @@ const MultasOficinaPage = () => {
                     ))}
                   </datalist>
                 </div>
-                <div className="min-w-[150px] flex-[1_1_150px]">
+                {/* Rango de fechas sobre la fecha de recepcion; se puede dejar uno vacio. */}
+                <TextField
+                  id="filtro-desde"
+                  label="Recepcion desde"
+                  type="date"
+                  value={filters.from}
+                  max={filters.to || undefined}
+                  onChange={(e) => setFilter("from", e.target.value)}
+                  className="min-w-0"
+                />
+                <TextField
+                  id="filtro-hasta"
+                  label="Recepcion hasta"
+                  type="date"
+                  value={filters.to}
+                  min={filters.from || undefined}
+                  onChange={(e) => setFilter("to", e.target.value)}
+                  className="min-w-0"
+                />
+                <div className="min-w-0">
                   <Select
                     id="filtro-quien-paga"
                     label="¿Chofer pago?"
@@ -868,7 +872,7 @@ const MultasOficinaPage = () => {
                     onChange={(e) => setFilter("quienPaga", e.target.value)}
                   />
                 </div>
-                <div className="min-w-[150px] flex-[1_1_150px]">
+                <div className="min-w-0">
                   <Select
                     id="filtro-orden"
                     label="Ordenar por"
@@ -877,7 +881,7 @@ const MultasOficinaPage = () => {
                     onChange={(e) => setFilter("orden", e.target.value)}
                   />
                 </div>
-                <label className="flex min-w-[210px] flex-[1_1_210px] cursor-pointer items-center gap-2.5 rounded-xl glass-input px-4 py-3 text-[14px] text-ink-50">
+                <label className="flex cursor-pointer items-center gap-2.5 self-end rounded-xl glass-input px-4 py-3 text-[14px] text-ink-50 sm:col-span-2">
                   <input
                     type="checkbox"
                     checked={filters.descuentoPendiente}
@@ -887,32 +891,28 @@ const MultasOficinaPage = () => {
                   Descuento pendiente
                 </label>
               </div>
-            </div>
-
-            {/* Acordeones por estado */}
-            <div className="flex flex-col gap-4">
-              {visibleEstados.map((estado) => (
-                <EstadoAccordion
-                  // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
-                  key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
-                  estado={estado.value}
-                  summary={summary[estado.value]}
-                  params={listParams}
-                  version={version}
-                  defaultOpen={
-                    summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")
-                  }
-                  showDriver={isPrivileged}
-                  location={location}
-                  isPrivileged={isPrivileged}
-                  onChanged={refresh}
-                  onExpand={() => setExpandedEstado(estado.value)}
-                />
-              ))}
-            </div>
+            )}
           </div>
 
-          <MultasSidebar stats={stats} summary={summary} isPrivileged={isPrivileged} onSeeDetails={applyFilter} />
+          {/* Acordeones por estado */}
+          <div className="flex flex-col gap-4">
+            {visibleEstados.map((estado) => (
+              <EstadoAccordion
+                // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
+                key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
+                estado={estado.value}
+                summary={summary[estado.value]}
+                params={listParams}
+                version={version}
+                defaultOpen={summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")}
+                showDriver={isPrivileged}
+                location={location}
+                isPrivileged={isPrivileged}
+                onChanged={refresh}
+                onExpand={() => setExpandedEstado(estado.value)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
