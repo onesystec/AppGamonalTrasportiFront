@@ -11,7 +11,7 @@ import { Textarea } from "../ui/Textarea";
 import { CheckCircleIcon, ClockIcon, EuroIcon } from "../ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { AREA_ACCESS_OPTIONS, userAreaKeys } from "../../lib/roles";
-import { MULTA_ESTADO_BY_VALUE, MULTA_PLAZO_POR_DEFECTO_DIAS, QUIEN_PAGA_OPTIONS } from "../../lib/multas";
+import { MULTA_ESTADO_BY_VALUE, MULTA_PLAZO_POR_DEFECTO_DIAS, QUIEN_PAGA_OPTIONS, TITULAR_OPTIONS } from "../../lib/multas";
 import { suggestMultaDriverRequest } from "../../lib/multas.api";
 import { addDaysToDay, parseCosto, romeToday } from "../../lib/mancato";
 import { listUsersRequest } from "../../lib/users.api";
@@ -100,6 +100,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     costo: multa ? String(multa.costo).replace(".", ",") : "",
     quienPaga: multa?.quienPaga ?? "",
     area: multa?.area ?? (myAreaKeys?.length === 1 ? myAreaKeys[0] : ""),
+    titular: multa?.titular ?? "",
     fechaInfraccion: multa?.fechaInfraccion ? new Date(multa.fechaInfraccion).toISOString().slice(0, 10) : "",
     horaInfraccion: multa?.horaInfraccion ?? "",
     fechaRecepcion: multa ? new Date(multa.fechaRecepcion).toISOString().slice(0, 10) : romeToday(),
@@ -216,6 +217,8 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       horaInfraccion: form.horaInfraccion,
       // En edicion "" quita el area (solo un Admin); al crear, si esta vacia no se manda.
       area: form.area,
+      // En edicion "" quita el titular; al crear, si esta vacio no se manda.
+      titular: form.titular,
       fechaRecepcion: form.fechaRecepcion,
       fechaVencimiento: vencimiento,
       comentarios: form.comentarios.trim(),
@@ -231,6 +234,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       if (!fields.fechaInfraccion) delete fields.fechaInfraccion;
       if (!fields.horaInfraccion) delete fields.horaInfraccion;
       if (!fields.area) delete fields.area;
+      if (!fields.titular) delete fields.titular;
     }
 
     onSubmit(fields, { multa: archivoMulta, comprobante });
@@ -329,6 +333,20 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           <span className="mt-1.5 block text-[12px] text-ink-400">
             Define quien la ve: los Responsables solo ven las multas de sus areas.
           </span>
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Titular del verbale</span>
+          <SegmentedControl
+            options={TITULAR_OPTIONS}
+            value={form.titular}
+            onChange={(v) => setField("titular", v === form.titular ? "" : v)}
+            className="w-full sm:w-auto"
+          />
+          <span className="mt-1.5 block text-[12px] text-ink-400">
+            A nombre de quien llego la multa: Gamonal Trasporti S.R.L. o la individual.
+          </span>
+          {err("titular") && <span className="mt-1.5 block text-[13px] text-danger-500">{err("titular")}</span>}
         </div>
 
         <div className="sm:col-span-2">
