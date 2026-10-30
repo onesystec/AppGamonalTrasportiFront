@@ -275,6 +275,7 @@ export const PermisosChoferPage = () => {
                     {selectedDay.serviciosDetalle?.length > 0 && (
                       <> &middot; {selectedDay.serviciosDetalle.length} servicio(s)</>
                     )}
+                    {selectedDay.adicionales?.length > 0 && <> &middot; {selectedDay.adicionales.length} trabajo(s) adicional(es)</>}
                     {selectedDay.permiso && (
                       <span className="block text-ink-300">
                         {permisoTipoLabel(selectedDay.permiso.tipo)}
@@ -295,7 +296,7 @@ export const PermisosChoferPage = () => {
                     )}
                   </div>
                 </div>
-                <ServiciosDelDia servicios={selectedDay.serviciosDetalle} />
+                <ServiciosDelDia servicios={selectedDay.serviciosDetalle} adicionales={selectedDay.adicionales} />
               </div>
             )}
           </section>

@@ -77,8 +77,9 @@ export const CalendarioAncho = ({ data, selected, onSelect }) => {
                     <span className={clsx(chipClass(dia.permiso), "block h-1.5 w-full p-0 sm:hidden")} aria-hidden="true" />
                   </>
                 )}
-                <span className="flex items-center gap-1.5">
+                <span className="flex flex-wrap items-center gap-x-1.5">
                   {dia.servicios > 0 && <span className="text-[10px] font-medium text-ink-200">{dia.servicios} serv.</span>}
+                  {dia.adicionales?.length > 0 && <span className="text-[10px] font-medium text-ink-200">+ adicional</span>}
                   {dia.completo && <span className="ml-auto h-0.5 w-4 rounded bg-danger-500" title="Dia completo" />}
                 </span>
               </span>
