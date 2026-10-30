@@ -7,6 +7,7 @@ import { PermisoCard } from "../../components/calendario/PermisoCard";
 import { ProximosPermisosCard } from "../../components/calendario/ProximosPermisosCard";
 import { RegistrarPermisoCard } from "../../components/calendario/RegistrarPermisoCard";
 import { ResumenMesCard } from "../../components/calendario/ResumenMesCard";
+import { ServiciosDelDia } from "../../components/calendario/ServiciosDelDia";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { Alert } from "../../components/ui/Alert";
 import { Avatar } from "../../components/ui/Avatar";
@@ -266,30 +267,35 @@ export const PermisosChoferPage = () => {
             </div>
 
             {selectedDay && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line/10 bg-line/[0.03] px-4 py-3">
-                <div className="text-[13px] text-ink-200">
-                  <b className="text-ink-50">{formatDateOnly(selectedDay.fecha)}</b>
-                  {DIA_ESTADOS[selectedDay.estado].label && <> &middot; {DIA_ESTADOS[selectedDay.estado].label}</>}
-                  {selectedDay.servicios > 0 && <> &middot; {selectedDay.servicios} servicio(s)</>}
-                  {selectedDay.permiso && (
-                    <span className="block text-ink-300">
-                      {permisoTipoLabel(selectedDay.permiso.tipo)}
-                      {selectedDay.permiso.tipo !== "DESCANSO" && `: ${selectedDay.permiso.motivo}`}
-                    </span>
-                  )}
+              <div className="mt-4 rounded-xl border border-line/10 bg-line/[0.03] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-[13px] text-ink-200">
+                    <b className="text-ink-50">{formatDateOnly(selectedDay.fecha)}</b>
+                    {DIA_ESTADOS[selectedDay.estado].label && <> &middot; {DIA_ESTADOS[selectedDay.estado].label}</>}
+                    {selectedDay.serviciosDetalle?.length > 0 && (
+                      <> &middot; {selectedDay.serviciosDetalle.length} servicio(s)</>
+                    )}
+                    {selectedDay.permiso && (
+                      <span className="block text-ink-300">
+                        {permisoTipoLabel(selectedDay.permiso.tipo)}
+                        {selectedDay.permiso.tipo !== "DESCANSO" && `: ${selectedDay.permiso.motivo}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDay.permiso && (
+                      <Button variant="ghost" className={SMALL} onClick={() => setRemoveId(selectedDay.permiso.id)}>
+                        Quitar permiso
+                      </Button>
+                    )}
+                    {["NO_TRABAJADO", "FUTURO", "HOY"].includes(selectedDay.estado) && (
+                      <Button className={SMALL} onClick={goToForm}>
+                        Justificar o marcar libre
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDay.permiso && (
-                    <Button variant="ghost" className={SMALL} onClick={() => setRemoveId(selectedDay.permiso.id)}>
-                      Quitar permiso
-                    </Button>
-                  )}
-                  {["NO_TRABAJADO", "FUTURO", "HOY"].includes(selectedDay.estado) && (
-                    <Button className={SMALL} onClick={goToForm}>
-                      Justificar o marcar libre
-                    </Button>
-                  )}
-                </div>
+                <ServiciosDelDia servicios={selectedDay.serviciosDetalle} />
               </div>
             )}
           </section>
