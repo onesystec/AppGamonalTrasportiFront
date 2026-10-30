@@ -3,12 +3,24 @@ import { DIA_ESTADOS, LEGEND_ESTADOS, permisoTipoLabel } from "../../lib/permiso
 
 const WEEKDAYS = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
 
-const dotClass = (estado) =>
-  clsx(
-    "h-2 w-2 shrink-0 rounded-full",
-    DIA_ESTADOS[estado]?.dot,
-    estado === "PERMISO_PENDIENTE" && "h-2 w-2"
-  );
+// Casilla completa de color segun el estado (fondo + borde), para leer el mes de un vistazo.
+const TILE = {
+  TRABAJADO: "border-success-500/50 bg-success-500/20 hover:bg-success-500/30",
+  NO_TRABAJADO: "border-danger-500/50 bg-danger-500/20 hover:bg-danger-500/30",
+  JUSTIFICADO: "border-warning-500/50 bg-warning-500/20 hover:bg-warning-500/30",
+  PERMISO_PENDIENTE: "border-dashed border-warning-500 bg-warning-500/[0.06] hover:bg-warning-500/15",
+  DESCANSO: "border-[#8b5cf6]/50 bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30",
+  PROGRAMADO: "border-accent-400/50 bg-accent-500/20 hover:bg-accent-500/30",
+};
+
+const NUMBER_TONE = {
+  TRABAJADO: "text-success-500",
+  NO_TRABAJADO: "text-danger-500",
+  JUSTIFICADO: "text-warning-500",
+  PERMISO_PENDIENTE: "text-warning-500",
+  DESCANSO: "text-[#a78bfa]",
+  PROGRAMADO: "text-accent-400",
+};
 
 const chipClass = (permiso) =>
   clsx(
@@ -16,8 +28,8 @@ const chipClass = (permiso) =>
     permiso.estado === "PENDIENTE"
       ? "border border-dashed border-warning-500 text-warning-500"
       : permiso.tipo === "DESCANSO"
-        ? "bg-[#8b5cf6]/20 text-[#a78bfa]"
-        : "bg-warning-500/20 text-warning-500"
+        ? "bg-[#8b5cf6]/30 text-[#c4b5fd]"
+        : "bg-warning-500/30 text-warning-500"
   );
 
 // Calendario del mes con celdas anchas (vista de la oficina): numero del dia, un punto con el estado
@@ -48,12 +60,12 @@ export const CalendarioAncho = ({ data, selected, onSelect }) => {
               aria-label={`${dia.fecha}: ${DIA_ESTADOS[dia.estado].label || "sin datos"}`}
               className={clsx(
                 "relative flex min-h-[62px] flex-col justify-between rounded-xl border p-1.5 text-left transition-colors sm:min-h-[82px] sm:p-2",
-                "border-line/10 bg-line/[0.03] hover:bg-line/10",
+                TILE[dia.estado] ?? "border-line/10 bg-line/[0.03] hover:bg-line/10",
                 dia.estado === "HOY" && "border-accent-400 bg-accent-500/10",
                 selected === dia.fecha && "ring-2 ring-ink-50/70"
               )}
             >
-              <span className={clsx("text-[13px] font-semibold sm:text-[14px]", muted ? "text-ink-400" : "text-ink-50")}>
+              <span className={clsx("text-[13px] font-semibold sm:text-[14px]", muted ? "text-ink-400" : (NUMBER_TONE[dia.estado] ?? "text-ink-50"))}>
                 {Number(dia.fecha.slice(8))}
               </span>
               <span className="flex min-w-0 flex-col gap-1">
@@ -66,9 +78,7 @@ export const CalendarioAncho = ({ data, selected, onSelect }) => {
                   </>
                 )}
                 <span className="flex items-center gap-1.5">
-                  {!muted && dia.estado !== "HOY" && dia.estado !== "PROGRAMADO" && <span className={dotClass(dia.estado)} />}
-                  {dia.estado === "PROGRAMADO" && <span className="h-2 w-2 rounded-full bg-accent-400" />}
-                  {dia.servicios > 0 && <span className="text-[10px] text-ink-300">{dia.servicios} serv.</span>}
+                  {dia.servicios > 0 && <span className="text-[10px] font-medium text-ink-200">{dia.servicios} serv.</span>}
                   {dia.completo && <span className="ml-auto h-0.5 w-4 rounded bg-danger-500" title="Dia completo" />}
                 </span>
               </span>
