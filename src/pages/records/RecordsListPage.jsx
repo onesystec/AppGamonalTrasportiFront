@@ -432,6 +432,22 @@ const SECTION_TO_AREA_HINT = {
   "extras-stefania": "otros",
 };
 
+const LIST_STATE_KEY = "records-list-state";
+const savedListState = () => {
+  const empty = { searchQuery: "", filters: EMPTY_RECORD_FILTERS, showUnpaidOnly: false };
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(LIST_STATE_KEY) ?? "null");
+    if (!saved) return empty;
+    return {
+      searchQuery: typeof saved.searchQuery === "string" ? saved.searchQuery : "",
+      filters: { ...EMPTY_RECORD_FILTERS, ...(saved.filters ?? {}) },
+      showUnpaidOnly: saved.showUnpaidOnly === true,
+    };
+  } catch {
+    return empty;
+  }
+};
+
 export const RecordsListPage = ({ section: sectionHint }) => {
   const location = useLocation();
   const { version, refresh: refreshRecords } = useDataRefresh("records");
@@ -481,12 +497,12 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   // Buscador (codigo/cliente/chofer/destino): reemplaza el acordeon de la izquierda
   // mientras hay una busqueda activa. null = sin busqueda, [] = sin resultados.
   // Precarga con ?q= (buscador de la barra superior del AppShell).
-  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? savedListState().searchQuery);
   const [searchResults, setSearchResults] = useState(null);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searching, setSearching] = useState(false);
   // Filtros (chofer, vehiculo, cliente, estado, tipo, fechas): se combinan con el texto y buscan en todo el historico.
-  const [filters, setFilters] = useState(EMPTY_RECORD_FILTERS);
+  const [filters, setFilters] = useState(() => savedListState().filters);
   const activeFilters = countActiveFilters(filters);
 
   // Filtro "Solo sin cobrar": igual que el buscador, reemplaza el acordeon mientras
@@ -494,8 +510,18 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   // que puede ser miles de registros). Pide el mes completo con detalle economico
   // (listRecordsByMonthRequest) porque el resumen liviano del acordeon no trae
   // pagoRecibido.
-  const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
+  const [showUnpaidOnly, setShowUnpaidOnly] = useState(() => savedListState().showUnpaidOnly);
   const [unpaidRecords, setUnpaidRecords] = useState(null);
+
+  // Busqueda, filtros y "Solo sin cobrar" se recuerdan al recargar la pagina (solo mientras la pestana siga abierta).
+  useEffect(() => {
+    if (!isPrivileged) return;
+    try {
+      sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify({ searchQuery, filters, showUnpaidOnly }));
+    } catch {
+      /* sin almacenamiento: simplemente no se recuerda */
+    }
+  }, [isPrivileged, searchQuery, filters, showUnpaidOnly]);
 
   // Fuerza un re-render cada minuto para que "tiempo restante antes de vencer" no quede desactualizado.
   const [, setTick] = useState(0);
@@ -589,6 +615,15 @@ export const RecordsListPage = ({ section: sectionHint }) => {
     setUpdatingId(recordId);
     try {
       await updateRecordRequest(recordId, { estado });
+      // El acordeon, el resumen del mes, la busqueda y "sin cobrar" tambien muestran el estado: se cambia ahi mismo y despues se
+      // vuelve a pedir lo abierto para que todo quede al dia sin recargar la pagina.
+      const patch = (r) => (r.id === recordId ? { ...r, estado } : r);
+      setDayRecords((prev) => new Map([...prev].map(([key, rows]) => [key, rows.map(patch)])));
+      setSummary((prev) => prev?.map(patch) ?? prev);
+      setSearchResults((prev) => prev?.map(patch) ?? prev);
+      setUnpaidRecords((prev) => prev?.map(patch) ?? prev);
+      setRecords((prev) => prev?.map(patch) ?? prev);
+      refreshRecords();
       setPendingRecords((prev) => {
         if (!prev) return prev;
         // Si el nuevo estado ya no es "en proceso" (ej. Entregado/Anulado), sale del
