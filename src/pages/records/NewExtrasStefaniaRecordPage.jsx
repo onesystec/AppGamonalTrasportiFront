@@ -169,6 +169,18 @@ export const NewExtrasStefaniaRecordPage = () => {
 
           <Alert>{formError}</Alert>
 
+          <div className="mt-5">
+            <Textarea
+              id="descripcion"
+              label="Descripcion"
+              placeholder="Detalle del servicio a realizar..."
+              value={form.descripcion}
+              onChange={handleChange("descripcion")}
+              error={fieldErrors.descripcion?.[0]}
+              required
+            />
+          </div>
+
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <SearchableSelect
@@ -272,18 +284,6 @@ export const NewExtrasStefaniaRecordPage = () => {
               salidaError={fieldErrors.salida?.[0]}
               error={fieldErrors.stops?.[0]}
               disabled={submitting}
-            />
-          </div>
-
-          <div className="mt-5">
-            <Textarea
-              id="descripcion"
-              label="Descripcion"
-              placeholder="Detalle del servicio a realizar..."
-              value={form.descripcion}
-              onChange={handleChange("descripcion")}
-              error={fieldErrors.descripcion?.[0]}
-              required
             />
           </div>
         </GlassCard>

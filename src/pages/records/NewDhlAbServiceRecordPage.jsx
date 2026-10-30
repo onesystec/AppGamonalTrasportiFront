@@ -253,6 +253,18 @@ export const NewDhlAbServiceRecordPage = () => {
 
           <Alert>{formError}</Alert>
 
+          <div className="mt-5">
+            <Textarea
+              id="descripcion"
+              label="Descripcion"
+              placeholder="Detalle del servicio a realizar..."
+              value={form.descripcion}
+              onChange={handleChange("descripcion")}
+              error={fieldErrors.descripcion?.[0]}
+              required
+            />
+          </div>
+
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <SearchableSelect
@@ -358,18 +370,6 @@ export const NewDhlAbServiceRecordPage = () => {
               value={form.aplicativo}
               onChange={(v) => setField("aplicativo", v)}
               error={fieldErrors.aplicativo?.[0]}
-            />
-          </div>
-
-          <div className="mt-5">
-            <Textarea
-              id="descripcion"
-              label="Descripcion"
-              placeholder="Detalle del servicio a realizar..."
-              value={form.descripcion}
-              onChange={handleChange("descripcion")}
-              error={fieldErrors.descripcion?.[0]}
-              required
             />
           </div>
 
