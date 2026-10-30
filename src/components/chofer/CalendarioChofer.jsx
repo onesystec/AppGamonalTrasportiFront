@@ -15,7 +15,7 @@ const TONES = {
   red: { box: "border-danger-500/50", icon: "bg-danger-500 text-white" },
   amber: { box: "border-warning-500/50", icon: "bg-warning-500/20 text-warning-500 ring-2 ring-warning-500" },
   blue: { box: "border-accent-400/40", icon: "bg-accent-500/20 text-accent-400" },
-  violet: { box: "border-[#8b5cf6]/40", icon: "bg-[#8b5cf6]/20 text-[#a78bfa]" },
+  violet: { box: "border-line/20", icon: "bg-line/10 text-ink-300" },
 };
 
 // Comparacion con el mes anterior (mismo tramo del mes si es el mes en curso). "goodWhen": hacia donde

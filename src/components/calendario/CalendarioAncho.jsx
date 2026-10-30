@@ -9,7 +9,7 @@ const TILE = {
   NO_TRABAJADO: "border-danger-500/50 bg-danger-500/20 hover:bg-danger-500/30",
   JUSTIFICADO: "border-warning-500/50 bg-warning-500/20 hover:bg-warning-500/30",
   PERMISO_PENDIENTE: "border-dashed border-warning-500 bg-warning-500/[0.06] hover:bg-warning-500/15",
-  DESCANSO: "border-[#8b5cf6]/50 bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30",
+  DESCANSO: "border-line/10 bg-line/[0.05] hover:bg-line/10",
   PROGRAMADO: "border-accent-400/50 bg-accent-500/20 hover:bg-accent-500/30",
 };
 
@@ -18,7 +18,7 @@ const NUMBER_TONE = {
   NO_TRABAJADO: "text-danger-500",
   JUSTIFICADO: "text-warning-500",
   PERMISO_PENDIENTE: "text-warning-500",
-  DESCANSO: "text-[#a78bfa]",
+  DESCANSO: "text-ink-300",
   PROGRAMADO: "text-accent-400",
 };
 
@@ -28,7 +28,7 @@ const chipClass = (permiso) =>
     permiso.estado === "PENDIENTE"
       ? "border border-dashed border-warning-500 text-warning-500"
       : permiso.tipo === "DESCANSO"
-        ? "bg-[#8b5cf6]/30 text-[#c4b5fd]"
+        ? "bg-line/10 text-ink-300"
         : "bg-warning-500/30 text-warning-500"
   );
 

@@ -24,7 +24,7 @@ export const ResumenMesCard = ({ data }) => {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2.5">
         <Tile label="Dias trabajados" value={s.trabajados} total={total} color="#22e093" />
-        <Tile label="Dias libres" value={s.descansos} total={total} color="#8b5cf6" />
+        <Tile label="Dias libres" value={s.descansos} total={total} color="#94a3b8" />
         <Tile label="Dias justificados" value={s.justificados} total={total} color="#ff8a1a" />
         <Tile label="Dias no trabajados" value={s.noTrabajados} total={total} color="#ff3b57" />
       </div>

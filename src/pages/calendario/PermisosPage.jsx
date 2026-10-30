@@ -281,7 +281,7 @@ export const PermisosPage = () => {
                   <Count value={summary.trabajados} tone="text-success-500" label="Trabajados" />
                   <Count value={summary.noTrabajados} tone="text-danger-500" label="No trab." />
                   <Count value={summary.justificados} tone="text-warning-500" label="Justif." />
-                  <Count value={summary.descansos} tone="text-[#a78bfa]" label="Libres" />
+                  <Count value={summary.descansos} tone="text-ink-300" label="Libres" />
                 </span>
                 <ChevronRightIcon className="h-4 w-4 shrink-0 text-ink-400" />
               </Link>

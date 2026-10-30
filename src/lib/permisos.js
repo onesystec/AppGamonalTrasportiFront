@@ -41,7 +41,7 @@ export const DIA_ESTADOS = {
     cell: "border border-dashed border-warning-500 text-warning-500 font-semibold",
     dot: "border border-dashed border-warning-500",
   },
-  DESCANSO: { label: "Dia libre", cell: "bg-[#8b5cf6]/20 text-[#a78bfa] font-semibold", dot: "bg-[#8b5cf6]" },
+  DESCANSO: { label: "Dia libre", cell: "bg-line/[0.05] text-ink-300 font-semibold", dot: "bg-ink-400" },
   PROGRAMADO: { label: "Servicio programado", cell: "bg-accent-500/15 text-accent-400 font-semibold", dot: "bg-accent-400" },
   HOY: { label: "Hoy", cell: "text-ink-50", dot: "" },
   FUTURO: { label: "", cell: "text-ink-300", dot: "" },
@@ -75,7 +75,7 @@ const PRO_BORDER = {
   NO_TRABAJADO: "border-danger-500/40",
   JUSTIFICADO: "border-warning-500/50",
   PERMISO_PENDIENTE: "border-dashed border-warning-500",
-  DESCANSO: "border-[#8b5cf6]/50",
+  DESCANSO: "border-line/10",
   PROGRAMADO: "border-accent-400/40",
 };
 
