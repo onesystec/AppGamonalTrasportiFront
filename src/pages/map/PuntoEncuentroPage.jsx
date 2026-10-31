@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { MapSectionTabs } from "../../components/layout/MapSectionTabs";
 import { Alert } from "../../components/ui/Alert";
-import { ChevronLeftIcon, MapPinIcon } from "../../components/ui/icons";
+import { copyText } from "../../components/ui/CopyButton";
+import { CheckIcon, ChevronLeftIcon, CopyIcon, MapPinIcon } from "../../components/ui/icons";
 import { Spinner } from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -112,6 +113,14 @@ const OrigenField = ({ letra, color, value, onChange, vehiculos }) => (
 // Una opcion de encuentro: que tiempo tarda cada uno y a que hora llegaria.
 const EncuentroItem = ({ item, active, onSelect, since }) => {
   const llega = (min) => horaRoma(since + min * 60000);
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+  // idle | ok | error
+  const [copiado, setCopiado] = useState("idle");
+  // Nombre + enlace de Google Maps: pegado en WhatsApp se abre directo para navegar hasta ahi.
+  const copiar = async () => {
+    setCopiado((await copyText(`${item.nombre}\n${mapsUrl}`)) ? "ok" : "error");
+    setTimeout(() => setCopiado("idle"), 1800);
+  };
   return (
     <li>
       <button
@@ -150,14 +159,22 @@ const EncuentroItem = ({ item, active, onSelect, since }) => {
           </span>
         </div>
       </button>
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-1 inline-block px-3 text-[11px] font-medium text-accent-400 hover:text-accent-300"
-      >
-        Ver en Google Maps
-      </a>
+      <div className="mt-1 flex items-center gap-3 px-3">
+        <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-accent-400 hover:text-accent-300">
+          Ver en Google Maps
+        </a>
+        <button
+          type="button"
+          onClick={copiar}
+          title="Copia el nombre y el enlace de Google Maps, listo para pegar en WhatsApp"
+          className={`inline-flex items-center gap-1 text-[11px] font-medium transition-colors ${
+            copiado === "ok" ? "text-success-500" : copiado === "error" ? "text-danger-500" : "text-accent-400 hover:text-accent-300"
+          }`}
+        >
+          {copiado === "ok" ? <CheckIcon className="h-3 w-3" /> : <CopyIcon className="h-3 w-3" />}
+          {copiado === "ok" ? "¡Copiado!" : copiado === "error" ? "No se pudo copiar" : "Copiar"}
+        </button>
+      </div>
     </li>
   );
 };
