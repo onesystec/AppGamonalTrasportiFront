@@ -37,6 +37,13 @@ const minutos = (min) => minutosTexto(Math.round(min));
 // Cuanto se desvian los dos del "mismo tiempo": verde hasta 5 min, ambar hasta 15, rojo si pasa.
 const diffColor = (min) => (min <= 5 ? "#22e093" : min <= 15 ? "#ffb020" : "#ff3b57");
 
+// Que sabemos del acceso al sitio: las areas de autopista son publicas; de los parkings solo se sabe el precio si OpenStreetMap lo dice.
+const CALIDAD = {
+  autopista: { label: "Área de autopista", className: "border-[#22e093]/50 text-[#22e093]" },
+  gratis: { label: "Gratis según OpenStreetMap", className: "border-[#22e093]/50 text-[#22e093]" },
+  sin_datos: { label: "Sin datos de acceso: confirmar", className: "border-[#ffb020]/60 text-[#ffb020]" },
+};
+
 const pinIcon = (color, scale = 11) => ({
   path: window.google.maps.SymbolPath.CIRCLE,
   scale,
@@ -116,9 +123,10 @@ const EncuentroItem = ({ item, active, onSelect, since }) => {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
   // idle | ok | error
   const [copiado, setCopiado] = useState("idle");
-  // Nombre + enlace de Google Maps: pegado en WhatsApp se abre directo para navegar hasta ahi.
+  // Nombre + enlace de Google Maps: pegado en WhatsApp se abre directo para navegar hasta ahi. Si no hay datos de acceso se avisa al chofer.
   const copiar = async () => {
-    setCopiado((await copyText(`${item.nombre}\n${mapsUrl}`)) ? "ok" : "error");
+    const aviso = item.calidad === "sin_datos" ? "\n(Sin datos de acceso: confirmar que se puede parar)" : "";
+    setCopiado((await copyText(`${item.nombre}\n${mapsUrl}${aviso}`)) ? "ok" : "error");
     setTimeout(() => setCopiado("idle"), 1800);
   };
   return (
@@ -144,6 +152,14 @@ const EncuentroItem = ({ item, active, onSelect, since }) => {
           </span>
         </div>
         <p className="mt-0.5 text-[11.5px] text-ink-400">{item.tipoLabel}</p>
+        {item.calidad && (
+          <p className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full border px-2 py-0.5 text-[10.5px] font-semibold ${CALIDAD[item.calidad].className}`}>
+              {CALIDAD[item.calidad].label}
+            </span>
+            {item.kmRuta >= 0.3 && <span className="text-[10.5px] text-ink-400">a {item.kmRuta} km de la ruta</span>}
+          </p>
+        )}
         <div className="mt-1.5 grid grid-cols-2 gap-x-3 text-[12px] text-ink-300">
           <span>
             <span className="font-bold" style={{ color: COLOR_A }}>A</span>{" "}
