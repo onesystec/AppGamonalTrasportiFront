@@ -37,11 +37,15 @@ const minutos = (min) => minutosTexto(Math.round(min));
 // Cuanto se desvian los dos del "mismo tiempo": verde hasta 5 min, ambar hasta 15, rojo si pasa.
 const diffColor = (min) => (min <= 5 ? "#22e093" : min <= 15 ? "#ffb020" : "#ff3b57");
 
-// Que sabemos del acceso al sitio: las areas de autopista son publicas; de los parkings solo se sabe el precio si OpenStreetMap lo dice.
+// Que sabemos del acceso al sitio (de mas a menos seguro): "confirmado" = area con una concesionaria de autopista (Autogrill, Chef Express...) a su
+// lado; "autopista" = area de servicio de autopista con nombre; "descanso" = area de descanso (publica, sin servicios); de los parkings solo se
+// sabe el precio si OpenStreetMap lo dice.
 const CALIDAD = {
-  autopista: { label: "Área de autopista", className: "border-[#22e093]/50 text-[#22e093]" },
-  gratis: { label: "Gratis según OpenStreetMap", className: "border-[#22e093]/50 text-[#22e093]" },
-  sin_datos: { label: "Sin datos de acceso: confirmar", className: "border-[#ffb020]/60 text-[#ffb020]" },
+  confirmado: { label: (marca) => `${marca} confirmado`, className: "border-[#22e093] bg-[#22e093]/15 text-[#22e093]" },
+  autopista: { label: () => "Área de servicio de autopista", className: "border-[#22e093]/50 text-[#22e093]" },
+  descanso: { label: () => "Área de descanso · sin servicios", className: "border-[#22e093]/30 text-[#22e093]/80" },
+  gratis: { label: () => "Parking gratis según OpenStreetMap", className: "border-[#22e093]/30 text-[#22e093]/80" },
+  sin_datos: { label: () => "Sin datos de acceso: confirmar", className: "border-[#ffb020]/60 text-[#ffb020]" },
 };
 
 const pinIcon = (color, scale = 11) => ({
@@ -155,7 +159,7 @@ const EncuentroItem = ({ item, active, onSelect, since }) => {
         {item.calidad && (
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className={`rounded-full border px-2 py-0.5 text-[10.5px] font-semibold ${CALIDAD[item.calidad].className}`}>
-              {CALIDAD[item.calidad].label}
+              {CALIDAD[item.calidad].label(item.marca)}
             </span>
             {item.kmRuta >= 0.3 && <span className="text-[10.5px] text-ink-400">a {item.kmRuta} km de la ruta</span>}
           </p>
