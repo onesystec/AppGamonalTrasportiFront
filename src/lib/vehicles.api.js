@@ -24,6 +24,17 @@ export const getEtaToDestinationRequest = (origenLat, origenLng, destino) =>
     .post("/vehiculos/eta-a-destino", { origenLat, origenLng, destino })
     .then((res) => res.data.data.eta);
 
+// Punto de encuentro de dos vehiculos/direcciones (Mapa): cada extremo es { lat, lng, label? } o { direccion }.
+export const findMeetingPointRequest = (a, b) => api.post("/vehiculos/punto-encuentro", { a, b }).then((res) => res.data.data);
+
+// Sitios para parar cerca del punto ideal (a y b ya son coordenadas). Aparte porque depende de Overpass, que puede tardar o estar caido.
+export const getMeetingSuggestionsRequest = (a, b) =>
+  api.post("/vehiculos/punto-encuentro/sugerencias", { a, b }).then((res) => res.data.data);
+
+// Las rutas de a y b hasta el punto elegido, para dibujarlas.
+export const getMeetingRoutesRequest = (a, b, punto) =>
+  api.post("/vehiculos/punto-encuentro/rutas", { a, b, punto }).then((res) => res.data.data);
+
 // Seccion "Area C" del Mapa (pestanias Pagado/No pagado) - todas las entradas, el
 // front separa por "pagado".
 export const listAreaCEntriesRequest = () =>

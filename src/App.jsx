@@ -44,6 +44,7 @@ const NewDriverPage = lazy(() =>
 );
 const MapPage = lazy(() => import("./pages/map/MapPage").then((m) => ({ default: m.MapPage })));
 const SeguimientoPage = lazy(() => import("./pages/map/SeguimientoPage").then((m) => ({ default: m.SeguimientoPage })));
+const PuntoEncuentroPage = lazy(() => import("./pages/map/PuntoEncuentroPage").then((m) => ({ default: m.PuntoEncuentroPage })));
 const AreaCPage = lazy(() => import("./pages/finanzas/AreaCPage").then((m) => ({ default: m.AreaCPage })));
 const MecanicaPage = lazy(() => import("./pages/mecanica/MecanicaPage").then((m) => ({ default: m.MecanicaPage })));
 const DailySummaryPage = lazy(() =>
@@ -360,6 +361,7 @@ function App() {
               <Route path="/combustible/*" element={<LegacyRedirect from="/combustible" to="/finanzas/combustible" />} />
               <Route path="/mapa" element={<RoleOnly privileged><MapPage /></RoleOnly>} />
               <Route path="/mapa/seguimiento" element={<RoleOnly privileged><SeguimientoPage /></RoleOnly>} />
+              <Route path="/mapa/encuentro" element={<RoleOnly privileged><PuntoEncuentroPage /></RoleOnly>} />
               {/* El Area C ahora vive en Finanzas; el enlace viejo sigue funcionando. */}
               <Route path="/mapa/area-c" element={<Navigate to="/finanzas/area-c" replace />} />
               {/* Control de Flota ya no existe: Area C esta en Finanzas y los excesos de velocidad en Vehiculos. */}
