@@ -150,6 +150,14 @@ const EncuentroItem = ({ item, active, onSelect, since }) => {
           </span>
         </div>
       </button>
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-1 inline-block px-3 text-[11px] font-medium text-accent-400 hover:text-accent-300"
+      >
+        Ver en Google Maps
+      </a>
     </li>
   );
 };
@@ -394,7 +402,7 @@ export const PuntoEncuentroPage = () => {
                       {sugerencias === null && (
                         <p className="mt-1.5 flex items-center gap-2 text-ink-400">
                           <Spinner className="h-3.5 w-3.5 border-line/20 border-t-line" />
-                          Buscando áreas de servicio y gasolineras cerca…
+                          Buscando áreas de servicio y parkings cerca…
                         </p>
                       )}
                     </div>
@@ -417,6 +425,14 @@ export const PuntoEncuentroPage = () => {
                   </p>
                 )}
               </div>
+
+              <footer className="border-t border-line/10 px-4 py-2 text-[10.5px] text-ink-400">
+                Áreas de servicio, de descanso y parkings de camiones: © colaboradores de{" "}
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-ink-200">
+                  OpenStreetMap
+                </a>
+                . Tiempos sin tráfico.
+              </footer>
             </aside>
           ) : (
             <button
