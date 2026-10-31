@@ -204,9 +204,18 @@ export const PuntoEncuentroPage = () => {
   const [aviso, setAviso] = useState(null);
   const searchIdRef = useRef(0);
   const pickedRef = useRef(false);
-  const [listOpen, setListOpen] = useState(
-    () => typeof window === "undefined" || window.matchMedia("(min-width: 640px)").matches
-  );
+  // El panel se puede ocultar solo en pantalla grande. En el celular manda "sheet": "full" = el formulario y las sugerencias ocupan todo (el mapa
+  // queda detras), "peek" = al elegir una sugerencia el panel baja y deja solo esa opcion abajo, con el mapa y el punto de encuentro arriba.
+  const [listOpen, setListOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches);
+  const [sheet, setSheet] = useState("full");
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     if (!isPrivileged) return;
@@ -245,6 +254,7 @@ export const PuntoEncuentroPage = () => {
   const search = async () => {
     const searchId = ++searchIdRef.current;
     pickedRef.current = false;
+    setSheet("full");
     setLoading(true);
     setError("");
     setResult(null);
@@ -287,6 +297,7 @@ export const PuntoEncuentroPage = () => {
   const select = (key) => {
     pickedRef.current = true;
     setSelectedKey(key);
+    if (isMobile) setSheet("peek");
   };
 
   const items = useMemo(() => {
@@ -332,10 +343,15 @@ export const PuntoEncuentroPage = () => {
     const bounds = new window.google.maps.LatLngBounds();
     [result.a, result.b, selected].forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
     [...pathA, ...pathB].forEach((p) => bounds.extend(p));
+    if (isMobile) {
+      // Con la opcion elegida abajo (la tarjeta ocupa unos 250 px) el mapa se encuadra en lo que queda libre arriba.
+      map.fitBounds(bounds, { top: 50, right: 40, bottom: sheet === "peek" ? 270 : 50, left: 40 });
+      return;
+    }
     const panelVisible = listOpen && typeof window !== "undefined" && window.innerWidth >= 640;
     map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: panelVisible ? 380 : 60 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, result, selected?.key, pathA, pathB]);
+  }, [map, result, selected?.key, pathA, pathB, sheet]);
 
   // Antes de buscar, se marca donde esta cada vehiculo elegido.
   const previews = useMemo(() => {
@@ -354,6 +370,12 @@ export const PuntoEncuentroPage = () => {
   if (!isPrivileged) return <Navigate to="/" replace />;
 
   const labelDe = (o, point) => (o.modo === "vehiculo" ? o.targa : (point?.label ?? o.direccion));
+  const peek = isMobile && sheet === "peek" && Boolean(selected);
+  const asideClass = !isMobile
+    ? "absolute bottom-3 left-3 top-3 w-[min(340px,calc(100%-1.5rem))] overflow-hidden"
+    : peek
+      ? "absolute inset-x-2 bottom-2"
+      : "absolute inset-0 overflow-y-auto rounded-3xl";
 
   return (
     <div className="flex flex-col gap-4">
@@ -371,7 +393,24 @@ export const PuntoEncuentroPage = () => {
 
       <div className="glass-surface relative overflow-hidden rounded-3xl">
         {listOpen ? (
-            <aside className="glass-surface absolute bottom-3 left-3 top-3 z-10 flex w-[min(340px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl">
+            <aside className={`glass-surface z-10 flex flex-col rounded-2xl ${asideClass}`}>
+              {peek ? (
+                <div className="flex items-center justify-between gap-2 px-3 pt-3">
+                  <p className="min-w-0 truncate text-[12px] text-ink-300">
+                    <span className="font-bold" style={{ color: COLOR_A }}>A</span> {labelDe(origenA, result.a)}
+                    {" → "}
+                    <span className="font-bold" style={{ color: COLOR_B }}>B</span> {labelDe(origenB, result.b)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSheet("full")}
+                    className="shrink-0 rounded-full border border-accent-500/60 bg-accent-500/15 px-3 py-1 text-[11.5px] font-semibold text-ink-50 transition-colors hover:bg-accent-500/25"
+                  >
+                    Ver sugerencias
+                  </button>
+                </div>
+              ) : (
+              <>
               <header className="flex items-center justify-between gap-2 border-b border-line/10 px-4 py-3">
                 <h2 className="flex items-center gap-2 text-[14px] font-semibold text-ink-50">
                   <MapPinIcon className="h-4 w-4 text-ink-300" />
@@ -382,7 +421,7 @@ export const PuntoEncuentroPage = () => {
                   onClick={() => setListOpen(false)}
                   aria-label="Ocultar el panel"
                   title="Ocultar panel"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-line/10 hover:text-ink-50"
+                  className="hidden h-7 w-7 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-line/10 hover:text-ink-50 sm:flex"
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
@@ -403,7 +442,7 @@ export const PuntoEncuentroPage = () => {
                 {error && <p className="text-[12px] text-[#ff3b57]">{error}</p>}
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="sm:flex-1 sm:overflow-y-auto">
                 {result && (
                   <>
                     <div className="border-b border-line/10 px-4 py-2.5 text-[12px] text-ink-300">
@@ -442,6 +481,14 @@ export const PuntoEncuentroPage = () => {
                   </p>
                 )}
               </div>
+              </>
+              )}
+
+              {peek && (
+                <ul className="p-2">
+                  <EncuentroItem item={selected} since={searchedAt} active onSelect={() => {}} />
+                </ul>
+              )}
 
               <footer className="border-t border-line/10 px-4 py-2 text-[10.5px] text-ink-400">
                 Áreas de servicio, de descanso y parkings de camiones: © colaboradores de{" "}
