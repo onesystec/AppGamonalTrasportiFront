@@ -407,7 +407,6 @@ export const SeguimientoPage = () => {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Seguimiento</h1>
-          <p className="mt-1 text-[14px] text-ink-300">Servicios en camino, en vivo, y los programados que aún no salieron.</p>
         </div>
         <MapSectionTabs />
       </div>
@@ -582,7 +581,7 @@ export const SeguimientoPage = () => {
             </button>
           ))}
 
-        <div className="h-[calc(100dvh-17rem)] min-h-[480px] w-full lg:h-[calc(100dvh-14rem)]">
+        <div className="h-[calc(100dvh-17rem)] min-h-[480px] w-full lg:h-[calc(100dvh-12.5rem)]">
           {!isLoaded ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="h-6 w-6 border-line/20 border-t-line" />
