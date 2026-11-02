@@ -19,7 +19,7 @@ import { useTarifasKm } from "../../hooks/useTarifasKm";
 import { formatCurrency } from "../../lib/format";
 import { createRecordRequest } from "../../lib/records.api";
 import { SolicitudBanner } from "../../components/solicitudes/SolicitudBanner";
-import { esSolicitudDeTexto, findClientByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
+import { esSolicitudDeTexto, findClientByName, findDriverByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
 import { DestinoSugerencias } from "../../components/records/DestinoSugerencias";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
@@ -128,6 +128,9 @@ export const NewDhlAbServiceRecordPage = () => {
         setClients(clientsData);
         const match = solicitud ? findClientByName(clientsData, solicitud.cliente) : null;
         if (match) setForm((prev) => (prev.clientId ? prev : { ...prev, clientId: match.id }));
+        // El chofer que indico el cliente se elige solo si el nombre corresponde a uno solo; si no, lo decide la oficina.
+        const driverMatch = solicitud?.choferIndicado ? findDriverByName(users.filter((u) => u.estado === "ACTIVO"), solicitud.choferIndicado) : null;
+        if (driverMatch) setForm((prev) => (prev.driverId ? prev : { ...prev, driverId: driverMatch.id }));
       })
       .catch((err) => setLoadError(parseApiError(err).message));
   }, []);

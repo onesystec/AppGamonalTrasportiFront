@@ -24,6 +24,7 @@ export const SolicitudDetalle = ({ solicitud: s }) => {
     <dl className="flex flex-col gap-2.5">
       <Fila label={t("detail.type")}>{s.servicioLabel}</Fila>
       <Fila label={t("form.client")}>{s.cliente}</Fila>
+      <Fila label="Chofer indicado">{s.choferIndicado}</Fila>
       <Fila label="Shipment">{s.shipment}</Fila>
       <Fila label="Order">{s.orderNumero}</Fila>
       <Fila label="Tipo">{s.tipoPedido}</Fila>

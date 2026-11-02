@@ -24,6 +24,7 @@ export const SolicitudBanner = ({ solicitud, clienteEncontrado }) => (
         {[solicitud.shipment && `Shipment ${solicitud.shipment}`, solicitud.orderNumero && `Order ${solicitud.orderNumero}`, solicitud.tipoPedido].filter(Boolean).join(" · ")}
       </span>
     )}
+    {solicitud.choferIndicado && <span className="mt-1 block text-ink-300">Chofer indicado por el cliente: {solicitud.choferIndicado}</span>}
     {!esSolicitudDeTexto(solicitud) && solicitud.descripcion && <span className="mt-1 block whitespace-pre-line text-ink-300">{solicitud.descripcion}</span>}
     {!clienteEncontrado && (
       <span className="mt-1 block text-warning-500">El cliente «{solicitud.cliente}» no esta en la lista: elige uno o crealo en el campo Cliente.</span>

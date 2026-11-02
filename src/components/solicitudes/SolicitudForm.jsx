@@ -28,6 +28,7 @@ const EMPTY = {
   shipment: "",
   orderNumero: "",
   tipoPedido: "",
+  choferIndicado: "",
 };
 
 const fromSolicitud = (s) => ({
@@ -47,6 +48,7 @@ const fromSolicitud = (s) => ({
   shipment: s.shipment ?? "",
   orderNumero: s.orderNumero ?? "",
   tipoPedido: s.tipoPedido ?? "",
+  choferIndicado: s.choferIndicado ?? "",
 });
 
 const aplicativosDe = (servicio) =>
@@ -121,6 +123,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       shipment: esMilano ? form.shipment : "",
       orderNumero: esMilano ? form.orderNumero : "",
       tipoPedido: esMilano ? form.tipoPedido : "",
+      choferIndicado: esMilano ? form.choferIndicado : "",
     };
     try {
       const saved = solicitud ? await updateSolicitudRequest(solicitud.id, payload) : await createSolicitudRequest(payload);
@@ -214,6 +217,30 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
               {lectura?.tipoOrigen === "eta" && <span className="mt-1.5 block text-[12px] text-ink-400">Suggerito in base all'ETA: cambialo se non è così.</span>}
               {lectura?.tipoOrigen === "texto" && <span className="mt-1.5 block text-[12px] text-ink-400">Letto dal testo.</span>}
             </div>
+            <TextField
+              id="sol-chofer"
+              label="Chofer (facoltativo)"
+              placeholder="Es. Kevin Fernandez"
+              value={form.choferIndicado}
+              onChange={onChange("choferIndicado")}
+              error={fieldErrors.choferIndicado?.[0]}
+            />
+            <label className="block" htmlFor="sol-milano">
+              <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Numero di Milano (facoltativo)</span>
+              <select
+                id="sol-milano"
+                value={form.aplicativo}
+                onChange={onChange("aplicativo")}
+                className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50"
+              >
+                <option value="">— Nessuno —</option>
+                {aplicativos.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </>
         )}
         <TextField id="sol-cliente" label={t("form.client")} value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />
@@ -241,7 +268,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         </label>
       )}
 
-      {aplicativos.length > 0 && (
+      {aplicativos.length > 0 && !esMilano && (
         <label className="block" htmlFor="sol-aplicativo">
           <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{t("form.numberLabel")}</span>
           <select id="sol-aplicativo" value={form.aplicativo} onChange={onChange("aplicativo")} className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50">

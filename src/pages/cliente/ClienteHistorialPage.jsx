@@ -246,6 +246,7 @@ export const ClienteHistorialPage = () => {
     sinAsignar: false,
     chofer: s.chofer,
     targa: s.targa,
+    omitirFaltantes: s.estado === "ANNULLATO",
   }));
   const loadDetalle = async (row) => {
     const fotos = verFotos ? await getClienteFotosRequest(row.id) : [];

@@ -130,6 +130,19 @@ export const solicitudToFormDefaults = (s) => ({
   aplicativo: s.aplicativo ?? "",
 });
 
+// Chofer (ficha) al que corresponde el nombre que escribio el cliente: todas las palabras del nombre dentro de "nombre apellido" y un solo candidato.
+// Si hay dudas (varios o ninguno) no se elige ninguno: lo decide la oficina.
+const plain = (value) => String(value ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export const findDriverByName = (drivers, name) => {
+  const tokens = plain(name).split(" ").filter(Boolean);
+  if (!tokens.length) return null;
+  const hits = drivers.filter((d) => {
+    const full = ` ${plain(`${d.nombre} ${d.apellido}`)} `;
+    return tokens.every((t) => full.includes(` ${t} `));
+  });
+  return hits.length === 1 ? hits[0] : null;
+};
+
 const normalizeName = (name) => String(name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
 // Cliente (ficha) que coincide con el nombre escrito en la solicitud, si existe.
