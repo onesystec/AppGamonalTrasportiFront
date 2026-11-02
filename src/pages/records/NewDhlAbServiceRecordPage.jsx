@@ -126,7 +126,8 @@ export const NewDhlAbServiceRecordPage = () => {
         setDrivers(users.filter((u) => u.estado === "ACTIVO"));
         setVehicles(vehiclesData);
         setClients(clientsData);
-        const match = solicitud ? findClientByName(clientsData, solicitud.cliente) : null;
+        // En AB Service el "cliente" de la solicitud es el Customer del portal (el cliente final); el cliente del servicio es siempre AB.
+        const match = solicitud ? (findClientByName(clientsData, solicitud.cliente) ?? (solicitud.servicio === "AB_SERVICE" ? findClientByName(clientsData, "AB") : null)) : null;
         if (match) setForm((prev) => (prev.clientId ? prev : { ...prev, clientId: match.id }));
         // El chofer que indico el cliente se elige solo si el nombre corresponde a uno solo; si no, lo decide la oficina.
         const driverMatch = solicitud?.choferIndicado ? findDriverByName(users.filter((u) => u.estado === "ACTIVO"), solicitud.choferIndicado) : null;
@@ -373,7 +374,7 @@ export const NewDhlAbServiceRecordPage = () => {
               error={fieldErrors.extrasPiazzaZona?.[0]}
             />
 
-            {form.spedizzione === "DHL" && (
+            {(form.spedizzione === "DHL" || form.spedizzione === "AB_SERVICE") && (
               <>
                 <TextField
                   id="shipment"

@@ -73,13 +73,15 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
   const esAb = form.servicio === "AB_SERVICE";
   const esRoma = form.servicio === "DHL_ROMA";
   const esMilano = form.servicio === "DHL_MILANO";
+  // DHL Milano y AB Service se pueden rellenar pegando el texto (AB Service ademas localiza los lugares del mensaje).
+  const usaTexto = esMilano || esAb;
 
   // Lee el texto pegado y rellena lo que encuentra (Shipment, Order, cliente, tipo, ciudad, ETA, km); el resto lo completa quien envia.
   const leerTexto = async () => {
     setLeyendo(true);
     setFormError("");
     try {
-      const d = await leerTextoClienteRequest("DHL_MILANO", texto);
+      const d = await leerTextoClienteRequest(form.servicio, texto);
       setForm((prev) => ({
         ...prev,
         cliente: d.cliente ?? prev.cliente,
@@ -91,7 +93,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         tipoPedido: d.tipoPedido ?? prev.tipoPedido,
         descripcion: d.descripcion,
       }));
-      setLectura({ avisos: d.avisos ?? [], duplicados: d.duplicados ?? [], tipoOrigen: d.tipoOrigen ?? null });
+      setLectura({ avisos: d.avisos ?? [], duplicados: d.duplicados ?? [], tipoOrigen: d.tipoOrigen ?? null, lugares: d.lugares ?? [] });
     } catch (err) {
       setFormError(parseApiError(err).message);
     } finally {
@@ -118,12 +120,12 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       ...form,
       autRitiro: esAb ? form.autRitiro : "",
       // La descripcion de DHL Milano es el texto de DHL completo (si se pego); en AB Service, la del envio.
-      descripcion: esAb || esMilano ? form.descripcion : "",
+      descripcion: usaTexto ? form.descripcion : "",
       pagato50: esRoma ? form.pagato50 : false,
-      shipment: esMilano ? form.shipment : "",
-      orderNumero: esMilano ? form.orderNumero : "",
-      tipoPedido: esMilano ? form.tipoPedido : "",
-      choferIndicado: esMilano ? form.choferIndicado : "",
+      shipment: usaTexto ? form.shipment : "",
+      orderNumero: usaTexto ? form.orderNumero : "",
+      tipoPedido: usaTexto ? form.tipoPedido : "",
+      choferIndicado: usaTexto ? form.choferIndicado : "",
     };
     try {
       const saved = solicitud ? await updateSolicitudRequest(solicitud.id, payload) : await createSolicitudRequest(payload);
@@ -161,11 +163,11 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         {fieldErrors.servicio?.[0] && <span className="mt-1.5 block text-[13px] text-danger-500">{fieldErrors.servicio[0]}</span>}
       </div>
 
-      {esMilano && (
+      {usaTexto && (
         <div className="rounded-2xl border border-line/15 p-4">
           <Textarea
             id="sol-texto"
-            label="Incolla il testo di DHL (facoltativo)"
+            label={esAb ? "Incolla il messaggio di AB Service (facoltativo)" : "Incolla il testo di DHL (facoltativo)"}
             placeholder="Shipments: Customer ... Shipment # ... ETA ... Ship To City ... Order # ..."
             rows={5}
             value={texto}
@@ -179,6 +181,21 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
               Leggi testo
             </Button>
           </div>
+          {lectura?.lugares?.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5 rounded-xl border border-line/15 px-3 py-2 text-[12.5px]">
+              {lectura.lugares.map((l, i) => (
+                <li key={`${l.rol}-${i}`} className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                  <span className="shrink-0 font-semibold text-ink-100">{l.rol === "ritiro" ? "Ritiro" : "Consegna"}</span>
+                  <span className="text-ink-200">{l.texto}</span>
+                  {l.localizado ? (
+                    <span className="text-success-500">✓ Localizzato{l.localizado !== l.texto ? `: ${l.localizado}` : ""}</span>
+                  ) : (
+                    <span className="text-warning-500">⚠ Non localizzato: controlla l'indirizzo</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
           {lectura?.duplicados.length > 0 && (
             <div className="mt-3 rounded-xl border border-danger-500/40 bg-danger-500/10 px-3 py-2 text-[12.5px] text-ink-100">
               <span className="block font-semibold text-danger-500">Questo ordine sembra già inviato</span>
@@ -198,7 +215,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {esMilano && (
+        {usaTexto && (
           <>
             <TextField id="sol-shipment" label="Shipment" value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
             <TextField id="sol-order" label="Order" value={form.orderNumero} onChange={onChange("orderNumero")} error={fieldErrors.orderNumero?.[0]} />
@@ -225,22 +242,24 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
               onChange={onChange("choferIndicado")}
               error={fieldErrors.choferIndicado?.[0]}
             />
-            <label className="block" htmlFor="sol-milano">
-              <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Numero di Milano (facoltativo)</span>
-              <select
-                id="sol-milano"
-                value={form.aplicativo}
-                onChange={onChange("aplicativo")}
-                className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50"
-              >
-                <option value="">— Nessuno —</option>
-                {aplicativos.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {esMilano && (
+              <label className="block" htmlFor="sol-milano">
+                <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Numero di Milano (facoltativo)</span>
+                <select
+                  id="sol-milano"
+                  value={form.aplicativo}
+                  onChange={onChange("aplicativo")}
+                  className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50"
+                >
+                  <option value="">— Nessuno —</option>
+                  {aplicativos.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </>
         )}
         <TextField id="sol-cliente" label={t("form.client")} value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />

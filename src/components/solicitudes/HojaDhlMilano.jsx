@@ -51,7 +51,7 @@ const CeldaShipmentOrder = ({ s }) => {
 };
 
 // Que datos faltan en una fila (por columna). Vacio = completa.
-const faltantes = (s) => {
+const faltantes = (s, variante) => {
   if (s.omitirFaltantes) return {};
   const km = s.km;
   return {
@@ -61,7 +61,7 @@ const faltantes = (s) => {
     D: !s.ciudad,
     E: !s.eta,
     F: km == null || km === "",
-    G: !s.milano?.texto,
+    ...(variante === "ab" ? {} : { G: !s.milano?.texto }),
   };
 };
 
@@ -121,7 +121,9 @@ const Dato = ({ titulo, children }) => (
   </div>
 );
 
-export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Nessun servizio per questo mese." }) => {
+export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
+  // AB Service no usa el numero de Milano: sin la columna G.
+  const columnas = variante === "ab" ? COLUMNAS.filter((c) => c.letra !== "G") : COLUMNAS;
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
@@ -152,7 +154,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
             {/* Letras de columna, como en Sheets */}
             <tr>
               <th className="sticky left-0 z-20 w-12 border border-line/25 bg-line/10" />
-              {COLUMNAS.map((c) => (
+              {columnas.map((c) => (
                 <th key={c.letra} className={clsx("border border-line/25 bg-line/10 px-2 py-0.5 text-center text-[11px] font-normal text-ink-300", c.ancho)}>
                   {c.letra}
                 </th>
@@ -161,7 +163,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
             {/* Fila 1: los titulos */}
             <tr>
               <th className="sticky left-0 z-20 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">1</th>
-              {COLUMNAS.map((c) => (
+              {columnas.map((c) => (
                 <th key={c.letra} className="whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
                   {c.titulo}
                 </th>
@@ -171,7 +173,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
           <tbody>
             {rows.map((s, i) => {
               const extendida = abierta === s.id;
-              const falta = faltantes(s);
+              const falta = faltantes(s, variante);
               const tip = (col) => (falta[col] ? AVISO_FALTA[col](s) : undefined);
               return (
                 <Fragment key={s.id}>
@@ -209,18 +211,20 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
                     <td className={clsx(celda(s.id, "F", falta), "whitespace-nowrap text-right")} title={tip("F")} onClick={() => setSeleccion(`${s.id}:F`)}>
                       {s.km ?? ""}
                     </td>
-                    <td
-                      className={clsx(celda(s.id, "G", falta), "whitespace-nowrap text-center font-semibold", s.milano?.propuesto && "font-normal italic text-ink-300")}
-                      title={s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : tip("G")}
-                      onClick={() => setSeleccion(`${s.id}:G`)}
-                    >
-                      {s.milano?.texto ?? ""}
-                    </td>
+                    {variante !== "ab" && (
+                      <td
+                        className={clsx(celda(s.id, "G", falta), "whitespace-nowrap text-center font-semibold", s.milano?.propuesto && "font-normal italic text-ink-300")}
+                        title={s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : tip("G")}
+                        onClick={() => setSeleccion(`${s.id}:G`)}
+                      >
+                        {s.milano?.texto ?? ""}
+                      </td>
+                    )}
                   </tr>
                   {extendida && (
                     <tr>
                       <th className="sticky left-0 z-10 border border-line/25 bg-accent-500/25" />
-                      <td colSpan={COLUMNAS.length} className="border border-line/25 bg-line/[0.04] px-4 py-3">
+                      <td colSpan={columnas.length} className="border border-line/25 bg-line/[0.04] px-4 py-3">
                         <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
                       </td>
                     </tr>
@@ -231,7 +235,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
             {rows.length === 0 && (
               <tr>
                 <th className="sticky left-0 z-10 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">2</th>
-                <td colSpan={COLUMNAS.length} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
+                <td colSpan={columnas.length} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
                   {vacio}
                 </td>
               </tr>
@@ -289,7 +293,7 @@ export const filaDeServicio = (s, puntoTitulo) => ({
 
 // La hoja unica de DHL Milano: las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
 // cuyo servicio ya esta en la lista no se repite (se ve el servicio); si el servicio quedo fuera (otro mes, otra empresa), se sigue viendo la solicitud.
-export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio }) => {
+export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio, variante = "dhl" }) => {
   const idsServicios = new Set(servicios.map((r) => r.id));
   const rows = [
     ...solicitudes.filter((s) => !(s.recordId && idsServicios.has(s.recordId))).map(filaDeSolicitud),
@@ -308,7 +312,7 @@ export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, 
       bollas: fotos.filter((f) => f.codigo === "BOLLA").map((f) => ({ id: f.id, url: f.url, esPdf: f.esPdf })),
     };
   };
-  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} vacio={vacio} />;
+  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} variante={variante} vacio={vacio} />;
 };
 
 // Solo solicitudes (el usuario sin acceso al historial).

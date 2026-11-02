@@ -1477,7 +1477,7 @@ const RecordEditForm = ({
                   onChange={handleChangeZona}
                 />
               )}
-              {record.spedizzione === "DHL" && (
+              {(record.spedizzione === "DHL" || record.spedizzione === "AB_SERVICE") && (
                 <>
                   <TextField id="shipment" label="Shipment" value={form.shipment} onChange={handleChange("shipment")} />
                   <TextField id="orderNumero" label="Order" value={form.orderNumero} onChange={handleChange("orderNumero")} />

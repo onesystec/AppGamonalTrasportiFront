@@ -23,6 +23,9 @@ import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib
 
 const REFRESH_MS = 60 * 1000;
 
+// Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: AB Service no usa el numero de Milano).
+const HOJAS = { DHL_MILANO: "dhl", AB_SERVICE: "ab" };
+
 // En que pestana va un servicio ya hecho (Historial): DHL Milano / DHL Roma, AB Service y el resto como Extra Piazza.
 const tipoDeServicio = (r) => (r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "DHL_ROMA" : "DHL_MILANO") : r.spedizzione === "AB_SERVICE" ? "AB_SERVICE" : "EXTRA_PIAZZA");
 
@@ -241,7 +244,7 @@ export const ClienteRegistroPage = () => {
         </div>
       </div>
 
-      <div role="tablist" aria-label={t("reg.services")} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label={t("reg.services")} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
         {SOLICITUD_SERVICIOS.map((t) => (
           <button
             key={t.value}
@@ -262,26 +265,27 @@ export const ClienteRegistroPage = () => {
 
       <Alert>{error}</Alert>
       {!items && !error && <PageLoader />}
-      {items && servicio === "DHL_MILANO" && (
+      {items && HOJAS[servicio] && (
         <>
           {/* Escritorio: la hoja tipo Google Sheets con las solicitudes y los servicios. En el celular, las tablas de siempre. */}
           <div className="hidden lg:block">
             <HojaMixta
-              solicitudes={porServicio.DHL_MILANO}
-              servicios={serviciosPorTipo.DHL_MILANO}
+              solicitudes={porServicio[servicio]}
+              servicios={serviciosPorTipo[servicio]}
               onOpen={setSelectedId}
               verFotos={verFotos}
               estadoTexto={(r) => estadoTexto(r, t, language)}
+              variante={HOJAS[servicio]}
               vacio="Nessuna richiesta o servizio per questo mese."
             />
           </div>
           <div className="flex flex-col gap-4 lg:hidden">
-            <TablaRegistros items={visibles.DHL_MILANO} servicio={servicio} onSelect={setSelectedId} />
-            {serviciosPorTipo.DHL_MILANO.length > 0 && <TablaServicios servicios={serviciosPorTipo.DHL_MILANO} verFotos={verFotos} onFotos={setFotosDe} />}
+            <TablaRegistros items={visibles[servicio]} servicio={servicio} onSelect={setSelectedId} />
+            {serviciosPorTipo[servicio].length > 0 && <TablaServicios servicios={serviciosPorTipo[servicio]} verFotos={verFotos} onFotos={setFotosDe} />}
           </div>
         </>
       )}
-      {items && servicio !== "DHL_MILANO" && (
+      {items && !HOJAS[servicio] && (
         <div className="flex flex-col gap-4">
           <TablaRegistros items={visibles[servicio]} servicio={servicio} onSelect={setSelectedId} />
           {serviciosPorTipo[servicio].length > 0 && (
@@ -292,6 +296,35 @@ export const ClienteRegistroPage = () => {
           )}
         </div>
       )}
+
+      {/* Pestanas de hoja, como en Excel / Google Sheets: abajo, siempre a la vista, una por tipo de servicio. */}
+      <div
+        role="tablist"
+        aria-label={t("reg.services")}
+        className="sticky bottom-0 z-20 -mx-4 hidden items-end gap-0.5 border-t border-line/30 bg-popover px-4 lg:-mx-6 lg:flex lg:px-6"
+      >
+        {SOLICITUD_SERVICIOS.map((tab) => {
+          const activa = servicio === tab.value;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={activa}
+              onClick={() => setServicio(tab.value)}
+              className={clsx(
+                "-mt-px rounded-b-md border border-t-0 px-5 py-2 text-[13px] transition-colors",
+                activa
+                  ? "border-line/40 bg-line/15 font-semibold text-ink-50 shadow-[inset_0_-3px_0_0_#1a73e8]"
+                  : "border-transparent font-medium text-ink-300 hover:bg-line/10 hover:text-ink-50"
+              )}
+            >
+              {tab.label}
+              {items && <span className="ml-1.5 opacity-60">{visibles[tab.value].length + serviciosPorTipo[tab.value].length}</span>}
+            </button>
+          );
+        })}
+      </div>
 
       {selected && !form && (
         <VistaRapida
