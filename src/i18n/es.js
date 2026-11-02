@@ -143,6 +143,7 @@ export const es = {
   "reg.avgDelay": "Retraso medio",
   "reg.lateNow": "{count} servicios con retraso ahora",
   "reg.lateNow_one": "{count} servicio con retraso ahora",
+  "reg.contactOffice": "Escribir a la oficina",
   "reg.follow": "Seguir",
   "reg.estimated": "Llegada estimada {time}",
   "reg.exportCsv": "Exportar CSV",

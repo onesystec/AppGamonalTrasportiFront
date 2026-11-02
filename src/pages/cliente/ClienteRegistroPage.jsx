@@ -18,7 +18,7 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { editarCeldaRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
+import { editarCeldaRequest, getClienteMeRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
 import { horaRoma, minutosTexto } from "../../lib/seguimiento";
 import { currentMonth } from "../../lib/finanzas";
@@ -56,8 +56,24 @@ const Modal = ({ title, onClose, children }) => {
   );
 };
 
+// Escribir a la oficina por WhatsApp (solo si el servidor tiene el numero configurado); con "texto" el mensaje ya sale con el servicio de que se trata.
+const ContactarUfficio = ({ numero, texto, className }) => {
+  const t = useT();
+  if (!numero) return null;
+  return (
+    <a
+      href={`https://wa.me/${numero}${texto ? `?text=${encodeURIComponent(texto)}` : ""}`}
+      target="_blank"
+      rel="noreferrer"
+      className={className ?? "inline-flex items-center gap-1.5 rounded-xl border border-line/20 px-3.5 py-2 text-[13px] font-medium text-ink-100 transition hover:bg-line/10"}
+    >
+      {t("reg.contactOffice")}
+    </a>
+  );
+};
+
 // Vista rapida de un registro: todos sus datos, "Copiar para WhatsApp" y, mientras este pendiente, editar y borrar.
-const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
+const VistaRapida = ({ solicitud, contacto, onClose, onEdit, onDeleted }) => {
   const t = useT();
   const [confirmando, setConfirmando] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -85,6 +101,7 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
       <SolicitudDetalle solicitud={solicitud} />
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <SolicitudWhatsappButton solicitud={solicitud} />
+        <ContactarUfficio numero={contacto} texto={`Ciao, ho una domanda sulla richiesta ${solicitud.shipment || solicitud.cliente} (${solicitud.destinazione}).`} />
         {solicitud.estado === "PENDIENTE" && (
           <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={onEdit}>
             {t("common.edit")}
@@ -108,7 +125,7 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
 // Vista rapida de un servicio ya creado por la oficina: sus datos, las fotos del retiro y de la entrega y, para quien lo pidio, modificar los pocos datos
 // que puede cambiar (Shipment / Order o codigos, Tipo, Ciudad y ETA). El resto (cliente, km, numero, chofer...) lo decide la oficina. Cada cambio queda en el
 // historial y, si el servicio ya esta entregado, la oficina recibe un aviso.
-const VistaServicio = ({ fila, verFotos, verSeguimiento, onClose, onFotos, onSaved }) => {
+const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFotos, onSaved }) => {
   const t = useT();
   const { language } = useLanguage();
   const r = fila.servicio;
@@ -182,6 +199,7 @@ const VistaServicio = ({ fila, verFotos, verSeguimiento, onClose, onFotos, onSav
               </span>
             )}
             {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="!px-4 !py-2 !text-[13px]" />}
+            <ContactarUfficio numero={contacto} texto={`Ciao, ho una domanda sul servizio ${fila.codigo || r.codigo} (${fila.destino}, ${formatFechaHora(r.etaPlan)}).`} />
             <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
               {t("reg.editData")}
             </Button>
@@ -338,6 +356,7 @@ export const ClienteRegistroPage = () => {
   const [form, setForm] = useState(null); // null | { solicitud?: Solicitud }
   const [selectedId, setSelectedId] = useState(null);
   const [servicioSel, setServicioSel] = useState(null);
+  const [contacto, setContacto] = useState(null);
 
   const load = useCallback(
     () =>
@@ -356,6 +375,13 @@ export const ClienteRegistroPage = () => {
         .catch((err) => setError(parseApiError(err).message)),
     [month, verHistorial, verSeguimiento]
   );
+
+  // Numero de WhatsApp de la oficina (si esta configurado en el servidor).
+  useEffect(() => {
+    getClienteMeRequest()
+      .then((me) => setContacto(me?.contactoWhatsapp ?? null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setItems(null);
@@ -387,6 +413,7 @@ export const ClienteRegistroPage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <MonthSelector month={month} onChange={setMonth} allowFuture />
+          <ContactarUfficio numero={contacto} />
           <Button className="!w-auto px-5 py-2.5" onClick={() => setForm({})}>
             <PlusIcon className="h-4 w-4" />
             {t("reg.new")}
@@ -498,6 +525,7 @@ export const ClienteRegistroPage = () => {
       {selected && !form && (
         <VistaRapida
           solicitud={selected}
+          contacto={contacto}
           onClose={() => setSelectedId(null)}
           onEdit={() => setForm({ solicitud: selected })}
           onDeleted={() => {
@@ -543,6 +571,7 @@ export const ClienteRegistroPage = () => {
       {servicioSel && (
         <VistaServicio
           fila={servicioSel}
+          contacto={contacto}
           verFotos={verFotos}
           verSeguimiento={verSeguimiento}
           onClose={() => setServicioSel(null)}
