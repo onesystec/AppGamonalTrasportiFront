@@ -102,17 +102,8 @@ const columnasDe = (variante) =>
       ? [COL_CODIGO, COL_CLIENTE, COL_RITIRO, COL_CONSEGNA, COL_ETA, COL_KM]
       : [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM, colNumero(variante === "roma" ? "Roma" : "Milano")];
 
-// Quien subio la solicitud y cuando (si la fila viene de una solicitud): una persona de la empresa del cliente o de la oficina.
-const DatosCarga = ({ row }) =>
-  row.creadoPor ? (
-    <>
-      <Dato titulo="Caricato da">
-        {row.creadoPor}
-        {row.creadoPorRol ? ` · ${row.creadoPorRol}` : ""}
-      </Dato>
-      {row.creadoAt && <Dato titulo="Caricato il">{formatFechaHora(row.creadoAt)}</Dato>}
-    </>
-  ) : null;
+// Cuando se subio la solicitud (si la fila viene de una solicitud). Quien la subio no se muestra en la hoja.
+const DatosCarga = ({ row }) => (row.creadoAt ? <Dato titulo="Caricato il">{formatFechaHora(row.creadoAt)}</Dato> : null);
 
 const Panel = ({ row, detalle, verFotos }) => {
   if (row.sinAsignar) {
@@ -405,7 +396,6 @@ const EXTRA_CHOFER = {
 };
 const EXTRA_TARGA = { id: "I", titulo: "TARGA", ancho: 100, render: (s) => s.targa ?? "" };
 const EXTRA_BOLLA = { id: "J", titulo: "BOLLA", ancho: 90, render: (s, ctx) => <CeldaBolla s={s} onAbrir={ctx.abrirFotos} /> };
-const EXTRA_CARGADO_POR = { id: "K", titulo: "CARICATO DA", ancho: 190, render: (s) => (s.creadoPor ? `${s.creadoPor}${s.creadoPorRol ? ` · ${s.creadoPorRol}` : ""}` : "") };
 const EXTRA_CARGADO_EL = { id: "L", titulo: "CARICATO IL", ancho: 130, render: (s) => (s.creadoAt ? formatFechaHora(s.creadoAt) : "") };
 const useAnchosHoja = (variante) => {
   const [anchos, setAnchos] = useState({});
@@ -488,9 +478,9 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
     return () => observer.disconnect();
   }, [fija, anchoTabla]);
   // Las columnas extra que caben, en orden (sin saltarse ninguna). Si caben las esenciales (chofer, targa y bolla), ya no se necesita abrir la fila; quien la
-  // subio y cuando se suman solo si sobra mas espacio (si no caben, salen al pasar el cursor por el numero de fila).
+  // subio se suma solo si sobra mas espacio (si no cabe, sale al pasar el cursor por el numero de fila).
   const esenciales = [EXTRA_CHOFER, EXTRA_TARGA, ...(verFotos ? [EXTRA_BOLLA] : [])];
-  const extras = [...esenciales, EXTRA_CARGADO_POR, EXTRA_CARGADO_EL];
+  const extras = [...esenciales, EXTRA_CARGADO_EL];
   const extrasVisibles = [];
   let resto = fija ? libre : 0;
   for (const e of extras) {
@@ -674,7 +664,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                       onClick={todasCaben ? undefined : () => setAbierta(extendida ? null : s.id)}
                       title={
                         todasCaben
-                          ? [s.puntoTitulo, !extrasVisibles.includes(EXTRA_CARGADO_POR) && s.creadoPor && `Caricato da ${s.creadoPor}${s.creadoAt ? ` il ${formatFechaHora(s.creadoAt)}` : ""}`].filter(Boolean).join(" · ")
+                          ? [s.puntoTitulo, !extrasVisibles.includes(EXTRA_CARGADO_EL) && s.creadoAt && `Caricato il ${formatFechaHora(s.creadoAt)}`].filter(Boolean).join(" · ")
                           : `${s.puntoTitulo ?? ""} · clic para ver chofer, targa e bolla`
                       }
                       className={clsx(
