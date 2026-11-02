@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { Textarea } from "../ui/Textarea";
+import { useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
 import { formatFechaHora, SOLICITUD_SERVICIOS } from "../../lib/solicitudes";
 import { registrarDesdeTextoClienteRequest } from "../../lib/solicitudes.api";
@@ -19,7 +20,8 @@ const OPCIONES = SOLICITUD_SERVICIOS.flatMap((s) =>
     : [{ value: s.value, label: s.label, servicio: s.value }]
 );
 
-export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistered, onCancel }) => {
+export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", dia, onRegistered, onCancel }) => {
+  const t = useT();
   const [opcion, setOpcion] = useState(servicioInicial === "EXTRA_PIAZZA" ? "EXTRA_PIAZZA_MILANO" : servicioInicial);
   const { servicio, zona } = OPCIONES.find((o) => o.value === opcion) ?? OPCIONES[0];
   const [texto, setTexto] = useState("");
@@ -31,7 +33,7 @@ export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistere
     setSaving(true);
     setError("");
     try {
-      const res = await registrarDesdeTextoClienteRequest({ servicio, ...(zona ? { zona } : {}), texto, confirmar });
+      const res = await registrarDesdeTextoClienteRequest({ servicio, ...(zona ? { zona } : {}), ...(dia ? { fecha: dia } : {}), texto, confirmar });
       if (!res.creada) {
         setDuplicados(res.duplicados);
         return;
@@ -47,6 +49,12 @@ export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistere
   return (
     <div className="flex flex-col gap-4">
       <Alert>{error}</Alert>
+
+      {dia && (
+        <p className="rounded-xl bg-accent-500/10 px-3 py-2 text-[13px] text-accent-300">
+          {t("reg.forDay", { date: new Date(`${dia}T12:00:00Z`).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) })}
+        </p>
+      )}
 
       <div>
         <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Servizio</span>

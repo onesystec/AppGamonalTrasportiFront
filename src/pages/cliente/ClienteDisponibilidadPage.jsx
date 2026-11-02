@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -48,6 +48,9 @@ const Separador = ({ texto, columnas }) => (
 export const ClienteDisponibilidadPage = () => {
   const { user } = useAuth();
   const { t, locale } = useLanguage();
+  const navigate = useNavigate();
+  // Con el modulo REGISTRO, un dia con choferes libres se puede tocar para pedir un servicio ese dia.
+  const puedePedir = Boolean(user?.clienteModulos?.includes("REGISTRO"));
   const [rango, setRango] = useState(14);
   const [desde, setDesde] = useState(todayRome);
   const [data, setData] = useState(null);
@@ -128,6 +131,8 @@ export const ClienteDisponibilidadPage = () => {
             </span>
           </div>
 
+          {puedePedir && <p className="px-1 text-[12px] text-ink-400">{t("disp.client.requestHint")}</p>}
+
           <div className="glass-surface overflow-x-auto rounded-2xl p-3">
             <table className="border-separate border-spacing-0">
               <thead>
@@ -155,16 +160,20 @@ export const ClienteDisponibilidadPage = () => {
                   </th>
                   {data.dias.map((day) => {
                     const libres = data.choferes.libres[day] ?? 0;
+                    const pedible = puedePedir && libres > 0 && day >= hoy;
+                    const Celda = pedible ? "button" : "span";
                     return (
                       <td key={day} className="p-0.5">
-                        <span
+                        <Celda
+                          {...(pedible ? { type: "button", onClick: () => navigate("/cliente/registro", { state: { nuevaPara: day } }), title: t("disp.client.requestHint") } : {})}
                           className={clsx(
                             "flex h-8 w-full min-w-[26px] items-center justify-center rounded-md text-[12px] font-semibold",
-                            libres > 0 ? "bg-success-500/20 text-success-500" : "bg-danger-500/30 text-danger-500"
+                            libres > 0 ? "bg-success-500/20 text-success-500" : "bg-danger-500/30 text-danger-500",
+                            pedible && "cursor-pointer ring-success-500/60 transition hover:ring-2"
                           )}
                         >
                           {libres}
-                        </span>
+                        </Celda>
                       </td>
                     );
                   })}

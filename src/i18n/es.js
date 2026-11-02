@@ -153,6 +153,8 @@ export const es = {
   "reg.campo.eta": "ETA",
   "reg.campo.chofer": "Chofer",
   "reg.campo.targa": "Targa",
+  "reg.forDay": "Solicitud para el dia {date}",
+  "disp.client.requestHint": "Toca un dia con choferes libres para pedir un servicio.",
   "reg.follow": "Seguir",
   "reg.estimated": "Llegada estimada {time}",
   "reg.exportCsv": "Exportar CSV",

@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -390,6 +390,17 @@ export const ClienteRegistroPage = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [servicioSel, setServicioSel] = useState(null);
   const [contacto, setContacto] = useState(null);
+  // Desde Disponibilita ("Richiedi" en un dia libre): abre el registro nuevo ya con ese dia.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const nuevaPara = location.state?.nuevaPara ?? null;
+  useEffect(() => {
+    if (!nuevaPara) return;
+    setMonth(nuevaPara.slice(0, 7));
+    setForm({ dia: nuevaPara });
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuevaPara]);
 
   const load = useCallback(
     () =>
@@ -588,6 +599,7 @@ export const ClienteRegistroPage = () => {
             // Registrar nuevo: solo el texto. La fila aparece en la hoja (lo que falte, en rojo) y se completa y edita ahi.
             <RegistroDesdeTexto
               servicioInicial={servicio}
+              dia={form.dia}
               onCancel={() => setForm(null)}
               onRegistered={(saved) => {
                 setForm(null);
