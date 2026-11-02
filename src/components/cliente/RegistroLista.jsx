@@ -51,7 +51,8 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       origen: "solicitud",
       id: s.id,
       area: areaDeSolicitud(s),
-      codigo: [s.shipment, s.orderNumero].filter(Boolean).join(" / "),
+      codigo: s.shipment || s.orderNumero || "",
+      orden: s.shipment ? s.orderNumero : null,
       cliente: s.cliente,
       ritiro: s.ritiro,
       destino: s.destinazione,
@@ -74,7 +75,8 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       origen: "servicio",
       id: r.id,
       area: areaDeServicio(r),
-      codigo: [r.shipment ?? sol?.shipment, r.orderNumero ?? sol?.orderNumero].filter(Boolean).join(" / ") || r.codigo,
+      codigo: r.shipment ?? sol?.shipment ?? r.orderNumero ?? sol?.orderNumero ?? r.codigo,
+      orden: (r.shipment ?? sol?.shipment) ? (r.orderNumero ?? sol?.orderNumero ?? null) : null,
       cliente: r.cliente ?? "",
       ritiro: sol?.ritiro ?? null,
       destino: r.ciudad || r.destino,
@@ -187,7 +189,7 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
           {fila.destino || "—"}
         </span>
         <span className="block truncate text-[11px] text-ink-400">
-          {[fila.cliente, fila.ritiro && `${t("reg.pickup")}: ${fila.ritiro}`, fila.tipo, fila.km && `${fila.km} km`].filter(Boolean).join(" · ")}
+          {[fila.orden && `Order ${fila.orden}`, fila.cliente, fila.ritiro && `${t("reg.pickup")}: ${fila.ritiro}`, fila.tipo, fila.km && `${fila.km} km`].filter(Boolean).join(" · ")}
         </span>
       </span>
       <span className="min-w-0">
@@ -245,7 +247,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
       filas.filter(
         (f) =>
           (areaKey === AREA_ALL || f.area === areaKey) &&
-          (!q || [f.codigo, f.cliente, f.destino, f.ritiro, f.chofer, f.targa].some((v) => v && String(v).toLowerCase().includes(q)))
+          (!q || [f.codigo, f.orden, f.cliente, f.destino, f.ritiro, f.chofer, f.targa].some((v) => v && String(v).toLowerCase().includes(q)))
       ),
     [filas, areaKey, q]
   );

@@ -142,6 +142,7 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
 
   const filas = [
     [extra ? "Codice" : "Shipment", fila.codigo],
+    [extra ? "Secondo codice" : "Order", fila.orden],
     ["Cliente", fila.cliente],
     [t("reg.pickup"), fila.ritiro],
     [extra ? "Consegna" : "Città", fila.destino],
