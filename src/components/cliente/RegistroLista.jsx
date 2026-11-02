@@ -175,9 +175,66 @@ export const BotonGaleria = ({ servicio, onFotos, className }) => {
   );
 };
 
-const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+const EstadoFila = ({ fila }) => {
   const t = useT();
   const { language } = useLanguage();
+  return fila.origen === "solicitud" ? (
+    <EstadoPill estado={fila.solicitud.estado} />
+  ) : (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ESTADO_PILL[fila.servicio.estado] ?? "bg-line/15 text-ink-300"}`}>{estadoTexto(fila.servicio, t, language)}</span>
+  );
+};
+
+// En el celular cada servicio es una tarjeta (la tabla obligaria a desplazar de lado).
+const Tarjeta = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+  const t = useT();
+  const area = RECORD_AREAS.find((a) => a.key === fila.area);
+  const abrir = () => (fila.origen === "solicitud" ? onOpenSolicitud(fila.id) : onOpenServicio(fila));
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={abrir}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          abrir();
+        }
+      }}
+      className={clsx(
+        "flex w-full cursor-pointer flex-col gap-2 rounded-xl border p-3 text-left text-[12px] text-ink-200 transition-colors",
+        fila.retraso != null ? "border-danger-500/50 border-l-4 border-l-danger-500 bg-danger-500/[0.09]" : "border-line/10 bg-line/[0.03]"
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <AreaBadge areaKey={fila.area} size={32} />
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-semibold text-ink-50">{fila.codigo || "—"}</span>
+          <span className="block truncate text-[11px] text-ink-400">{area?.label}</span>
+        </div>
+        <EstadoFila fila={fila} />
+      </div>
+      <div className="min-w-0">
+        <span className="block text-[14px] text-ink-50">{fila.destino || "—"}</span>
+        <span className="block text-[12px] text-ink-400">
+          {[fila.orden && `Order ${fila.orden}`, fila.cliente, fila.ritiro && `${t("reg.pickup")}: ${fila.ritiro}`, fila.tipo, fila.km && `${fila.km} km`].filter(Boolean).join(" · ")}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="text-ink-300">{[fila.targa, fila.numero, fila.chofer].filter(Boolean).join(" · ") || "—"}</span>
+        <span className="flex items-center gap-2">
+          <span className="text-[13px] font-semibold text-ink-100">{fila.eta ? horaRoma(fila.eta) : <span className="text-danger-500">—</span>}</span>
+          {verFotos && fila.fotos > 0 && <BotonGaleria servicio={fila.servicio} onFotos={onFotos} />}
+        </span>
+      </div>
+      {fila.llegoAt && <span className="text-[11px] text-ink-400">{t("reg.arrived", { time: horaRoma(fila.llegoAt) })}</span>}
+      {fila.retraso != null && <RetrasoPill min={fila.retraso} className="self-start" />}
+    </div>
+  );
+};
+
+const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+  const t = useT();
   const area = RECORD_AREAS.find((a) => a.key === fila.area);
   // Todas las filas abren su vista rapida (la solicitud o el servicio). Es un div y no un boton porque lleva botones de fotos dentro.
   const abrir = () => (fila.origen === "solicitud" ? onOpenSolicitud(fila.id) : onOpenServicio(fila));
@@ -223,13 +280,7 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
         {fila.chofer ?? "—"}
       </span>
       <span>
-        {fila.origen === "solicitud" ? (
-          <EstadoPill estado={fila.solicitud.estado} />
-        ) : (
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ESTADO_PILL[fila.servicio.estado] ?? "bg-line/15 text-ink-300"}`}>
-            {estadoTexto(fila.servicio, t, language)}
-          </span>
-        )}
+        <EstadoFila fila={fila} />
       </span>
       <span className="min-w-0">
         <span className="min-w-0">
@@ -387,11 +438,18 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                     <ChevronIcon open={abierto} />
                   </button>
                   {abierto && (
-                    <div className="overflow-x-auto border-t border-line/10 pb-2">
-                      <Cabecera />
-                      <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
+                    <div className="border-t border-line/10 pb-2">
+                      <div className="hidden overflow-x-auto md:block">
+                        <Cabecera />
+                        <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
+                          {items.map((f) => (
+                            <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 p-2 md:hidden">
                         {items.map((f) => (
-                          <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
+                          <Tarjeta key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                         ))}
                       </div>
                     </div>
