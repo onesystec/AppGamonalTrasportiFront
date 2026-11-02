@@ -13,6 +13,9 @@ export const getClienteSeguimientoRequest = () => api.get("/cliente/seguimiento"
 // Recorrido que le falta a la furgoneta hasta la parada del cliente (null si ya llego o no hay posicion).
 export const getClienteRutaRequest = (id) => api.get(`/cliente/seguimiento/${id}/ruta`).then((res) => res.data.data.ruta);
 
+// Editar una celda de la hoja tipo Excel: origen "solicitud" | "servicio", su id y { campo: valor }. Queda en el historial; si el servicio ya se entrego, avisa a la oficina.
+export const editarCeldaRequest = ({ origen, id, cambios }) => api.patch("/cliente/celda", { origen, id, cambios }).then((res) => res.data.data);
+
 // Ancho de las columnas de las hojas tipo Excel: { dhl: { A: 120, ... }, ... }. Lo que fija una persona de la empresa lo ven todas.
 export const getHojaAnchosRequest = () => api.get("/cliente/hoja-anchos").then((res) => res.data.data.anchos);
 export const saveHojaAnchosRequest = (hoja, anchos) => api.put(`/cliente/hoja-anchos/${hoja}`, { anchos }).then((res) => res.data.data.anchos);

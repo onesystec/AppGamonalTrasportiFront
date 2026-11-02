@@ -43,6 +43,7 @@ import { FaltantesChips, hasFaltantes } from "../../components/records/Faltantes
 import { EMPTY_RECORD_FILTERS, RecordFilters, countActiveFilters } from "../../components/records/RecordFilters";
 import { ViajeChip } from "../../components/records/ViajeChip";
 import { DesvioChip } from "../../components/records/DesvioChip";
+import { CambiosButton } from "../../components/solicitudes/CambiosButton";
 import { SolicitudesButton } from "../../components/solicitudes/SolicitudesButton";
 import {
   listPendingRecordsRequest,
@@ -838,6 +839,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
             <>
               <MonthPicker value={viewDate} onChange={setViewDate} />
               <SolicitudesButton />
+              <CambiosButton />
               <button
                 type="button"
                 onClick={() => setShowCompactar(true)}

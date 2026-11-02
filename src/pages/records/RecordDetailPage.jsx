@@ -57,6 +57,7 @@ import {
   uploadRecordFileRequest,
 } from "../../lib/records.api";
 import { formatHours, pagaPorKm } from "../../lib/horas";
+import { CambiosDelServicio } from "../../components/solicitudes/CambiosButton";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
@@ -1053,6 +1054,7 @@ const RecordSummaryView = ({
       </div>
 
       <p className="mt-3 text-[15px] text-ink-200">{record.descripcion}</p>
+      {isPrivileged && <CambiosDelServicio recordId={record.id} />}
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {record.retiroPaqueteAt && (

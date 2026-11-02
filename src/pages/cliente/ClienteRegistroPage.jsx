@@ -284,6 +284,8 @@ export const ClienteRegistroPage = () => {
               verFotos={verFotos}
               estadoTexto={(r) => estadoTexto(r, t, language)}
               variante={HOJAS[servicio]}
+              editable
+              onCambio={load}
               vacio="Nessuna richiesta o servizio per questo mese."
             />
           </div>

@@ -41,7 +41,7 @@ export const usePushNotifications = () => {
         const recordId = action?.notification?.data?.recordId;
         navigate(user?.cargo === "CHOFER" ? "/" : `/mapa/seguimiento${recordId ? `?servicio=${recordId}` : ""}`);
       } else if (type === "multa") navigate("/finanzas/multas");
-      else if (type === "reprogramacion") {
+      else if (type === "reprogramacion" || type === "cambio-servicio") {
         const recordId = action?.notification?.data?.recordId;
         navigate(recordId ? `/records/${recordId}` : "/");
       } else if (type === "horas") navigate(user?.cargo === "CHOFER" ? "/mis-horas" : "/finanzas/horas");

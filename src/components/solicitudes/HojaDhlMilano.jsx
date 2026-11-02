@@ -1,9 +1,9 @@
 import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { parseApiError } from "../../lib/api";
-import { getClienteFotosRequest, getHojaAnchosRequest, saveHojaAnchosRequest } from "../../lib/cliente.api";
+import { editarCeldaRequest, getClienteFotosRequest, getHojaAnchosRequest, saveHojaAnchosRequest } from "../../lib/cliente.api";
 import { PUNTO_ESTADO } from "../cliente/TablaServicios";
-import { formatFechaHora, kmDeSolicitud } from "../../lib/solicitudes";
+import { formatFechaHora, kmDeSolicitud, toRomeInput } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 
 // Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano y DHL Roma. Se usa en el
@@ -62,6 +62,7 @@ const CeldaCodigos = ({ s }) => {
 // Las columnas: id (para la celda seleccionada), titulo, ancho, clase de la celda, que se dibuja, cuando "falta" el dato (celda roja) y su aviso.
 const COL_SHIPMENT = {
   id: "A",
+  campos: ["shipment", "orderNumero"],
   titulo: "SHIPMENT/ORDER",
   ancho: AJUSTADA,
   clase: "whitespace-nowrap",
@@ -69,13 +70,14 @@ const COL_SHIPMENT = {
   falta: (s) => !(s.shipment && s.orderNumero),
   aviso: (s) => (!s.shipment && !s.orderNumero ? "Mancano Shipment e Order" : !s.shipment ? "Manca lo Shipment" : "Manca l'Order"),
 };
-const COL_TIPO = { id: "B", titulo: "TIPO", ancho: AJUSTADA, clase: "whitespace-nowrap text-center font-semibold", render: (s) => s.tipoPedido ?? "", falta: (s) => !s.tipoPedido, aviso: () => "Manca il tipo (ASAP o SCHEDULED)" };
-const COL_CLIENTE = { id: "C", titulo: "CLIENTE", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.cliente, falta: (s) => !s.cliente, aviso: () => "Manca il cliente" };
-const COL_CIUDAD = { id: "D", titulo: "CIUDAD", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca la città" };
-const COL_ETA = { id: "E", titulo: "ETA", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => formatFechaHora(s.eta), falta: (s) => !s.eta, aviso: () => "Manca l'ETA" };
-const COL_KM = { id: "F", titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap text-right", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
+const COL_TIPO = { id: "B", campos: ["tipoPedido"], titulo: "TIPO", ancho: AJUSTADA, clase: "whitespace-nowrap text-center font-semibold", render: (s) => s.tipoPedido ?? "", falta: (s) => !s.tipoPedido, aviso: () => "Manca il tipo (ASAP o SCHEDULED)" };
+const COL_CLIENTE = { id: "C", campos: ["cliente"], titulo: "CLIENTE", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.cliente, falta: (s) => !s.cliente, aviso: () => "Manca il cliente" };
+const COL_CIUDAD = { id: "D", campos: ["ciudad"], titulo: "CIUDAD", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca la città" };
+const COL_ETA = { id: "E", campos: ["eta"], titulo: "ETA", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => formatFechaHora(s.eta), falta: (s) => !s.eta, aviso: () => "Manca l'ETA" };
+const COL_KM = { id: "F", campos: ["km"], titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap text-right", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
 const colNumero = (zona) => ({
   id: "G",
+  campos: ["aplicativo"],
   titulo: zona.toUpperCase(),
   ancho: AJUSTADA,
   clase: "whitespace-nowrap text-center font-semibold",
@@ -87,9 +89,9 @@ const colNumero = (zona) => ({
 });
 
 // Extra Piazza: CODICE | CLIENTE | RITIRO | CONSEGNA | ETA | KM (el KM lo escribe una persona).
-const COL_CODIGO = { id: "A", titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.shipment, aviso: () => "Manca il codice" };
-const COL_RITIRO = { id: "R", titulo: "RITIRO", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ritiro ?? "", falta: (s) => !s.ritiro, aviso: () => "Manca il luogo di ritiro" };
-const COL_CONSEGNA = { id: "D", titulo: "CONSEGNA", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca il luogo di consegna" };
+const COL_CODIGO = { id: "A", campos: ["shipment", "orderNumero"], titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.shipment, aviso: () => "Manca il codice" };
+const COL_RITIRO = { id: "R", campos: ["ritiro"], titulo: "RITIRO", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ritiro ?? "", falta: (s) => !s.ritiro, aviso: () => "Manca il luogo di ritiro" };
+const COL_CONSEGNA = { id: "D", campos: ["ciudad"], titulo: "CONSEGNA", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca il luogo di consegna" };
 
 const columnasDe = (variante) =>
   variante === "ab"
@@ -158,12 +160,126 @@ const Dato = ({ titulo, children }) => (
   </div>
 );
 
+// --- Edicion de celdas, como en Excel ---
+// Seleccionar una celda y escribir la edita al instante: Enter guarda y baja, Tab guarda y pasa a la derecha, Esc cancela. Una solicitud pendiente se
+// edita entera; un servicio ya creado, solo Shipment/Order, Tipo, Ciudad y ETA (lo demas es de la oficina; el servidor lo vuelve a comprobar).
+const CAMPOS_SERVICIO = ["shipment", "orderNumero", "tipoPedido", "ciudad", "eta"];
+const OPCIONES_TIPO = [
+  { value: "", label: "—" },
+  { value: "ASAP", label: "ASAP" },
+  { value: "SCHEDULED", label: "SCHEDULED" },
+];
+const valorInicial = (s, campo) =>
+  ({
+    shipment: s.shipment,
+    orderNumero: s.orderNumero,
+    tipoPedido: s.tipoPedido,
+    cliente: s.cliente,
+    ciudad: s.ciudad,
+    eta: toRomeInput(s.eta),
+    km: s.km,
+    aplicativo: s.milano?.texto,
+    ritiro: s.ritiro,
+  })[campo] ?? "";
+const ETIQUETA_EDITOR = { shipment: "Shipment", orderNumero: "Order", ritiro: "Ritiro" };
+
+const clasesEditor = "w-full min-w-0 bg-popover px-2 py-1.5 text-[13px] text-ink-50 outline-none disabled:opacity-60";
+
+const EditorCelda = ({ columna, variante, inicial, guardando, onGuardar, onCancelar }) => {
+  const [valores, setValores] = useState(inicial);
+  const hecho = useRef(false);
+  const primero = useRef(null);
+  const campos = columna.campos;
+
+  useEffect(() => {
+    const el = primero.current;
+    if (!el) return;
+    el.focus();
+    // El cursor al final del texto (como al editar en Excel).
+    try {
+      const n = el.value.length;
+      el.setSelectionRange(n, n);
+    } catch {
+      // datetime-local y select no tienen seleccion de texto
+    }
+  }, []);
+
+  const guardar = (mover, nuevos = valores) => {
+    if (hecho.current) return;
+    hecho.current = true;
+    onGuardar(nuevos, mover);
+  };
+  const cancelar = () => {
+    if (hecho.current) return;
+    hecho.current = true;
+    onCancelar();
+  };
+  const teclas = (e, ultimo = true) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      guardar("abajo");
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelar();
+    } else if (e.key === "Tab" && ultimo) {
+      e.preventDefault();
+      guardar(e.shiftKey ? "izquierda" : "derecha");
+    }
+  };
+  const cambiar = (campo) => (e) => setValores((prev) => ({ ...prev, [campo]: e.target.value }));
+
+  // Listas (tipo y numero de zona): al elegir una opcion se guarda.
+  const lista = (campo, opciones) => (
+    <select
+      ref={primero}
+      value={valores[campo]}
+      disabled={guardando}
+      className={clasesEditor}
+      onChange={(e) => guardar(null, { ...valores, [campo]: e.target.value })}
+      onKeyDown={(e) => e.key === "Escape" && (e.preventDefault(), cancelar())}
+      onBlur={() => guardar(null)}
+    >
+      {opciones.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+
+  if (campos[0] === "tipoPedido") return lista("tipoPedido", OPCIONES_TIPO);
+  if (campos[0] === "aplicativo") {
+    const max = variante === "roma" ? 10 : 18;
+    return lista("aplicativo", [{ value: "", label: "—" }, ...Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))]);
+  }
+  return (
+    <div className="flex flex-col" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && guardar(null)}>
+      {campos.map((campo, i) => (
+        <input
+          key={campo}
+          ref={i === 0 ? primero : undefined}
+          type={campo === "eta" ? "datetime-local" : "text"}
+          value={valores[campo]}
+          disabled={guardando}
+          placeholder={campos.length > 1 ? ETIQUETA_EDITOR[campo] : undefined}
+          aria-label={ETIQUETA_EDITOR[campo] ?? columna.titulo}
+          className={clsx(clasesEditor, i > 0 && "border-t border-line/25")}
+          onChange={cambiar(campo)}
+          onKeyDown={(e) => teclas(e, i === campos.length - 1)}
+        />
+      ))}
+    </div>
+  );
+};
+
 // Ancho de las columnas que ajusta quien usa la hoja (arrastrando el borde del titulo): se guarda en el servidor y lo ven todos los de la empresa.
 // Con anchos guardados la tabla pasa a diseño fijo (como Excel: cada columna mide lo que dice y sobra espacio a la derecha); sin ellos, se ajusta sola.
 const MIN_ANCHO = 30;
 const MAX_ANCHO = 800;
 const ANCHO_BASE = { A: 150, B: 100, C: 200, D: 200, E: 150, F: 70, G: 90, R: 200 };
 const ANCHO_NUMERO_FILA = 48;
+// Con anchos ajustados, si a la derecha de la tabla queda al menos este espacio libre, el detalle de una fila (chofer, targa, bolla) se abre alli.
+const ANCHO_DETALLE_LATERAL = 320;
 const useAnchosHoja = (variante) => {
   const [anchos, setAnchos] = useState({});
   const [aviso, setAviso] = useState(null); // { ok, texto } del ultimo guardado
@@ -222,15 +338,108 @@ const useAnchosHoja = (variante) => {
   return { anchos, aviso, empezarArrastre, restablecer };
 };
 
-export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
+export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
   // Cada servicio tiene sus columnas: AB Service no usa el numero de Milano; en Roma la ultima columna es ROMA; Extra Piazza lleva CODICE, RITIRO y CONSEGNA.
   const columnas = columnasDe(variante);
   const { anchos, aviso, empezarArrastre, restablecer } = useAnchosHoja(variante);
   const fija = Object.keys(anchos).length > 0;
   const anchoDe = (c) => anchos[c.id] ?? ANCHO_BASE[c.id] ?? 120;
+  const anchoTabla = ANCHO_NUMERO_FILA + columnas.reduce((suma, c) => suma + anchoDe(c), 0);
+  // Espacio libre a la derecha de la tabla (cuando las columnas se achicaron): ahi se muestra el detalle de la fila abierta, aprovechando el hueco.
+  const contenedor = useRef(null);
+  const [libre, setLibre] = useState(0);
+  useEffect(() => {
+    const el = contenedor.current;
+    if (!el || !fija) {
+      setLibre(0);
+      return undefined;
+    }
+    const medir = () => setLibre(Math.max(0, el.clientWidth - anchoTabla));
+    medir();
+    const observer = new ResizeObserver(medir);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fija, anchoTabla]);
+  const lateral = fija && libre >= ANCHO_DETALLE_LATERAL;
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
+  const [editando, setEditando] = useState(null); // { rowId, colId, inicial, guardando }
+  const [errorEdicion, setErrorEdicion] = useState("");
+
+  // Una celda se puede editar si hay con que guardar (onEditar) y la fila lo permite: solicitud pendiente (todo) o servicio ya creado (solo algunos datos).
+  const puedeEditar = (s, c) => Boolean(onEditar && s.editable && c.campos && (s.editable === "todo" || c.campos.every((f) => CAMPOS_SERVICIO.includes(f))));
+  const enfocar = () => contenedor.current?.focus({ preventScroll: true });
+  const seleccionar = (s, c) => {
+    setSeleccion(`${s.id}:${c.id}`);
+    enfocar();
+  };
+  // Despues de guardar, la seleccion se mueve como en Excel (abajo con Enter, a los lados con Tab).
+  const moverSeleccion = (s, c, mover) => {
+    const iFila = rows.findIndex((r) => r.id === s.id);
+    const iCol = columnas.findIndex((x) => x.id === c.id);
+    const fila = mover === "abajo" ? Math.min(rows.length - 1, iFila + 1) : iFila;
+    const col = mover === "derecha" ? Math.min(columnas.length - 1, iCol + 1) : mover === "izquierda" ? Math.max(0, iCol - 1) : iCol;
+    setSeleccion(`${rows[fila].id}:${columnas[col].id}`);
+  };
+  const empezarEdicion = (s, c, tecla = null) => {
+    if (!puedeEditar(s, c)) return;
+    const inicial = Object.fromEntries(c.campos.map((f) => [f, String(valorInicial(s, f) ?? "")]));
+    // Escribir sobre una celda de texto reemplaza lo que tenia (como en Excel); Enter / F2 / doble clic conservan el texto.
+    if (tecla != null && !["tipoPedido", "aplicativo", "eta"].includes(c.campos[0])) inicial[c.campos[0]] = tecla;
+    setErrorEdicion("");
+    setEditando({ rowId: s.id, colId: c.id, inicial, guardando: false });
+  };
+  const guardarEdicion = async (s, c, valores, mover) => {
+    const cambios = {};
+    for (const f of c.campos) if (String(valores[f] ?? "").trim() !== String(valorInicial(s, f) ?? "").trim()) cambios[f] = valores[f];
+    if (Object.keys(cambios).length === 0) {
+      setEditando(null);
+      if (mover) moverSeleccion(s, c, mover);
+      enfocar();
+      return;
+    }
+    setEditando((prev) => ({ ...prev, guardando: true }));
+    try {
+      await onEditar(s, cambios);
+      setEditando(null);
+      if (mover) moverSeleccion(s, c, mover);
+    } catch (err) {
+      setEditando(null);
+      setErrorEdicion(parseApiError(err).message);
+    }
+    enfocar();
+  };
+  // Teclado sobre la hoja (con una celda seleccionada y sin editar): flechas y Tab para moverse, Enter / F2 para editar, escribir para reemplazar, Supr para borrar.
+  const teclado = (e) => {
+    if (editando || !seleccion) return;
+    const [rowId, colId] = seleccion.split(":");
+    const iFila = rows.findIndex((r) => r.id === rowId);
+    const iCol = columnas.findIndex((x) => x.id === colId);
+    if (iFila < 0 || iCol < 0) return;
+    const s = rows[iFila];
+    const c = columnas[iCol];
+    const ir = (f, k) => {
+      e.preventDefault();
+      setSeleccion(`${rows[f].id}:${columnas[k].id}`);
+    };
+    if (e.key === "ArrowDown" && iFila < rows.length - 1) ir(iFila + 1, iCol);
+    else if (e.key === "ArrowUp" && iFila > 0) ir(iFila - 1, iCol);
+    else if (e.key === "ArrowRight" && iCol < columnas.length - 1) ir(iFila, iCol + 1);
+    else if (e.key === "ArrowLeft" && iCol > 0) ir(iFila, iCol - 1);
+    else if (e.key === "Tab" && !e.shiftKey && iCol < columnas.length - 1) ir(iFila, iCol + 1);
+    else if (e.key === "Tab" && e.shiftKey && iCol > 0) ir(iFila, iCol - 1);
+    else if ((e.key === "Enter" || e.key === "F2") && puedeEditar(s, c)) {
+      e.preventDefault();
+      empezarEdicion(s, c);
+    } else if ((e.key === "Delete" || e.key === "Backspace") && puedeEditar(s, c) && c.campos.length === 1) {
+      e.preventDefault();
+      guardarEdicion(s, c, { [c.campos[0]]: "" }, null);
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && puedeEditar(s, c)) {
+      e.preventDefault();
+      empezarEdicion(s, c, e.key);
+    }
+  };
 
   // Al extender una fila se pide su detalle (chofer, targa, fotos de la bolla) una sola vez.
   useEffect(() => {
@@ -252,10 +461,10 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
 
   return (
     <div>
-      <div className="overflow-auto rounded-md border border-line/30 bg-popover">
+      <div ref={contenedor} tabIndex={0} onKeyDown={teclado} className="overflow-auto rounded-md border border-line/30 bg-popover outline-none">
         <table
           className={clsx("border-collapse select-none text-left", !fija && "w-full")}
-          style={fija ? { tableLayout: "fixed", width: ANCHO_NUMERO_FILA + columnas.reduce((suma, c) => suma + anchoDe(c), 0) } : undefined}
+          style={fija ? { tableLayout: "fixed", width: "100%", minWidth: anchoTabla } : undefined}
         >
           {fija && (
             <colgroup>
@@ -263,6 +472,8 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
               {columnas.map((c) => (
                 <col key={c.id} style={{ width: anchoDe(c) }} />
               ))}
+              {/* Columna de relleno: se queda con el espacio que sobra a la derecha */}
+              <col />
             </colgroup>
           )}
           <thead>
@@ -274,6 +485,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
                   {String.fromCharCode(65 + i)}
                 </th>
               ))}
+              {fija && <th className="border-0 p-0" />}
             </tr>
             {/* Fila 1: los titulos */}
             <tr>
@@ -292,6 +504,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
                   />
                 </th>
               ))}
+              {fija && <th className="border-0 p-0" />}
             </tr>
           </thead>
           <tbody>
@@ -317,21 +530,55 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
                         <span className={clsx("text-[9px] transition-transform", extendida && "rotate-90")}>▶</span>
                       </span>
                     </th>
-                    {columnas.map((c) => (
-                      <td
-                        key={c.id}
-                        className={clsx(celda(s.id, c.id, falta), c.clase, c.claseFila?.(s), fija && "!whitespace-normal break-words")}
-                        title={falta[c.id] ? c.aviso(s) : c.titulo_fila?.(s)}
-                        onClick={() => setSeleccion(`${s.id}:${c.id}`)}
-                      >
-                        {c.render(s)}
+                    {columnas.map((c) => {
+                      const enEdicion = editando?.rowId === s.id && editando.colId === c.id;
+                      return (
+                        <td
+                          key={c.id}
+                          className={clsx(celda(s.id, c.id, falta), c.clase, c.claseFila?.(s), fija && "!whitespace-normal break-words", enEdicion && "!p-0")}
+                          title={falta[c.id] ? c.aviso(s) : c.titulo_fila?.(s)}
+                          onClick={() => seleccionar(s, c)}
+                          onDoubleClick={(e) => {
+                            // Una celda editable se edita con doble clic; las demas siguen abriendo la solicitud (doble clic en la fila).
+                            if (puedeEditar(s, c)) {
+                              e.stopPropagation();
+                              empezarEdicion(s, c);
+                            }
+                          }}
+                        >
+                          {enEdicion ? (
+                            <EditorCelda
+                              columna={c}
+                              variante={variante}
+                              inicial={editando.inicial}
+                              guardando={editando.guardando}
+                              onGuardar={(valores, mover) => guardarEdicion(s, c, valores, mover)}
+                              onCancelar={() => {
+                                setEditando(null);
+                                enfocar();
+                              }}
+                            />
+                          ) : (
+                            c.render(s)
+                          )}
+                        </td>
+                      );
+                    })}
+                    {/* Con espacio libre a la derecha, el detalle de la fila abierta se muestra aqui (sobre el hueco, sin mover las demas filas). */}
+                    {fija && (
+                      <td className="relative border-0 p-0 align-top">
+                        {extendida && lateral && (
+                          <div className="absolute left-2 top-1 z-10 w-[calc(100%-1rem)] rounded-md border border-line/30 bg-popover p-3 shadow-lg">
+                            <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
+                          </div>
+                        )}
                       </td>
-                    ))}
+                    )}
                   </tr>
-                  {extendida && (
+                  {extendida && !lateral && (
                     <tr>
                       <th className="sticky left-0 z-10 border border-line/25 bg-accent-500/25" />
-                      <td colSpan={columnas.length} className="border border-line/25 bg-line/[0.04] px-4 py-3">
+                      <td colSpan={columnas.length + (fija ? 1 : 0)} className="border border-line/25 bg-line/[0.04] px-4 py-3">
                         <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
                       </td>
                     </tr>
@@ -342,7 +589,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
             {rows.length === 0 && (
               <tr>
                 <th className="sticky left-0 z-10 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">2</th>
-                <td colSpan={columnas.length} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
+                <td colSpan={columnas.length + (fija ? 1 : 0)} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
                   {vacio}
                 </td>
               </tr>
@@ -350,8 +597,15 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
           </tbody>
         </table>
       </div>
+      {errorEdicion && <p className="mt-2 text-[13px] text-danger-500">{errorEdicion}</p>}
       <p className="mt-2 text-[12px] text-ink-400">
-        Clicca sul numero di riga per vedere chofer, targa e bolla{onOpen ? " · doppio clic su una cella per aprire o modificare la richiesta" : ""}. Le celle in rosso hanno dati mancanti. Trascina il bordo di un titolo per cambiare la larghezza della colonna (vale per tutti).
+        Clicca sul numero di riga per vedere chofer, targa e bolla.{" "}
+        {onEditar
+          ? "Seleziona una cella e scrivi per modificarla: Invio salva, Tab passa alla cella accanto, Esc annulla. Un servizio già creato permette di cambiare solo Shipment/Order, Tipo, Città ed ETA."
+          : onOpen
+            ? "Doppio clic su una cella per aprire o modificare la richiesta."
+            : ""}{" "}
+        Le celle in rosso hanno dati mancanti. Trascina il bordo di un titolo per cambiare la larghezza della colonna (vale per tutti).
         {aviso && <span className={aviso.ok ? "ml-2 text-success-500" : "ml-2 text-danger-500"}>{aviso.texto}</span>}
       </p>
     </div>
@@ -380,6 +634,8 @@ export const filaDeSolicitud = (s) => ({
   creadoPorRol: s.creadoPorRol,
   creadoAt: s.createdAt,
   omitirFaltantes: s.estado === "RECHAZADA",
+  // Pendiente: se edita todo; aceptada: es ese servicio (solo algunos datos); rechazada: nada.
+  editable: s.estado === "PENDIENTE" ? "todo" : s.estado === "ACEPTADA" ? "servicio" : false,
 });
 
 // Un servicio ya hecho (el historial) como fila de la hoja: de solo lectura, con el chofer y la targa que ya trae.
@@ -406,11 +662,13 @@ export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   chofer: s.chofer,
   targa: s.targa,
   omitirFaltantes: s.estado === "ANNULLATO",
+  editable: "servicio",
 });
 
 // La hoja unica de cada servicio (DHL Milano, DHL Roma, AB Service, Extra Piazza): las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
 // cuyo servicio ya esta en la lista no se repite (se ve el servicio); si el servicio quedo fuera (otro mes, otra empresa), se sigue viendo la solicitud.
-export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio, variante = "dhl" }) => {
+// editable + onCambio: la hoja se puede editar (Registro del cliente) y onCambio recarga los datos despues de guardar.
+export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio, variante = "dhl", editable = false, onCambio }) => {
   const idsServicios = new Set(servicios.map((r) => r.id));
   const porRecord = new Map(solicitudes.filter((s) => s.recordId).map((s) => [s.recordId, s]));
   const rows = [
@@ -430,7 +688,13 @@ export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, 
       bollas: fotos.filter((f) => f.codigo === "BOLLA").map((f) => ({ id: f.id, url: f.url, esPdf: f.esPdf })),
     };
   };
-  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} variante={variante} vacio={vacio} />;
+  const onEditar = editable
+    ? async (row, cambios) => {
+        await editarCeldaRequest({ origen: row.origen, id: row.id, cambios });
+        await onCambio?.();
+      }
+    : undefined;
+  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} onEditar={onEditar} variante={variante} vacio={vacio} />;
 };
 
 // Solo solicitudes (el usuario sin acceso al historial).
