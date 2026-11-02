@@ -9,6 +9,7 @@ import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 // Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano y DHL Roma. Se usa en el
 // Registro de Piazza (las solicitudes: HojaDhlMilano) y en el Historial de servicios (los servicios ya hechos: HojaServicios con sus propias filas).
 // Columnas: SHIPMENT/ORDER (una sola celda, uno encima del otro), TIPO, CLIENTE, CIUDAD, ETA, KM y MILANO / ROMA (el numero asignado de la zona; AB no lo usa).
+// Extra Piazza: CODICE, CLIENTE, RITIRO, CONSEGNA, ETA y KM.
 // - Clic en el numero de fila (a la izquierda): la fila se extiende hacia abajo y muestra Chofer, Targa y la foto de retiro (bolla).
 // - Clic en una celda: la selecciona. Doble clic (si hay onOpen): abre el registro.
 // Una celda sin dato (o incompleta, como SHIPMENT/ORDER con solo uno de los dos) se pinta de rojo apagado para que se vea que falta completarla
@@ -16,15 +17,6 @@ import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 // Cada fila: { id, punto, puntoTitulo, shipment, orderNumero, tipoPedido, cliente, ciudad, eta, km, milano: { texto, propuesto }, sinAsignar, chofer, targa }.
 // Las columnas cortas (A, B, E, F y G) miden lo que mide su contenido o su titulo (el que sea mas ancho); CLIENTE y CIUDAD se reparten el resto.
 const AJUSTADA = "w-[1%] whitespace-nowrap";
-const COLUMNAS = [
-  { letra: "A", titulo: "SHIPMENT/ORDER", ancho: AJUSTADA },
-  { letra: "B", titulo: "TIPO", ancho: AJUSTADA },
-  { letra: "C", titulo: "CLIENTE", ancho: "min-w-[140px]" },
-  { letra: "D", titulo: "CIUDAD", ancho: "min-w-[140px]" },
-  { letra: "E", titulo: "ETA", ancho: AJUSTADA },
-  { letra: "F", titulo: "KM", ancho: AJUSTADA },
-  { letra: "G", titulo: "MILANO", ancho: AJUSTADA },
-];
 
 const ESTADO_PUNTO = { PENDIENTE: "bg-warning-500", ACEPTADA: "bg-success-500", RECHAZADA: "bg-danger-500" };
 const ESTADO_TITULO = { PENDIENTE: "In attesa", ACEPTADA: "Accettata", RECHAZADA: "Rifiutata" };
@@ -51,30 +43,60 @@ const CeldaShipmentOrder = ({ s }) => {
   return null;
 };
 
-// Que datos faltan en una fila (por columna). Vacio = completa.
-const faltantes = (s, variante) => {
-  if (s.omitirFaltantes) return {};
-  const km = s.km;
-  return {
-    A: !(s.shipment && s.orderNumero),
-    B: !s.tipoPedido,
-    C: !s.cliente,
-    D: !s.ciudad,
-    E: !s.eta,
-    F: km == null || km === "",
-    ...(variante === "ab" ? {} : { G: !s.milano?.texto }),
-  };
+// Extra Piazza: el codigo del servicio (o los dos, "S20602375 / S20602381"), uno encima del otro.
+const CeldaCodigos = ({ s }) => {
+  const codigos = [s.shipment, s.orderNumero].filter(Boolean);
+  if (!codigos.length) return null;
+  return (
+    <span className="flex flex-col leading-tight">
+      {codigos.map((c, i) => (
+        <span key={c}>
+          {c}
+          {i < codigos.length - 1 ? " /" : ""}
+        </span>
+      ))}
+    </span>
+  );
 };
 
-const AVISO_FALTA = {
-  A: (s) => (!s.shipment && !s.orderNumero ? "Mancano Shipment e Order" : !s.shipment ? "Manca lo Shipment" : "Manca l'Order"),
-  B: () => "Manca il tipo (ASAP o SCHEDULED)",
-  C: () => "Manca il cliente",
-  D: () => "Manca la città",
-  E: () => "Manca l'ETA",
-  F: () => "Mancano i km",
-  G: (s, variante) => (variante === "roma" ? "Numero di Roma non ancora assegnato" : "Numero di Milano non ancora assegnato"),
+// Las columnas: id (para la celda seleccionada), titulo, ancho, clase de la celda, que se dibuja, cuando "falta" el dato (celda roja) y su aviso.
+const COL_SHIPMENT = {
+  id: "A",
+  titulo: "SHIPMENT/ORDER",
+  ancho: AJUSTADA,
+  clase: "whitespace-nowrap",
+  render: (s) => <CeldaShipmentOrder s={s} />,
+  falta: (s) => !(s.shipment && s.orderNumero),
+  aviso: (s) => (!s.shipment && !s.orderNumero ? "Mancano Shipment e Order" : !s.shipment ? "Manca lo Shipment" : "Manca l'Order"),
 };
+const COL_TIPO = { id: "B", titulo: "TIPO", ancho: AJUSTADA, clase: "whitespace-nowrap text-center font-semibold", render: (s) => s.tipoPedido ?? "", falta: (s) => !s.tipoPedido, aviso: () => "Manca il tipo (ASAP o SCHEDULED)" };
+const COL_CLIENTE = { id: "C", titulo: "CLIENTE", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.cliente, falta: (s) => !s.cliente, aviso: () => "Manca il cliente" };
+const COL_CIUDAD = { id: "D", titulo: "CIUDAD", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca la città" };
+const COL_ETA = { id: "E", titulo: "ETA", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => formatFechaHora(s.eta), falta: (s) => !s.eta, aviso: () => "Manca l'ETA" };
+const COL_KM = { id: "F", titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap text-right", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
+const colNumero = (zona) => ({
+  id: "G",
+  titulo: zona.toUpperCase(),
+  ancho: AJUSTADA,
+  clase: "whitespace-nowrap text-center font-semibold",
+  claseFila: (s) => s.milano?.propuesto && "font-normal italic text-ink-300",
+  render: (s) => s.milano?.texto ?? "",
+  falta: (s) => !s.milano?.texto,
+  aviso: () => `Numero di ${zona} non ancora assegnato`,
+  titulo_fila: (s) => (s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : undefined),
+});
+
+// Extra Piazza: CODICE | CLIENTE | RITIRO | CONSEGNA | ETA | KM (el KM lo escribe una persona).
+const COL_CODIGO = { id: "A", titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.shipment, aviso: () => "Manca il codice" };
+const COL_RITIRO = { id: "R", titulo: "RITIRO", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ritiro ?? "", falta: (s) => !s.ritiro, aviso: () => "Manca il luogo di ritiro" };
+const COL_CONSEGNA = { id: "D", titulo: "CONSEGNA", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca il luogo di consegna" };
+
+const columnasDe = (variante) =>
+  variante === "ab"
+    ? [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM]
+    : variante === "extra"
+      ? [COL_CODIGO, COL_CLIENTE, COL_RITIRO, COL_CONSEGNA, COL_ETA, COL_KM]
+      : [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM, colNumero(variante === "roma" ? "Roma" : "Milano")];
 
 const Panel = ({ row, detalle, verFotos }) => {
   if (row.sinAsignar) {
@@ -123,8 +145,8 @@ const Dato = ({ titulo, children }) => (
 );
 
 export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
-  // AB Service no usa el numero de Milano: sin la columna G. En Roma la columna se llama ROMA.
-  const columnas = variante === "ab" ? COLUMNAS.filter((c) => c.letra !== "G") : COLUMNAS.map((c) => (c.letra === "G" && variante === "roma" ? { ...c, titulo: "ROMA" } : c));
+  // Cada servicio tiene sus columnas: AB Service no usa el numero de Milano; en Roma la ultima columna es ROMA; Extra Piazza lleva CODICE, RITIRO y CONSEGNA.
+  const columnas = columnasDe(variante);
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
@@ -155,9 +177,9 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
             {/* Letras de columna, como en Sheets */}
             <tr>
               <th className="sticky left-0 z-20 w-12 border border-line/25 bg-line/10" />
-              {columnas.map((c) => (
-                <th key={c.letra} className={clsx("border border-line/25 bg-line/10 px-2 py-0.5 text-center text-[11px] font-normal text-ink-300", c.ancho)}>
-                  {c.letra}
+              {columnas.map((c, i) => (
+                <th key={c.id} className={clsx("border border-line/25 bg-line/10 px-2 py-0.5 text-center text-[11px] font-normal text-ink-300", c.ancho)}>
+                  {String.fromCharCode(65 + i)}
                 </th>
               ))}
             </tr>
@@ -165,7 +187,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
             <tr>
               <th className="sticky left-0 z-20 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">1</th>
               {columnas.map((c) => (
-                <th key={c.letra} className="whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
+                <th key={c.id} className="whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
                   {c.titulo}
                 </th>
               ))}
@@ -174,8 +196,8 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
           <tbody>
             {rows.map((s, i) => {
               const extendida = abierta === s.id;
-              const falta = faltantes(s, variante);
-              const tip = (col) => (falta[col] ? AVISO_FALTA[col](s, variante) : undefined);
+              // Que celdas se pintan de rojo (faltan datos); en las filas rechazadas o anuladas no se avisa.
+              const falta = Object.fromEntries(columnas.map((c) => [c.id, !s.omitirFaltantes && c.falta(s)]));
               return (
                 <Fragment key={s.id}>
                   <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen && s.abrible !== false ? () => onOpen(s.id) : undefined}>
@@ -194,33 +216,16 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
                         <span className={clsx("text-[9px] transition-transform", extendida && "rotate-90")}>▶</span>
                       </span>
                     </th>
-                    <td className={clsx(celda(s.id, "A", falta), "whitespace-nowrap")} title={tip("A")} onClick={() => setSeleccion(`${s.id}:A`)}>
-                      <CeldaShipmentOrder s={s} />
-                    </td>
-                    <td className={clsx(celda(s.id, "B", falta), "whitespace-nowrap text-center font-semibold")} title={tip("B")} onClick={() => setSeleccion(`${s.id}:B`)}>
-                      {s.tipoPedido ?? ""}
-                    </td>
-                    <td className={clsx(celda(s.id, "C", falta), "break-words")} title={tip("C")} onClick={() => setSeleccion(`${s.id}:C`)}>
-                      {s.cliente}
-                    </td>
-                    <td className={clsx(celda(s.id, "D", falta), "break-words")} title={tip("D")} onClick={() => setSeleccion(`${s.id}:D`)}>
-                      {s.ciudad}
-                    </td>
-                    <td className={clsx(celda(s.id, "E", falta), "whitespace-nowrap")} title={tip("E")} onClick={() => setSeleccion(`${s.id}:E`)}>
-                      {formatFechaHora(s.eta)}
-                    </td>
-                    <td className={clsx(celda(s.id, "F", falta), "whitespace-nowrap text-right")} title={tip("F")} onClick={() => setSeleccion(`${s.id}:F`)}>
-                      {s.km ?? ""}
-                    </td>
-                    {variante !== "ab" && (
+                    {columnas.map((c) => (
                       <td
-                        className={clsx(celda(s.id, "G", falta), "whitespace-nowrap text-center font-semibold", s.milano?.propuesto && "font-normal italic text-ink-300")}
-                        title={s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : tip("G")}
-                        onClick={() => setSeleccion(`${s.id}:G`)}
+                        key={c.id}
+                        className={clsx(celda(s.id, c.id, falta), c.clase, c.claseFila?.(s))}
+                        title={falta[c.id] ? c.aviso(s) : c.titulo_fila?.(s)}
+                        onClick={() => setSeleccion(`${s.id}:${c.id}`)}
                       >
-                        {s.milano?.texto ?? ""}
+                        {c.render(s)}
                       </td>
-                    )}
+                    ))}
                   </tr>
                   {extendida && (
                     <tr>
@@ -260,6 +265,7 @@ export const filaDeSolicitud = (s) => ({
   puntoTitulo: ESTADO_TITULO[s.estado] ?? s.estado,
   shipment: s.shipment,
   orderNumero: s.orderNumero,
+  ritiro: s.ritiro,
   tipoPedido: s.tipoPedido,
   cliente: s.cliente,
   ciudad: s.destinazione,
@@ -272,14 +278,16 @@ export const filaDeSolicitud = (s) => ({
 });
 
 // Un servicio ya hecho (el historial) como fila de la hoja: de solo lectura, con el chofer y la targa que ya trae.
-export const filaDeServicio = (s, puntoTitulo) => ({
+// "solicitud": la que lo origino (si esta en la lista): le presta el codigo y el ritiro que el servicio real no guarda.
+export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   id: s.id,
   origen: "servicio",
   abrible: false,
   punto: PUNTO_ESTADO[s.estado] ?? "bg-accent-400",
   puntoTitulo,
-  shipment: s.shipment,
-  orderNumero: s.orderNumero,
+  shipment: s.shipment ?? solicitud?.shipment,
+  orderNumero: s.orderNumero ?? solicitud?.orderNumero,
+  ritiro: solicitud?.ritiro ?? null,
   tipoPedido: s.tipoPedido,
   cliente: s.cliente ?? "",
   ciudad: s.ciudad ?? "",
@@ -292,13 +300,14 @@ export const filaDeServicio = (s, puntoTitulo) => ({
   omitirFaltantes: s.estado === "ANNULLATO",
 });
 
-// La hoja unica de cada servicio (DHL Milano, DHL Roma, AB Service): las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
+// La hoja unica de cada servicio (DHL Milano, DHL Roma, AB Service, Extra Piazza): las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
 // cuyo servicio ya esta en la lista no se repite (se ve el servicio); si el servicio quedo fuera (otro mes, otra empresa), se sigue viendo la solicitud.
 export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio, variante = "dhl" }) => {
   const idsServicios = new Set(servicios.map((r) => r.id));
+  const porRecord = new Map(solicitudes.filter((s) => s.recordId).map((s) => [s.recordId, s]));
   const rows = [
     ...solicitudes.filter((s) => !(s.recordId && idsServicios.has(s.recordId))).map(filaDeSolicitud),
-    ...servicios.map((r) => filaDeServicio(r, estadoTexto ? estadoTexto(r) : r.estadoLabel)),
+    ...servicios.map((r) => filaDeServicio(r, estadoTexto ? estadoTexto(r) : r.estadoLabel, porRecord.get(r.id))),
   ].sort((a, b) => new Date(b.eta) - new Date(a.eta));
 
   const loadDetalle = async (row) => {

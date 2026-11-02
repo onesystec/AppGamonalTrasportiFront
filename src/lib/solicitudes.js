@@ -124,7 +124,7 @@ export const solicitudToFormDefaults = (s) => ({
   // Varie 2 es lo que se cobra aparte (ej. espera onsite): queda como costo de espera.
   costoEspera: s.varie2 != null ? String(s.varie2) : "",
   descripcion:
-    [s.descripcion, s.varie, kmTextoSuelto(s), s.autRitiro ? `Aut. ritiro: ${s.autRitiro}` : null, s.pagato50 ? "Pagato al 50%" : null]
+    [s.descripcion, s.ritiro ? `Ritiro: ${s.ritiro}` : null, s.varie, kmTextoSuelto(s), s.autRitiro ? `Aut. ritiro: ${s.autRitiro}` : null, s.pagato50 ? "Pagato al 50%" : null]
       .filter((v) => v && String(v).trim())
       .join("\n") || `Solicitud de ${s.cliente}`,
   aplicativo: s.aplicativo ?? "",

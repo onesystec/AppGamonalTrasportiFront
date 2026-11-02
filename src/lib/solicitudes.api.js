@@ -15,6 +15,9 @@ export const rechazarSolicitudRequest = (id, motivo) => api.post(`/solicitudes/$
 export const leerTextoRequest = (servicio, texto) => api.post("/solicitudes/leer-texto", { servicio, texto }).then((res) => res.data.data);
 export const crearDesdeTextoRequest = (payload) => api.post("/solicitudes/desde-texto", payload).then((res) => res.data.data);
 
+// Extra Piazza: km estimados por ruta entre el ritiro y la consegna (solo una pista: el KM lo escribe una persona).
+export const getRutaEstimadaRequest = (id) => api.get(`/solicitudes/${id}/ruta-estimada`).then((res) => res.data.data);
+
 // Usuario cliente (Piazza): leer el texto de DHL para rellenar la solicitud y el detalle (chofer, targa, bolla) de una ya aceptada.
 export const leerTextoClienteRequest = (servicio, texto) => api.post("/cliente/solicitudes/leer-texto", { servicio, texto }).then((res) => res.data.data);
 export const getDetalleSolicitudRequest = (id) => api.get(`/cliente/solicitudes/${id}/detalle`).then((res) => res.data.data);

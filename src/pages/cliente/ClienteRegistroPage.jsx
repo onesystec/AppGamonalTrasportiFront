@@ -23,8 +23,9 @@ import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib
 
 const REFRESH_MS = 60 * 1000;
 
-// Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: DHL Roma llama ROMA a la ultima columna y AB Service no usa ese numero).
-const HOJAS = { DHL_MILANO: "dhl", DHL_ROMA: "roma", AB_SERVICE: "ab" };
+// Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: DHL Roma llama ROMA a la ultima columna, AB Service no usa ese numero y Extra Piazza
+// lleva CODICE, RITIRO y CONSEGNA).
+const HOJAS = { DHL_MILANO: "dhl", DHL_ROMA: "roma", AB_SERVICE: "ab", EXTRA_PIAZZA: "extra" };
 
 // En que pestana va un servicio ya hecho (Historial): DHL Milano / DHL Roma, AB Service y el resto como Extra Piazza.
 const tipoDeServicio = (r) => (r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "DHL_ROMA" : "DHL_MILANO") : r.spedizzione === "AB_SERVICE" ? "AB_SERVICE" : "EXTRA_PIAZZA");
@@ -121,7 +122,14 @@ const COLUMNAS = {
   ],
   AB_SERVICE: [COL_CLIENTE, COL_DESTINO, COL_FECHA, col("autRitiro", "Aut. ritiro", (s) => s.autRitiro ?? ""), COL_FORNITORE, col("km", "Totale", (s) => kmDeSolicitud(s) ?? "", { align: "right" }), COL_PAGATO, COL_VARIE, COL_VARIE2],
 };
-COLUMNAS.EXTRA_PIAZZA = COLUMNAS.DHL_MILANO;
+COLUMNAS.EXTRA_PIAZZA = [
+  col("codigo", "Codice", (s) => [s.shipment, s.orderNumero].filter(Boolean).join(" / ")),
+  COL_CLIENTE,
+  col("ritiro", "Ritiro", (s) => s.ritiro ?? ""),
+  col("destinazione", "Consegna", (s) => s.destinazione),
+  COL_FECHA,
+  col("km", "KM", (s) => kmDeSolicitud(s) ?? "", { align: "right" }),
+];
 
 // Los registros del mes por servicio, con las columnas del Excel y los totales de abajo (pagato y varie 2), como en cada hoja.
 const TablaRegistros = ({ items, servicio, onSelect }) => {

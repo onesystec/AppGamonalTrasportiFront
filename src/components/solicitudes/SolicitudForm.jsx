@@ -29,6 +29,7 @@ const EMPTY = {
   orderNumero: "",
   tipoPedido: "",
   choferIndicado: "",
+  ritiro: "",
 };
 
 const fromSolicitud = (s) => ({
@@ -49,6 +50,7 @@ const fromSolicitud = (s) => ({
   orderNumero: s.orderNumero ?? "",
   tipoPedido: s.tipoPedido ?? "",
   choferIndicado: s.choferIndicado ?? "",
+  ritiro: s.ritiro ?? "",
 });
 
 const aplicativosDe = (servicio) =>
@@ -73,8 +75,9 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
   const esAb = form.servicio === "AB_SERVICE";
   const esRoma = form.servicio === "DHL_ROMA";
   const esMilano = form.servicio === "DHL_MILANO";
-  // DHL Milano, DHL Roma y AB Service se pueden rellenar pegando el texto (AB Service ademas localiza los lugares del mensaje).
-  const usaTexto = esMilano || esRoma || esAb;
+  const esExtra = form.servicio === "EXTRA_PIAZZA";
+  // DHL Milano, DHL Roma, AB Service y Extra Piazza se pueden rellenar pegando el texto (AB y Extra Piazza ademas localizan los lugares del mensaje).
+  const usaTexto = esMilano || esRoma || esAb || esExtra;
 
   // Lee el texto pegado y rellena lo que encuentra (Shipment, Order, cliente, tipo, ciudad, ETA, km); el resto lo completa quien envia.
   const leerTexto = async () => {
@@ -91,6 +94,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         shipment: d.shipment ?? prev.shipment,
         orderNumero: d.orderNumero ?? prev.orderNumero,
         tipoPedido: d.tipoPedido ?? prev.tipoPedido,
+        ritiro: d.ritiro ?? prev.ritiro,
         // El numero de Milano / Roma que dice el mensaje ("ROMA 2", "ASSEGNATO ROMA 4").
         aplicativo: d.aplicativo ?? prev.aplicativo,
         descripcion: d.descripcion,
@@ -126,7 +130,8 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       pagato50: esRoma ? form.pagato50 : false,
       shipment: usaTexto ? form.shipment : "",
       orderNumero: usaTexto ? form.orderNumero : "",
-      tipoPedido: usaTexto ? form.tipoPedido : "",
+      tipoPedido: usaTexto && !esExtra ? form.tipoPedido : "",
+      ritiro: esExtra ? form.ritiro : "",
       choferIndicado: usaTexto ? form.choferIndicado : "",
     };
     try {
@@ -169,7 +174,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         <div className="rounded-2xl border border-line/15 p-4">
           <Textarea
             id="sol-texto"
-            label={esAb ? "Incolla il messaggio di AB Service (facoltativo)" : "Incolla il testo di DHL (facoltativo)"}
+            label={esAb ? "Incolla il messaggio di AB Service (facoltativo)" : esExtra ? "Incolla il messaggio dell'Extra Piazza (facoltativo)" : "Incolla il testo di DHL (facoltativo)"}
             placeholder="Shipments: Customer ... Shipment # ... ETA ... Ship To City ... Order # ..."
             rows={5}
             value={texto}
@@ -219,8 +224,18 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {usaTexto && (
           <>
-            <TextField id="sol-shipment" label="Shipment" value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
-            <TextField id="sol-order" label="Order" value={form.orderNumero} onChange={onChange("orderNumero")} error={fieldErrors.orderNumero?.[0]} />
+            <TextField id="sol-shipment" label={esExtra ? "Codice" : "Shipment"} value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
+            <TextField
+              id="sol-order"
+              label={esExtra ? "Secondo codice (facoltativo)" : "Order"}
+              value={form.orderNumero}
+              onChange={onChange("orderNumero")}
+              error={fieldErrors.orderNumero?.[0]}
+            />
+            {esExtra && (
+              <TextField className="sm:col-span-2" id="sol-ritiro" label="Ritiro" value={form.ritiro} onChange={onChange("ritiro")} error={fieldErrors.ritiro?.[0]} />
+            )}
+            {!esExtra && (
             <div className="sm:col-span-2">
               <Select
                 id="sol-tipo"
@@ -236,6 +251,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
               {lectura?.tipoOrigen === "eta" && <span className="mt-1.5 block text-[12px] text-ink-400">Suggerito in base all'ETA: cambialo se non è così.</span>}
               {lectura?.tipoOrigen === "texto" && <span className="mt-1.5 block text-[12px] text-ink-400">Letto dal testo.</span>}
             </div>
+            )}
             <TextField
               id="sol-chofer"
               label="Chofer (facoltativo)"
@@ -264,9 +280,16 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
             )}
           </>
         )}
-        <TextField id="sol-cliente" label={t("form.client")} value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />
+        <TextField
+          id="sol-cliente"
+          label={esExtra ? `${t("form.client")} (facoltativo)` : t("form.client")}
+          value={form.cliente}
+          onChange={onChange("cliente")}
+          error={fieldErrors.cliente?.[0]}
+          required={!esExtra}
+        />
         <TextField id="sol-fecha" label={t("form.dateTime")} type="datetime-local" value={form.fechaHora} onChange={onChange("fechaHora")} error={fieldErrors.fechaHora?.[0]} required />
-        <TextField className="sm:col-span-2" id="sol-destino" label="Destinazione" value={form.destinazione} onChange={onChange("destinazione")} error={fieldErrors.destinazione?.[0]} required />
+        <TextField className="sm:col-span-2" id="sol-destino" label={esExtra ? "Consegna" : "Destinazione"} value={form.destinazione} onChange={onChange("destinazione")} error={fieldErrors.destinazione?.[0]} required />
         {esAb && <TextField id="sol-aut" label="Aut. ritiro" value={form.autRitiro} onChange={onChange("autRitiro")} error={fieldErrors.autRitiro?.[0]} />}
         <TextField id="sol-fornitore" label="Fornitore" value={form.fornitore} onChange={onChange("fornitore")} error={fieldErrors.fornitore?.[0]} />
         <TextField
@@ -303,7 +326,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         </label>
       )}
 
-      {esAb && (
+      {(esAb || esExtra) && (
         <Textarea
           id="sol-descripcion"
           label={t("form.shipmentDescription")}
