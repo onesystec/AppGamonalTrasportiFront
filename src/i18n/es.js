@@ -110,6 +110,7 @@ export const es = {
   "detail.description": "Descripcion",
   "detail.number": "Numero",
   "detail.requestedBy": "Pedido por",
+  "detail.uploadedAt": "Subido el",
   "detail.reason": "Motivo",
   "wa.copied": "Copiado",
   "wa.failed": "No se pudo copiar",

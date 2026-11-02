@@ -98,10 +98,23 @@ const columnasDe = (variante) =>
       ? [COL_CODIGO, COL_CLIENTE, COL_RITIRO, COL_CONSEGNA, COL_ETA, COL_KM]
       : [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM, colNumero(variante === "roma" ? "Roma" : "Milano")];
 
+// Quien subio la solicitud y cuando (si la fila viene de una solicitud): una persona de la empresa del cliente o de la oficina.
+const DatosCarga = ({ row }) =>
+  row.creadoPor ? (
+    <>
+      <Dato titulo="Caricato da">
+        {row.creadoPor}
+        {row.creadoPorRol ? ` · ${row.creadoPorRol}` : ""}
+      </Dato>
+      {row.creadoAt && <Dato titulo="Caricato il">{formatFechaHora(row.creadoAt)}</Dato>}
+    </>
+  ) : null;
+
 const Panel = ({ row, detalle, verFotos }) => {
   if (row.sinAsignar) {
     return (
       <div className="flex flex-wrap items-start gap-x-10 gap-y-2">
+        <DatosCarga row={row} />
         {row.choferIndicado && <Dato titulo="Chofer (indicato)">{row.choferIndicado}</Dato>}
         <p className="text-[13px] text-ink-300">Non ancora assegnato: chofer, targa e bolla compaiono quando l'ufficio accetta la richiesta.</p>
       </div>
@@ -112,6 +125,7 @@ const Panel = ({ row, detalle, verFotos }) => {
   const { chofer, targa, bollas } = detalle.data;
   return (
     <div className="flex flex-wrap items-start gap-x-10 gap-y-3">
+      <DatosCarga row={row} />
       <Dato titulo="Chofer">{chofer ?? "—"}</Dato>
       <Dato titulo="Targa">{targa ?? "—"}</Dato>
       {verFotos && (
@@ -274,6 +288,9 @@ export const filaDeSolicitud = (s) => ({
   milano: numeroMilano(s),
   sinAsignar: s.estado !== "ACEPTADA",
   choferIndicado: s.choferIndicado,
+  creadoPor: s.creadoPor,
+  creadoPorRol: s.creadoPorRol,
+  creadoAt: s.createdAt,
   omitirFaltantes: s.estado === "RECHAZADA",
 });
 
@@ -288,6 +305,9 @@ export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   shipment: s.shipment ?? solicitud?.shipment,
   orderNumero: s.orderNumero ?? solicitud?.orderNumero,
   ritiro: solicitud?.ritiro ?? null,
+  creadoPor: solicitud?.creadoPor,
+  creadoPorRol: solicitud?.creadoPorRol,
+  creadoAt: solicitud?.createdAt,
   tipoPedido: s.tipoPedido,
   cliente: s.cliente ?? "",
   ciudad: s.ciudad ?? "",

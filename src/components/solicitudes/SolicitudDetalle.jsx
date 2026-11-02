@@ -40,7 +40,8 @@ export const SolicitudDetalle = ({ solicitud: s }) => {
       <Fila label="Varie 2">{s.varie2 != null ? formatCurrency(s.varie2) : null}</Fila>
       <Fila label={t("detail.description")}>{s.descripcion}</Fila>
       <Fila label={t("detail.number")}>{s.aplicativo ? (APLICATIVO_LABELS[s.aplicativo] ?? s.aplicativo) : null}</Fila>
-      {s.creadoPor && <Fila label={t("detail.requestedBy")}>{`${s.creadoPor}${s.empresa ? ` (${s.empresa})` : ""}`}</Fila>}
+      {s.creadoPor && <Fila label={t("detail.requestedBy")}>{`${s.creadoPor}${s.creadoPorRol ? ` · ${s.creadoPorRol}` : ""}${s.empresa ? ` (${s.empresa})` : ""}`}</Fila>}
+      {s.createdAt && <Fila label={t("detail.uploadedAt")}>{formatFechaHora(s.createdAt)}</Fila>}
       {s.estado === "RECHAZADA" && s.motivoRechazo && <Fila label={t("detail.reason")}>{s.motivoRechazo}</Fila>}
     </dl>
   );

@@ -109,6 +109,7 @@ export const it = {
   "detail.description": "Descrizione",
   "detail.number": "Numero",
   "detail.requestedBy": "Richiesto da",
+  "detail.uploadedAt": "Caricato il",
   "detail.reason": "Motivo",
   "wa.copied": "Copiato",
   "wa.failed": "Impossibile copiare",
