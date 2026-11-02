@@ -13,13 +13,17 @@ import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
 import { APLICATIVO_OPTIONS, TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
+import { userAreaKeys } from "../../lib/roles";
+import { AREAS_BY_KEY } from "../../lib/recordAreas";
 import { crearDesdeTextoRequest, leerTextoRequest } from "../../lib/solicitudes.api";
 import { formatFechaHora, notifySolicitudesChanged, toRomeInput } from "../../lib/solicitudes";
 
-// Por ahora DHL Milano y DHL Roma.
+// DHL Milano, DHL Roma, AB Service y Extra Piazza (Extras Stefania todavia no). areas: las claves de area que dan acceso al servicio; area: donde se abre el formulario real.
 const SERVICIOS = {
-  DHL_MILANO: { label: "DHL Milano", zona: "MILANO", numeroLabel: "Numero di Milano" },
-  DHL_ROMA: { label: "DHL Roma", zona: "ROMA", numeroLabel: "Numero di Roma" },
+  DHL_MILANO: { label: "DHL Milano", zona: "MILANO", numeroLabel: "Numero di Milano", areas: ["dhl-milano"], area: "dhl-milano" },
+  DHL_ROMA: { label: "DHL Roma", zona: "ROMA", numeroLabel: "Numero di Roma", areas: ["dhl-roma"], area: "dhl-roma" },
+  AB_SERVICE: { label: "AB Service", zona: null, areas: ["ab-service"], area: "ab-service" },
+  EXTRA_PIAZZA: { label: "Extra Piazza", zona: null, areas: ["piazza-milano", "piazza-roma"], area: "piazza-milano" },
 };
 
 // Tipo dell'ordine: menu a tendina con ASAP / SCHEDULED. Quello scritto nel testo o dedotto dall'ETA arriva già scelto (e con "suggerito" accanto),
@@ -55,8 +59,13 @@ export const ServicioDesdeTextoPage = () => {
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const closeTo = "/records/dhl-ab-service";
 
-  const [servicio, setServicio] = useState("DHL_MILANO");
+  // Cada uno ve los servicios de sus areas (el Owner, todos).
+  const areasUsuario = userAreaKeys(user);
+  const permitidos = Object.entries(SERVICIOS).filter(([, s]) => areasUsuario === null || s.areas.some((k) => areasUsuario.includes(k)));
+  const [servicio, setServicio] = useState(() => permitidos[0]?.[0] ?? "DHL_MILANO");
   const zona = SERVICIOS[servicio];
+  const esExtra = servicio === "EXTRA_PIAZZA";
+  const esDhl = servicio === "DHL_MILANO" || servicio === "DHL_ROMA";
   const [texto, setTexto] = useState("");
   const [clients, setClients] = useState(null);
   const [lectura, setLectura] = useState(null);
@@ -93,6 +102,9 @@ export const ServicioDesdeTextoPage = () => {
         tipoOrigen: d.tipoOrigen ?? null,
         ciudad: d.ciudad ?? "",
         aplicativo: d.aplicativo ?? "",
+        ritiro: d.ritiro ?? "",
+        km: d.km != null ? String(d.km) : "",
+        lugares: d.lugares ?? [],
         eta: d.eta ? toRomeInput(d.eta) : "",
         avisos: d.avisos ?? [],
         duplicados: d.duplicados ?? [],
@@ -104,7 +116,7 @@ export const ServicioDesdeTextoPage = () => {
     }
   };
 
-  const faltan = lectura ? [!clienteNombre && "cliente", !lectura.ciudad.trim() && "città", !lectura.eta && "ETA"].filter(Boolean) : [];
+  const faltan = lectura ? [!esExtra && !clienteNombre && "cliente", !lectura.ciudad.trim() && (esExtra ? "consegna" : "città"), !lectura.eta && "ETA"].filter(Boolean) : [];
 
   const guardar = async () => {
     setGuardando(true);
@@ -118,8 +130,10 @@ export const ServicioDesdeTextoPage = () => {
         descripcion: lectura.descripcion,
         shipment: lectura.shipment,
         orderNumero: lectura.orderNumero,
-        tipoPedido: lectura.tipoPedido,
-        aplicativo: lectura.aplicativo,
+        tipoPedido: esExtra ? "" : lectura.tipoPedido,
+        aplicativo: esDhl ? lectura.aplicativo : "",
+        ritiro: esExtra ? lectura.ritiro : "",
+        km: esExtra ? "" : lectura.km,
       });
       setCreada(solicitud);
       notifySolicitudesChanged();
@@ -138,11 +152,10 @@ export const ServicioDesdeTextoPage = () => {
   };
 
   // Completa ora = abrir el formulario real del servicio con lo leido; al crearlo la solicitud queda aceptada.
-  const completarAhora = () =>
-    navigate("/records/dhl-ab-service/new", {
-      replace: true,
-      state: { backgroundLocation: location.state?.backgroundLocation, spedizzione: "DHL", zona: zona.zona, solicitud: creada },
-    });
+  const completarAhora = () => {
+    const area = AREAS_BY_KEY[zona.area];
+    navigate(area.newPath, { replace: true, state: { backgroundLocation: location.state?.backgroundLocation, ...area.newState, solicitud: creada } });
+  };
 
   if (!isPrivileged) return <Navigate to="/" replace />;
 
@@ -158,7 +171,7 @@ export const ServicioDesdeTextoPage = () => {
         <div>
           <h1 className="text-[24px] font-semibold text-ink-50">Servizio da un testo - {zona.label}</h1>
           <p className="mt-1 text-[14px] text-ink-300">
-            Incolla il testo del servizio: si leggono Shipment, Order, cliente, tipo, città, ETA, numero di zona. Il resto lo completa una persona prima di accettarlo.
+            Incolla il testo del servizio: si leggono codici, cliente, tipo, luoghi, ETA e km quando ci sono. Il resto lo completa una persona prima di accettarlo.
           </p>
         </div>
 
@@ -188,7 +201,7 @@ export const ServicioDesdeTextoPage = () => {
               <h2 className="text-[17px] font-medium text-ink-50">Testo del servizio</h2>
               <Alert>{error}</Alert>
               <div className="mt-4 flex flex-wrap gap-2">
-                {Object.entries(SERVICIOS).map(([value, s]) => (
+                {permitidos.map(([value, s]) => (
                   <button
                     key={value}
                     type="button"
@@ -248,30 +261,52 @@ export const ServicioDesdeTextoPage = () => {
                   </ul>
                 )}
 
+                {lectura.lugares?.length > 0 && (
+                  <ul className="mt-4 flex flex-col gap-1.5 rounded-xl border border-line/15 px-3 py-2 text-[12.5px]">
+                    {lectura.lugares.map((l, i) => (
+                      <li key={`${l.rol}-${i}`} className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                        <span className="shrink-0 font-semibold text-ink-100">{l.rol === "ritiro" ? "Ritiro" : "Consegna"}</span>
+                        <span className="text-ink-200">{l.texto}</span>
+                        {l.localizado ? (
+                          <span className="text-success-500">✓ Localizzato{l.localizado !== l.texto ? `: ${l.localizado}` : ""}</span>
+                        ) : (
+                          <span className="text-warning-500">⚠ Non localizzato: controlla l'indirizzo</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <TextField id="lec-shipment" label="Shipment" value={lectura.shipment} onChange={(e) => setCampo("shipment", e.target.value)} />
-                  <TextField id="lec-order" label="Order" value={lectura.orderNumero} onChange={(e) => setCampo("orderNumero", e.target.value)} />
+                  <TextField id="lec-shipment" label={esExtra ? "Codice" : "Shipment"} value={lectura.shipment} onChange={(e) => setCampo("shipment", e.target.value)} />
+                  <TextField id="lec-order" label={esExtra ? "Secondo codice (facoltativo)" : "Order"} value={lectura.orderNumero} onChange={(e) => setCampo("orderNumero", e.target.value)} />
+                  {esExtra && <TextField className="sm:col-span-2" id="lec-ritiro" label="Ritiro" value={lectura.ritiro} onChange={(e) => setCampo("ritiro", e.target.value)} />}
                   <ClientAutocomplete
                     id="lec-cliente"
-                    label={lectura.clientId || !lectura.clienteTexto ? "Cliente" : `Cliente (nel testo: ${lectura.clienteTexto})`}
+                    label={`${lectura.clientId || !lectura.clienteTexto ? "Cliente" : `Cliente (nel testo: ${lectura.clienteTexto})`}${esExtra ? " (facoltativo)" : ""}`}
                     clients={clients ?? []}
                     value={lectura.clientId}
                     onChange={(clientId) => setCampo("clientId", clientId)}
                     onClientCreated={(client) => setClients((prev) => [...(prev ?? []), client])}
                   />
-                  <TipoSelect
-                    value={lectura.tipoPedido}
-                    origen={lectura.tipoOrigen}
-                    onChange={(v) => setLectura((prev) => ({ ...prev, tipoPedido: v, tipoOrigen: v ? "manual" : null }))}
-                  />
-                  <Select
-                    id="lec-numero"
-                    label={`${zona.numeroLabel} (facoltativo)`}
-                    value={lectura.aplicativo}
-                    onChange={(e) => setCampo("aplicativo", e.target.value)}
-                    options={[{ value: "", label: "— Nessuno —" }, ...APLICATIVO_OPTIONS.filter((o) => o.value.startsWith(`${zona.zona}_`))]}
-                  />
-                  <TextField id="lec-ciudad" label="Città" value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+                  {!esExtra && (
+                    <TipoSelect
+                      value={lectura.tipoPedido}
+                      origen={lectura.tipoOrigen}
+                      onChange={(v) => setLectura((prev) => ({ ...prev, tipoPedido: v, tipoOrigen: v ? "manual" : null }))}
+                    />
+                  )}
+                  {esDhl && (
+                    <Select
+                      id="lec-numero"
+                      label={`${zona.numeroLabel} (facoltativo)`}
+                      value={lectura.aplicativo}
+                      onChange={(e) => setCampo("aplicativo", e.target.value)}
+                      options={[{ value: "", label: "— Nessuno —" }, ...APLICATIVO_OPTIONS.filter((o) => o.value.startsWith(`${zona.zona}_`))]}
+                    />
+                  )}
+                  <TextField id="lec-ciudad" label={esExtra ? "Consegna" : "Città"} value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+                  {!esExtra && <TextField id="lec-km" label="KM (facoltativo)" value={lectura.km} onChange={(e) => setCampo("km", e.target.value)} />}
                   <TextField
                     id="lec-eta"
                     label="ETA"
