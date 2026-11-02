@@ -2,7 +2,8 @@ import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { parseApiError } from "../../lib/api";
 import { editarCeldaRequest, getClienteFotosRequest, getHojaAnchosRequest, saveHojaAnchosRequest } from "../../lib/cliente.api";
-import { PUNTO_ESTADO } from "../cliente/TablaServicios";
+import { FotosModal, PUNTO_ESTADO } from "../cliente/TablaServicios";
+import { ImageIcon } from "../ui/icons";
 import { formatFechaHora, kmDeSolicitud, toRomeInput } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 
@@ -281,24 +282,24 @@ const ANCHO_NUMERO_FILA = 48;
 
 // Con anchos ajustados, si a la derecha de la tabla sobra espacio, lo que se ve al abrir una fila (chofer, targa, bolla y quien la subio) pasa a ser columnas
 // a continuacion, en este orden: las que caben se muestran para todos los servicios; si caben todas, la flechita de abrir la fila ya no hace falta.
-const BOLLA_MAX_MINIATURAS = 3;
-const CeldaBolla = ({ detalle }) => {
-  const bollas = detalle?.data?.bollas ?? [];
-  if (detalle?.loading) return <span className="text-ink-400">…</span>;
-  if (bollas.length === 0) return null;
+// Un servicio hecho trae el numero de fotos de entrega y bolla, pero NO las fotos: no se descarga nada hasta que se pulsa el icono (entonces se abre el visor).
+const tieneFotos = (s) => s.origen === "servicio" && s.fotos > 0;
+const CeldaBolla = ({ s, onAbrir }) => {
+  if (!tieneFotos(s)) return null;
   return (
-    <span className="flex items-center gap-1">
-      {bollas.slice(0, BOLLA_MAX_MINIATURAS).map((b) => (
-        <a key={b.id} href={b.url} target="_blank" rel="noreferrer" title="Foto de retiro (bolla)" className="block overflow-hidden rounded border border-line/30 hover:border-accent-400">
-          {b.esPdf ? (
-            <span className="flex h-7 w-7 items-center justify-center bg-line/10 text-[9px] font-semibold text-ink-100">PDF</span>
-          ) : (
-            <img src={b.url} alt="Foto de retiro (bolla)" loading="lazy" className="h-7 w-7 object-cover" />
-          )}
-        </a>
-      ))}
-      {bollas.length > BOLLA_MAX_MINIATURAS && <span className="text-[11px] text-ink-300">+{bollas.length - BOLLA_MAX_MINIATURAS}</span>}
-    </span>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onAbrir(s);
+      }}
+      title={`Vedi le foto (${s.fotos})`}
+      aria-label={`Vedi le foto di ${s.codigo ?? "questo servizio"}`}
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-accent-400 transition-colors hover:bg-line/10 hover:text-accent-300"
+    >
+      <ImageIcon className="h-5 w-5" />
+      {s.fotos > 1 && <span className="text-[11px] font-semibold text-ink-300">{s.fotos}</span>}
+    </button>
   );
 };
 const EXTRA_CHOFER = {
@@ -319,11 +320,9 @@ const EXTRA_CHOFER = {
     ),
 };
 const EXTRA_TARGA = { id: "I", titulo: "TARGA", ancho: 100, render: (s) => s.targa ?? "" };
-const EXTRA_BOLLA = { id: "J", titulo: "BOLLA", ancho: 120, render: (s, detalle) => <CeldaBolla detalle={detalle} /> };
+const EXTRA_BOLLA = { id: "J", titulo: "BOLLA", ancho: 90, render: (s, ctx) => <CeldaBolla s={s} onAbrir={ctx.abrirFotos} /> };
 const EXTRA_CARGADO_POR = { id: "K", titulo: "CARICATO DA", ancho: 190, render: (s) => (s.creadoPor ? `${s.creadoPor}${s.creadoPorRol ? ` · ${s.creadoPorRol}` : ""}` : "") };
 const EXTRA_CARGADO_EL = { id: "L", titulo: "CARICATO IL", ancho: 130, render: (s) => (s.creadoAt ? formatFechaHora(s.creadoAt) : "") };
-// Un servicio ya hecho trae sus fotos de entrega y bolla (contador); solo esos piden sus miniaturas.
-const tieneFotos = (s) => s.origen === "servicio" && s.fotos > 0;
 const useAnchosHoja = (variante) => {
   const [anchos, setAnchos] = useState({});
   const [aviso, setAviso] = useState(null); // { ok, texto } del ultimo guardado
@@ -416,12 +415,12 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
     resto -= e.ancho;
   }
   const todasCaben = extrasVisibles.length >= esenciales.length;
-  const hayBolla = extrasVisibles.includes(EXTRA_BOLLA);
   const anchoExtras = extrasVisibles.reduce((suma, e) => suma + e.ancho, 0);
   const colSpanTotal = columnas.length + extrasVisibles.length + (fija ? 1 : 0);
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
+  const [fotosDe, setFotosDe] = useState(null); // servicio cuyas fotos se estan viendo (solo se piden al abrir el visor)
   const [editando, setEditando] = useState(null); // { rowId, colId, inicial, guardando }
   const [errorEdicion, setErrorEdicion] = useState("");
 
@@ -509,22 +508,6 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
       .catch((err) => setDetalles((prev) => ({ ...prev, [row.id]: { error: parseApiError(err).message } })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierta, rows]);
-
-  // Con la columna BOLLA a la vista se piden las miniaturas de los servicios que tienen fotos, de a pocos para no saturar.
-  useEffect(() => {
-    if (!hayBolla) return;
-    const cupo = 4 - Object.values(detalles).filter((d) => d.loading).length;
-    if (cupo <= 0) return;
-    const pendientes = rows.filter((r) => tieneFotos(r) && !detalles[r.id]).slice(0, cupo);
-    if (pendientes.length === 0) return;
-    setDetalles((prev) => ({ ...prev, ...Object.fromEntries(pendientes.map((r) => [r.id, { loading: true }])) }));
-    pendientes.forEach((r) =>
-      loadDetalle(r)
-        .then((data) => setDetalles((prev) => ({ ...prev, [r.id]: { data } })))
-        .catch((err) => setDetalles((prev) => ({ ...prev, [r.id]: { error: parseApiError(err).message } })))
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hayBolla, rows, detalles]);
 
   const celda = (id, col, falta) =>
     clsx(
@@ -658,7 +641,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                     {/* Con espacio libre a la derecha: chofer, targa, bolla y quien la subio, como columnas a continuacion (solo lectura). */}
                     {extrasVisibles.map((e) => (
                       <td key={e.id} className="break-words border border-line/25 px-2 py-1.5 align-middle text-[13px] text-ink-50">
-                        {e.render(s, detalles[s.id])}
+                        {e.render(s, { detalle: detalles[s.id], abrirFotos: setFotosDe })}
                       </td>
                     ))}
                     {fija && <td className="border-0 p-0" />}
@@ -696,6 +679,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
         Le celle in rosso hanno dati mancanti. Trascina il bordo di un titolo per cambiare la larghezza della colonna (vale per tutti).
         {aviso && <span className={aviso.ok ? "ml-2 text-success-500" : "ml-2 text-danger-500"}>{aviso.texto}</span>}
       </p>
+      {fotosDe && <FotosModal servicio={{ id: fotosDe.id, codigo: fotosDe.codigo, destino: fotosDe.ciudad }} onClose={() => setFotosDe(null)} />}
     </div>
   );
 };
@@ -733,6 +717,7 @@ export const filaDeSolicitud = (s) => ({
 // "solicitud": la que lo origino (si esta en la lista): le presta el codigo y el ritiro que el servicio real no guarda.
 export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   id: s.id,
+  codigo: s.codigo,
   origen: "servicio",
   abrible: false,
   punto: PUNTO_ESTADO[s.estado] ?? "bg-accent-400",

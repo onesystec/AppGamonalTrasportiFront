@@ -70,9 +70,9 @@ export const FotosModal = ({ servicio, onClose }) => {
           {fotos?.map((f) => (
             <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-line/10 hover:border-line/30">
               {f.esPdf ? (
-                <span className="flex h-40 items-center justify-center bg-line/10 text-[14px] font-medium text-ink-100">{t("hist.openPdf")}</span>
+                <span className="flex h-72 items-center justify-center bg-line/10 text-[14px] font-medium text-ink-100">{t("hist.openPdf")}</span>
               ) : (
-                <img src={f.url} alt={f.tipo} className="h-40 w-full object-cover" loading="lazy" />
+                <img src={f.url} alt={f.tipo} className="h-72 w-full bg-black/20 object-contain" loading="lazy" />
               )}
               <span className="block px-3 py-2 text-[13px] text-ink-300">{f.tipo}</span>
             </a>
