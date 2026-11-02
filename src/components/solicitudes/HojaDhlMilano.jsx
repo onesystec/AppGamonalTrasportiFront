@@ -76,7 +76,7 @@ const COL_TIPO = { id: "B", campos: ["tipoPedido"], titulo: "TIPO", ancho: AJUST
 const COL_CLIENTE = { id: "C", campos: ["cliente"], titulo: "CLIENTE", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.cliente, falta: (s) => !s.cliente, aviso: () => "Manca il cliente" };
 const COL_CIUDAD = { id: "D", campos: ["ciudad"], titulo: "CIUDAD", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca la città" };
 const COL_ETA = { id: "E", campos: ["eta"], titulo: "ETA", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => formatFechaHora(s.eta), falta: (s) => !s.eta, aviso: () => "Manca l'ETA" };
-const COL_KM = { id: "F", campos: ["km"], titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap text-right", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
+const COL_KM = { id: "F", campos: ["km"], titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
 const colNumero = (zona) => ({
   id: "G",
   campos: ["aplicativo"],
@@ -185,7 +185,7 @@ const valorInicial = (s, campo) =>
   })[campo] ?? "";
 const ETIQUETA_EDITOR = { shipment: "Shipment", orderNumero: "Order", ritiro: "Ritiro" };
 
-const clasesEditor = "w-full min-w-0 bg-popover px-2 py-1.5 text-[13px] text-ink-50 outline-none disabled:opacity-60";
+const clasesEditor = "w-full min-w-0 bg-popover px-2 py-1.5 text-center text-[13px] text-ink-50 outline-none disabled:opacity-60";
 
 // Lista desplegable de la celda en edicion: abierta desde el primer momento, se puede recorrer con el teclado (flechas, Enter, Escape) o con el raton.
 const ListaEditor = ({ opciones, valor, guardando, onElegir, onCerrar }) => {
@@ -242,7 +242,7 @@ const ListaEditor = ({ opciones, valor, guardando, onElegir, onCerrar }) => {
       aria-expanded="true"
       aria-haspopup="listbox"
       onKeyDown={teclas}
-      className={clsx(clasesEditor, "flex cursor-pointer items-center justify-between gap-2", guardando && "pointer-events-none opacity-60")}
+      className={clsx(clasesEditor, "flex cursor-pointer items-center justify-center gap-2", guardando && "pointer-events-none opacity-60")}
     >
       <span className="truncate">{opciones.find((o) => o.value === valor)?.label ?? valor}</span>
       <span className="text-[9px] text-ink-300">▼</span>
@@ -604,7 +604,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
     <div>
       <div ref={contenedor} tabIndex={0} onKeyDown={teclado} className="overflow-auto rounded-md border border-line/30 bg-popover outline-none">
         <table
-          className={clsx("border-collapse select-none text-left", !fija && "w-full")}
+          className={clsx("border-collapse select-none text-center", !fija && "w-full")}
           style={fija ? { tableLayout: "fixed", width: "100%", minWidth: anchoTabla + anchoExtras } : undefined}
         >
           {fija && (
@@ -640,7 +640,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
             <tr>
               <th className="sticky left-0 z-20 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">1</th>
               {columnas.map((c) => (
-                <th key={c.id} className={clsx("relative whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50", fija && "overflow-hidden text-ellipsis")}>
+                <th key={c.id} className={clsx("relative whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-center text-[12px] font-bold text-ink-50", fija && "overflow-hidden text-ellipsis")}>
                   {c.titulo}
                   {/* Borde para cambiar el ancho: arrastrar; doble clic = ancho automatico */}
                   <span
@@ -654,7 +654,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                 </th>
               ))}
               {extrasVisibles.map((e) => (
-                <th key={e.id} className="overflow-hidden text-ellipsis whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
+                <th key={e.id} className="overflow-hidden text-ellipsis whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-center text-[12px] font-bold text-ink-50">
                   {e.titulo}
                 </th>
               ))}
@@ -733,7 +733,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                   {extendida && (
                     <tr>
                       <th className="sticky left-0 z-10 border border-line/25 bg-accent-500/25" />
-                      <td colSpan={colSpanTotal} className="border border-line/25 bg-line/[0.04] px-4 py-3">
+                      <td colSpan={colSpanTotal} className="border border-line/25 bg-line/[0.04] px-4 py-3 text-left">
                         <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
                       </td>
                     </tr>
