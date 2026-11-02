@@ -16,8 +16,9 @@ import { listSolicitudesOficinaRequest, rechazarSolicitudRequest } from "../../l
 
 const REFRESH_MS = 60 * 1000;
 
-// Area del registro real donde se carga cada tipo de solicitud (Extra Piazza arranca en Milano; la zona se cambia en el formulario).
-const AREA_POR_SERVICIO = { DHL_MILANO: "dhl-milano", DHL_ROMA: "dhl-roma", AB_SERVICE: "ab-service", EXTRA_PIAZZA: "piazza-milano" };
+// Area del registro real donde se carga cada tipo de solicitud (Extra Piazza: la de su zona; sin zona, Milano).
+const AREA_POR_SERVICIO = { DHL_MILANO: "dhl-milano", DHL_ROMA: "dhl-roma", AB_SERVICE: "ab-service" };
+const areaDeSolicitud = (s) => (s.servicio === "EXTRA_PIAZZA" ? (s.zona === "ROMA" ? "piazza-roma" : "piazza-milano") : AREA_POR_SERVICIO[s.servicio]);
 
 const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
   const [rechazando, setRechazando] = useState(false);
@@ -103,7 +104,7 @@ const SolicitudesModal = ({ onClose, onChanged }) => {
 
   // Completar = abrir el formulario real del servicio con los datos de la solicitud; al crearlo la solicitud queda aceptada.
   const handleComplete = (solicitud) => {
-    const area = AREAS_BY_KEY[AREA_POR_SERVICIO[solicitud.servicio]];
+    const area = AREAS_BY_KEY[areaDeSolicitud(solicitud)];
     onClose();
     navigate(area.newPath, { state: { backgroundLocation: location, ...area.newState, solicitud } });
   };

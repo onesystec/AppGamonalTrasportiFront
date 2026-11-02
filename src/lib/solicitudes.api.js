@@ -12,7 +12,7 @@ export const listSolicitudesOficinaRequest = (estado = "PENDIENTE") =>
 export const rechazarSolicitudRequest = (id, motivo) => api.post(`/solicitudes/${id}/rechazar`, { motivo: motivo || null }).then((res) => res.data.data);
 
 // Servicio desde un texto pegado (DHL Milano): el bot de reglas lo lee (no guarda nada) y despues se crea la solicitud pendiente.
-export const leerTextoRequest = (servicio, texto) => api.post("/solicitudes/leer-texto", { servicio, texto }).then((res) => res.data.data);
+export const leerTextoRequest = (servicio, texto, zona) => api.post("/solicitudes/leer-texto", { servicio, texto, ...(zona ? { zona } : {}) }).then((res) => res.data.data);
 export const crearDesdeTextoRequest = (payload) => api.post("/solicitudes/desde-texto", payload).then((res) => res.data.data);
 
 // Extra Piazza: km estimados por ruta entre el ritiro y la consegna (solo una pista: el KM lo escribe una persona).

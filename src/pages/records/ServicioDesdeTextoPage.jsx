@@ -18,12 +18,14 @@ import { AREAS_BY_KEY } from "../../lib/recordAreas";
 import { crearDesdeTextoRequest, leerTextoRequest } from "../../lib/solicitudes.api";
 import { formatFechaHora, notifySolicitudesChanged, toRomeInput } from "../../lib/solicitudes";
 
-// DHL Milano, DHL Roma, AB Service y Extra Piazza (Extras Stefania todavia no). areas: las claves de area que dan acceso al servicio; area: donde se abre el formulario real.
+// DHL Milano, DHL Roma, AB Service y Extra Piazza Milano / Roma (Extras Stefania todavia no). areas: las claves de area que dan acceso al servicio; area: donde se
+// abre el formulario real; tipo: el tipo de servicio que entiende el servidor (Extra Piazza va por zona, cada una sale de su lugar de espera).
 const SERVICIOS = {
   DHL_MILANO: { label: "DHL Milano", zona: "MILANO", numeroLabel: "Numero di Milano", areas: ["dhl-milano"], area: "dhl-milano" },
   DHL_ROMA: { label: "DHL Roma", zona: "ROMA", numeroLabel: "Numero di Roma", areas: ["dhl-roma"], area: "dhl-roma" },
   AB_SERVICE: { label: "AB Service", zona: null, areas: ["ab-service"], area: "ab-service" },
-  EXTRA_PIAZZA: { label: "Extra Piazza", zona: null, areas: ["piazza-milano", "piazza-roma"], area: "piazza-milano" },
+  EXTRA_PIAZZA_MILANO: { label: "Extra Piazza Milano", tipo: "EXTRA_PIAZZA", zonaExtra: "MILANO", zona: null, areas: ["piazza-milano"], area: "piazza-milano" },
+  EXTRA_PIAZZA_ROMA: { label: "Extra Piazza Roma", tipo: "EXTRA_PIAZZA", zonaExtra: "ROMA", zona: null, areas: ["piazza-roma"], area: "piazza-roma" },
 };
 
 // Tipo dell'ordine: menu a tendina con ASAP / SCHEDULED. Quello scritto nel testo o dedotto dall'ETA arriva già scelto (e con "suggerito" accanto),
@@ -64,7 +66,7 @@ export const ServicioDesdeTextoPage = () => {
   const permitidos = Object.entries(SERVICIOS).filter(([, s]) => areasUsuario === null || s.areas.some((k) => areasUsuario.includes(k)));
   const [servicio, setServicio] = useState(() => permitidos[0]?.[0] ?? "DHL_MILANO");
   const zona = SERVICIOS[servicio];
-  const esExtra = servicio === "EXTRA_PIAZZA";
+  const esExtra = zona.tipo === "EXTRA_PIAZZA";
   const esDhl = servicio === "DHL_MILANO" || servicio === "DHL_ROMA";
   const [texto, setTexto] = useState("");
   const [clients, setClients] = useState(null);
@@ -91,7 +93,7 @@ export const ServicioDesdeTextoPage = () => {
     setError("");
     setCreada(null);
     try {
-      const d = await leerTextoRequest(servicio, texto);
+      const d = await leerTextoRequest(zona.tipo ?? servicio, texto, zona.zonaExtra);
       setLectura({
         descripcion: d.descripcion,
         shipment: d.shipment ?? "",
@@ -123,7 +125,8 @@ export const ServicioDesdeTextoPage = () => {
     setError("");
     try {
       const solicitud = await crearDesdeTextoRequest({
-        servicio,
+        servicio: zona.tipo ?? servicio,
+        ...(zona.zonaExtra ? { zona: zona.zonaExtra } : {}),
         cliente: clienteNombre,
         destinazione: lectura.ciudad.trim(),
         fechaHora: lectura.eta,

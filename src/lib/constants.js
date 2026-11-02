@@ -14,11 +14,12 @@ export const SALIDA_SUGERENCIAS = [
   { id: "dhl-roma", label: "DHL Roma", direccion: "DHL Roma", lat: 41.87714283318788, lng: 12.359177365097292 },
 ];
 
-// Los dos lugares de espera donde puede empezar un servicio (los mismos de constants/workPlaces.js del backend). En "Otros" (Extras
+// Los lugares de espera donde puede empezar un servicio (los mismos de constants/workPlaces.js del backend). En "Otros" (Extras
 // Stefania) se elige desde cual sale; los demas servicios ya lo definen por su tipo y zona.
 export const ESPERA_SUGERENCIAS = [
   { id: "espera-milano", label: "Espera Milano", direccion: "Lugar de espera Milano", lat: 45.42317626065062, lng: 9.293531695992783 },
   { id: "espera-roma", label: "Espera Roma", direccion: "Lugar de espera Roma", lat: 41.877128, lng: 12.359183 },
+  { id: "espera-roma-piazza", label: "Espera Piazza Roma (FCO)", direccion: "Lugar de espera Roma (Extras Piazza)", lat: 41.801626, lng: 12.271827 },
 ];
 
 // Atajos del campo "Salida" segun el tipo de servicio: en "Otros" van primero los lugares de espera.
@@ -277,10 +278,10 @@ export const TAGLIANDO_STATUS_LABELS = {
 
 // De donde sale un servicio cuando no se escribe una "Salida" (igual que defaultSalidaFor del backend): AB Service retira en AB
 // Service (Milano), todo lo de zona Roma (DHL, AB Service y Extras Piazza) en el deposito de DHL Roma y lo demas en el
-// deposito de DHL Milano; Extras Piazza Milano sale del lugar de espera directo al primer punto.
+// deposito de DHL Milano; Extras Piazza sale de su lugar de espera (Milano, o Cargo City Fiumicino FCO en Roma) directo al primer punto.
 export const salidaPorDefectoLabel = (spedizzione, zona) => {
-  if (zona !== "ROMA" && (spedizzione === "EXTRA_PIAZZA" || spedizzione == null)) return "Lugar de espera Milano (directo al primer punto)";
-  if (zona === "ROMA" && (spedizzione === "DHL" || spedizzione === "AB_SERVICE" || spedizzione === "EXTRA_PIAZZA")) return "DHL Roma";
+  if (spedizzione === "EXTRA_PIAZZA" || spedizzione == null) return zona === "ROMA" ? "Lugar de espera Roma, Cargo City Fiumicino FCO (directo al primer punto)" : "Lugar de espera Milano (directo al primer punto)";
+  if (zona === "ROMA" && (spedizzione === "DHL" || spedizzione === "AB_SERVICE")) return "DHL Roma";
   if (spedizzione === "AB_SERVICE") return "AB Service";
   return "Via Walter Tobagi, 8 (DHL Milano)";
 };

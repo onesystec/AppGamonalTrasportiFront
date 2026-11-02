@@ -18,7 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { EXTRAS_PIAZZA_ZONA_OPTIONS, RECORD_STATUS_OPTIONS, destinoSugerencias } from "../../lib/constants";
+import { EXTRAS_PIAZZA_ZONA_OPTIONS, RECORD_STATUS_OPTIONS, destinoSugerencias, salidaPorDefectoLabel } from "../../lib/constants";
 import { useTarifasKm } from "../../hooks/useTarifasKm";
 import { CATEGORIA_VEHICULO_LABELS } from "../../lib/vehiculos";
 import { formatCurrency } from "../../lib/format";
@@ -332,6 +332,7 @@ export const NewRecordPage = () => {
               onPasaPorFrejusChange={(value) => setField("pasaPorFrejus", value)}
               salidaError={fieldErrors.salida?.[0]}
               sugerencias={destinoSugerencias("EXTRA_PIAZZA", form.extrasPiazzaZona)}
+              salidaPorDefecto={salidaPorDefectoLabel("EXTRA_PIAZZA", form.extrasPiazzaZona)}
               error={fieldErrors.stops?.[0]}
               disabled={submitting}
             />
