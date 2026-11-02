@@ -5,7 +5,7 @@ import { BackLink } from "../../components/ui/BackLink";
 import { Button } from "../../components/ui/Button";
 import { ClientAutocomplete } from "../../components/ui/ClientAutocomplete";
 import { GlassCard } from "../../components/ui/GlassCard";
-import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { Select } from "../../components/ui/Select";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
 import { TextField } from "../../components/ui/TextField";
 import { Textarea } from "../../components/ui/Textarea";
@@ -19,7 +19,29 @@ import { formatFechaHora, notifySolicitudesChanged, toRomeInput } from "../../li
 // Por ahora solo DHL Milano.
 const SERVICIO = "DHL_MILANO";
 
-// Servicio desde un texto pegado: el bot de reglas (sin IA, sin costo) lee el texto y rellena Shipment, Order, cliente, tipo, ciudad y ETA.
+// Tipo dell'ordine: menu a tendina con ASAP / SCHEDULED. Quello scritto nel testo o dedotto dall'ETA arriva già scelto (e con "suggerito" accanto),
+// e si cambia scegliendo un'altra voce.
+const TipoSelect = ({ value, origen, onChange }) => (
+  <div>
+    <Select
+      id="lec-tipo"
+      label="Tipo"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      options={[
+        { value: "", label: "— Scegli il tipo —" },
+        ...TIPO_PEDIDO_OPTIONS.map((o) => ({ value: o.value, label: value === o.value && origen === "eta" ? `${o.label} (suggerito)` : o.label })),
+      ]}
+    />
+    <span className="mt-1.5 block text-[12px] text-ink-400">
+      {origen === "texto" && "Letto dal testo."}
+      {origen === "eta" && "Suggerito in base all'ETA: cambialo se non è così."}
+      {!origen && !value && "Non è stato possibile dedurlo: scegline uno."}
+    </span>
+  </div>
+);
+
+// Servicio desde un texto pegado (todo el proceso va en italiano): el bot de reglas (sin IA, sin costo) lee el texto y rellena Shipment, Order, cliente, tipo, ciudad y ETA.
 // Quien pega corrige lo que haga falta y lo guarda como solicitud PENDIENTE (con el texto completo como descripcion); despues se completa el
 // resto del formulario (chofer, vehiculo, km...) y al crear el servicio la solicitud queda aceptada.
 export const ServicioDesdeTextoPage = () => {
@@ -62,6 +84,7 @@ export const ServicioDesdeTextoPage = () => {
         clientId: d.clienteId ?? "",
         clienteTexto: d.cliente ?? "",
         tipoPedido: d.tipoPedido ?? "",
+        tipoOrigen: d.tipoOrigen ?? null,
         ciudad: d.ciudad ?? "",
         eta: d.eta ? toRomeInput(d.eta) : "",
         avisos: d.avisos ?? [],
@@ -74,7 +97,7 @@ export const ServicioDesdeTextoPage = () => {
     }
   };
 
-  const faltan = lectura ? [!clienteNombre && "el cliente", !lectura.ciudad.trim() && "la ciudad", !lectura.eta && "la ETA"].filter(Boolean) : [];
+  const faltan = lectura ? [!clienteNombre && "cliente", !lectura.ciudad.trim() && "città", !lectura.eta && "ETA"].filter(Boolean) : [];
 
   const guardar = async () => {
     setGuardando(true);
@@ -106,7 +129,7 @@ export const ServicioDesdeTextoPage = () => {
     setError("");
   };
 
-  // Completar ahora = abrir el formulario real del servicio con lo leido; al crearlo la solicitud queda aceptada.
+  // Completa ora = abrir el formulario real del servicio con lo leido; al crearlo la solicitud queda aceptada.
   const completarAhora = () =>
     navigate("/records/dhl-ab-service/new", {
       replace: true,
@@ -120,46 +143,46 @@ export const ServicioDesdeTextoPage = () => {
       <div className="flex flex-col gap-6">
         <div>
           <BackLink to={closeTo} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
-            &larr; Mis registros
+            &larr; Registri
           </BackLink>
         </div>
 
         <div>
-          <h1 className="text-[24px] font-semibold text-ink-50">Servicio desde un texto - DHL Milano</h1>
+          <h1 className="text-[24px] font-semibold text-ink-50">Servizio da un testo - DHL Milano</h1>
           <p className="mt-1 text-[14px] text-ink-300">
-            Pega el texto del servicio: se leen Shipment, Order, cliente, tipo, ciudad y ETA. Lo demás lo completa una persona antes de aceptarlo.
+            Incolla il testo del servizio: si leggono Shipment, Order, cliente, tipo, città ed ETA. Il resto lo completa una persona prima di accettarlo.
           </p>
         </div>
 
         {creada ? (
           <GlassCard>
-            <h2 className="text-[17px] font-medium text-ink-50">Guardado como pendiente</h2>
+            <h2 className="text-[17px] font-medium text-ink-50">Salvato come in sospeso</h2>
             <p className="mt-2 text-[14px] text-ink-300">
               {creada.cliente} · {creada.destinazione} · {formatFechaHora(creada.fechaHora)}
               {creada.shipment ? ` · Shipment ${creada.shipment}` : ""}
               {creada.orderNumero ? ` · Order ${creada.orderNumero}` : ""}
             </p>
             <p className="mt-1 text-[13px] text-ink-400">
-              Queda en las solicitudes pendientes. Al completar el formulario (chofer, vehículo, km...) y crear el servicio, se acepta.
+              Resta tra le richieste in sospeso. Completando il modulo (autista, veicolo, km...) e creando il servizio, viene accettata.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button className="w-auto" onClick={completarAhora}>
-                Completar ahora
+                Completa ora
               </Button>
               <Button className="w-auto" variant="ghost" onClick={nuevo}>
-                Pegar otro texto
+                Incolla un altro testo
               </Button>
             </div>
           </GlassCard>
         ) : (
           <>
             <GlassCard>
-              <h2 className="text-[17px] font-medium text-ink-50">Texto del servicio</h2>
+              <h2 className="text-[17px] font-medium text-ink-50">Testo del servizio</h2>
               <Alert>{error}</Alert>
               <div className="mt-4">
                 <Textarea
                   id="texto"
-                  label="Pega aquí el texto"
+                  label="Incolla qui il testo"
                   placeholder="Shipments: Customer ... Shipment # ... ETA ... Ship To City ... Order # ..."
                   rows={8}
                   value={texto}
@@ -171,24 +194,24 @@ export const ServicioDesdeTextoPage = () => {
               </div>
               <div className="mt-4">
                 <Button className="w-auto" onClick={leer} loading={leyendo} disabled={!texto.trim()}>
-                  Leer texto
+                  Leggi testo
                 </Button>
               </div>
             </GlassCard>
 
             {lectura && (
               <GlassCard>
-                <h2 className="text-[17px] font-medium text-ink-50">Esto es lo que se leyó</h2>
-                <p className="mt-1 text-[13px] text-ink-300">Revisa y corrige lo que haga falta. La descripción será el texto completo.</p>
+                <h2 className="text-[17px] font-medium text-ink-50">Ecco cosa è stato letto</h2>
+                <p className="mt-1 text-[13px] text-ink-300">Controlla e correggi quello che serve. La descrizione sarà il testo completo.</p>
 
                 {lectura.duplicados.length > 0 && (
                   <div className="mt-4 rounded-2xl border border-danger-500/40 bg-danger-500/10 px-4 py-3 text-[13px] text-ink-100">
-                    <span className="block font-semibold text-danger-500">Este pedido parece ya estar cargado</span>
+                    <span className="block font-semibold text-danger-500">Questo ordine sembra già caricato</span>
                     {lectura.duplicados.map((d) => (
                       <span key={`${d.tipo}-${d.id}`} className="mt-1 block text-ink-200">
                         {d.tipo === "SERVICIO"
-                          ? `Servicio ${d.codigo} (${d.estado}) del ${formatFechaHora(d.fecha)}`
-                          : `Solicitud pendiente de ${d.cliente} del ${formatFechaHora(d.fecha)}`}
+                          ? `Servizio ${d.codigo} (${d.estado}) del ${formatFechaHora(d.fecha)}`
+                          : `Richiesta in sospeso di ${d.cliente} del ${formatFechaHora(d.fecha)}`}
                       </span>
                     ))}
                   </div>
@@ -207,21 +230,18 @@ export const ServicioDesdeTextoPage = () => {
                   <TextField id="lec-order" label="Order" value={lectura.orderNumero} onChange={(e) => setCampo("orderNumero", e.target.value)} />
                   <ClientAutocomplete
                     id="lec-cliente"
-                    label={lectura.clientId || !lectura.clienteTexto ? "Cliente" : `Cliente (en el texto: ${lectura.clienteTexto})`}
+                    label={lectura.clientId || !lectura.clienteTexto ? "Cliente" : `Cliente (nel testo: ${lectura.clienteTexto})`}
                     clients={clients ?? []}
                     value={lectura.clientId}
                     onChange={(clientId) => setCampo("clientId", clientId)}
                     onClientCreated={(client) => setClients((prev) => [...(prev ?? []), client])}
                   />
-                  <SearchableSelect
-                    id="lec-tipo"
-                    label="Tipo"
-                    placeholder="ASAP o SCHEDULED"
-                    options={TIPO_PEDIDO_OPTIONS}
+                  <TipoSelect
                     value={lectura.tipoPedido}
-                    onChange={(v) => setCampo("tipoPedido", v)}
+                    origen={lectura.tipoOrigen}
+                    onChange={(v) => setLectura((prev) => ({ ...prev, tipoPedido: v, tipoOrigen: v ? "manual" : null }))}
                   />
-                  <TextField id="lec-ciudad" label="Ciudad" value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+                  <TextField id="lec-ciudad" label="Città" value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
                   <TextField
                     id="lec-eta"
                     label="ETA"
@@ -233,9 +253,9 @@ export const ServicioDesdeTextoPage = () => {
 
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   <Button className="w-auto" onClick={guardar} loading={guardando} disabled={faltan.length > 0}>
-                    Guardar como pendiente
+                    Salva come in sospeso
                   </Button>
-                  {faltan.length > 0 && <span className="text-[13px] text-warning-500">Falta {faltan.join(", ")}.</span>}
+                  {faltan.length > 0 && <span className="text-[13px] text-warning-500">Da completare: {faltan.join(", ")}.</span>}
                 </div>
               </GlassCard>
             )}

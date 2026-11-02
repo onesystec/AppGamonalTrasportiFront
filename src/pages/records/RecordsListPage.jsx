@@ -350,7 +350,7 @@ const PendingPanel = ({ records: pending, closeTo, onChangeEstado, updatingId, s
   </PanelShell>
 );
 
-// "Desde un texto": pega el texto de un servicio de DHL Milano y se leen Shipment, Order, cliente, tipo, ciudad y ETA (queda como solicitud pendiente).
+// "Da un testo" (el proceso va en italiano): pega el texto de un servicio de DHL Milano y se leen Shipment, Order, cliente, tipo, ciudad y ETA (queda como solicitud pendiente).
 const DesdeTextoButton = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -361,7 +361,7 @@ const DesdeTextoButton = () => {
       className="inline-flex items-center gap-2 rounded-full border border-line/25 px-5 py-2.5 text-[14px] font-semibold text-ink-50 transition hover:bg-line/10"
     >
       <FileTextIcon className="h-4 w-4" />
-      Desde un texto
+      Da un testo
     </button>
   );
 };

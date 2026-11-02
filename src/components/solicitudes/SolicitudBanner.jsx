@@ -7,7 +7,7 @@ export const SolicitudBanner = ({ solicitud, clienteEncontrado }) => (
   <div className="rounded-2xl border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-[13px] text-ink-100">
     <span className="block font-semibold text-accent-300">
       {esSolicitudDeTexto(solicitud)
-        ? `Servicio leído de un texto pegado por ${solicitud.creadoPor ?? "la oficina"}: revisa los datos y completa el resto`
+        ? `Servizio letto da un testo incollato da ${solicitud.creadoPor ?? "l'ufficio"}: controlla i dati e completa il resto`
         : `Completando una solicitud de ${solicitud.empresa ?? solicitud.creadoPor ?? "un cliente"}`}
     </span>
     <span className="mt-1 block">
