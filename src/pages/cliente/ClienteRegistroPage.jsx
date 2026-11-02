@@ -6,6 +6,7 @@ import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
+import { RegistroLista } from "../../components/cliente/RegistroLista";
 import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
 import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
@@ -15,7 +16,7 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { getClienteServiciosRequest } from "../../lib/cliente.api";
+import { getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
 import { currentMonth } from "../../lib/finanzas";
 import { formatCurrency } from "../../lib/format";
@@ -23,6 +24,9 @@ import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS } from "../../lib/s
 import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib/solicitudes.api";
 
 const REFRESH_MS = 60 * 1000;
+
+// La vista del Registro es la lista por dias (como la de la oficina). La hoja tipo Excel sigue en el codigo, oculta: se vuelve a mostrar poniendo esto en true.
+const MOSTRAR_HOJA_EXCEL = false;
 
 // Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: DHL Roma llama ROMA a la ultima columna, AB Service no usa ese numero y Extra Piazza
 // lleva CODICE, RITIRO y CONSEGNA).
@@ -191,10 +195,13 @@ export const ClienteRegistroPage = () => {
   // Registro e Historial son una sola vista: con el modulo HISTORIAL, a las solicitudes se suman los servicios ya hechos (la misma hoja).
   const verHistorial = Boolean(user?.clienteModulos?.includes("HISTORIAL"));
   const verFotos = Boolean(user?.clienteModulos?.includes("FOTOS"));
+  // La alerta de ETA usa el GPS en vivo (mismo seguimiento del cliente); sin ese modulo se juzga solo por la hora.
+  const verSeguimiento = Boolean(user?.clienteModulos?.some((m) => m === "MAPA" || m === "LISTA"));
   const [month, setMonth] = useState(currentMonth);
   const [servicio, setServicio] = useState("DHL_MILANO");
   const [items, setItems] = useState(null);
   const [servicios, setServicios] = useState([]);
+  const [seguimiento, setSeguimiento] = useState(null);
   const [fotosDe, setFotosDe] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(null); // null | { solicitud?: Solicitud }
@@ -206,14 +213,16 @@ export const ClienteRegistroPage = () => {
         listSolicitudesClienteRequest(month),
         // Si el historial falla, las solicitudes se siguen viendo.
         verHistorial ? getClienteServiciosRequest(month).then((r) => r.servicios).catch(() => []) : Promise.resolve([]),
+        verSeguimiento ? getClienteSeguimientoRequest().catch(() => null) : Promise.resolve(null),
       ])
-        .then(([list, hechos]) => {
+        .then(([list, hechos, seg]) => {
           setItems(list);
           setServicios(hechos);
+          setSeguimiento(seg);
           setError("");
         })
         .catch((err) => setError(parseApiError(err).message)),
-    [month, verHistorial]
+    [month, verHistorial, verSeguimiento]
   );
 
   useEffect(() => {
@@ -253,6 +262,7 @@ export const ClienteRegistroPage = () => {
         </div>
       </div>
 
+      {MOSTRAR_HOJA_EXCEL && (
       <div role="tablist" aria-label={t("reg.services")} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
         {SOLICITUD_SERVICIOS.map((t) => (
           <button
@@ -271,10 +281,22 @@ export const ClienteRegistroPage = () => {
           </button>
         ))}
       </div>
+      )}
 
       <Alert>{error}</Alert>
       {!items && !error && <PageLoader />}
-      {items && HOJAS[servicio] && (
+      {items && !MOSTRAR_HOJA_EXCEL && (
+        <RegistroLista
+          solicitudes={items}
+          servicios={servicios}
+          seguimiento={seguimiento}
+          month={month}
+          verFotos={verFotos}
+          onOpenSolicitud={setSelectedId}
+          onFotos={setFotosDe}
+        />
+      )}
+      {items && MOSTRAR_HOJA_EXCEL && HOJAS[servicio] && (
         <>
           {/* Escritorio: la hoja tipo Google Sheets con las solicitudes y los servicios. En el celular, las tablas de siempre. */}
           <div className="hidden lg:block">
@@ -296,7 +318,7 @@ export const ClienteRegistroPage = () => {
           </div>
         </>
       )}
-      {items && !HOJAS[servicio] && (
+      {items && MOSTRAR_HOJA_EXCEL && !HOJAS[servicio] && (
         <div className="flex flex-col gap-4">
           <TablaRegistros items={visibles[servicio]} servicio={servicio} onSelect={setSelectedId} />
           {serviciosPorTipo[servicio].length > 0 && (
@@ -309,6 +331,7 @@ export const ClienteRegistroPage = () => {
       )}
 
       {/* Pestanas de hoja, como en Excel / Google Sheets: abajo, siempre a la vista, una por tipo de servicio. */}
+      {MOSTRAR_HOJA_EXCEL && (
       <div
         role="tablist"
         aria-label={t("reg.services")}
@@ -336,6 +359,7 @@ export const ClienteRegistroPage = () => {
           );
         })}
       </div>
+      )}
 
       {selected && !form && (
         <VistaRapida
