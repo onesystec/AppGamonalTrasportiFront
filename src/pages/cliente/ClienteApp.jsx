@@ -84,7 +84,7 @@ const ClienteShell = () => {
         <img src={logo} alt="" className="h-10 w-10 shrink-0 rounded-full" />
       )}
       <div className="min-w-0 flex-1">
-        <span className="block truncate text-[16px] font-semibold text-ink-50">{titulo || "Gamonal Driver"}</span>
+        <span className="block truncate text-[16px] font-semibold text-ink-50">{titulo || "ONE DRIVER Express"}</span>
         {subtitulo && <span className="block truncate text-[12px] text-ink-400">{subtitulo}</span>}
       </div>
     </div>

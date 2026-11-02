@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Gamonal Driver 2.0</string>
-    <string name="title_activity_main">Gamonal Driver 2.0</string>
+    <string name="app_name">ONE DRIVER Express</string>
+    <string name="title_activity_main">ONE DRIVER Express</string>
     <string name="package_name">com.gamonaltrasporti.app</string>
     <string name="custom_url_scheme">com.gamonaltrasporti.app</string>
 

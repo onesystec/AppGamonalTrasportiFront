@@ -79,9 +79,9 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
       <div className="relative z-10 flex h-dvh w-72 max-w-[80vw] animate-slide-in-left flex-col justify-between border-r border-sidebar-border bg-sidebar px-4 py-6">
         <div>
           <div className="flex items-center gap-3 px-2">
-            <img src={logo} alt="Gamonal Driver 2.0" className="h-10 w-10 shrink-0 rounded-full" />
+            <img src={logo} alt="ONE DRIVER Express" className="h-10 w-10 shrink-0 rounded-full" />
             <span className="text-[16px] font-semibold text-sidebar-foreground">
-              Gamonal <span className="text-sidebar-active">Driver 2.0</span>
+              ONE DRIVER <span className="text-sidebar-active">Express</span>
             </span>
           </div>
 

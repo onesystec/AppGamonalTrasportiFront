@@ -76,7 +76,7 @@ const UpdateBlock = () => {
 
           {status === "permission" && (
             <div className="mt-3 rounded-lg bg-warning-500/10 px-3 py-2.5 text-[13px] text-warning-500">
-              Para instalar la actualización, Android necesita que permitas a Gamonal Driver instalar aplicaciones. Toca «Abrir permiso», activa
+              Para instalar la actualización, Android necesita que permitas a ONE DRIVER Express instalar aplicaciones. Toca «Abrir permiso», activa
               la opción, vuelve a la app y toca «Actualizar ahora» otra vez. Solo se pide una vez.
               <Button variant="ghost" className="mt-2.5" onClick={openInstallSettings}>
                 Abrir permiso
@@ -178,7 +178,7 @@ export const SettingsPage = () => {
 
   const copyDiagnostic = async () => {
     const lines = [
-      "Gamonal Driver 2.0 - diagnostico",
+      "ONE DRIVER Express - diagnostico",
       `Version: ${installed ? `${installed.versionName} (${installed.versionCode})` : "web"}`,
       `Plataforma: ${platformLabel()}`,
       `Usuario: ${user?.cargo ?? "-"} ${user?.id ?? ""}`,

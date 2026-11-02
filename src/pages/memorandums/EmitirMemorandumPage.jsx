@@ -45,7 +45,7 @@ const Preview = ({ numero, tipoLabel, titulo, cuerpo, audiencia, emisor, rol, pl
     <div className="flex items-center gap-3 bg-[#0b1f33] px-5 py-4">
       <img src={logo} alt="" className="h-11 w-11 rounded-full bg-white" />
       <div>
-        <p className="text-[15px] font-bold text-white">Gamonal Driver 2.0</p>
+        <p className="text-[15px] font-bold text-white">ONE DRIVER Express</p>
         <p className="text-[9px] uppercase tracking-[0.12em] text-slate-300">Gestión de flota · Gamonal Trasporti</p>
       </div>
     </div>

@@ -660,7 +660,7 @@ export const ProfilePage = () => {
               <p className="mt-1 text-[16px] font-medium text-brand-bright">
                 {roleText(user)}
               </p>
-              <p className="text-[14px] text-white/75">Gamonal Driver 2.0</p>
+              <p className="text-[14px] text-white/75">ONE DRIVER Express</p>
               {avatarError && <p className="mt-2 text-[13px] text-danger-500">{avatarError}</p>}
             </div>
           </div>

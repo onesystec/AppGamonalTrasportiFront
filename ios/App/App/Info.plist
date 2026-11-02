@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Gamonal Driver 2.0</string>
+        <string>ONE DRIVER Express</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -28,13 +28,13 @@
 	     el tracking siga funcionando con la app minimizada o la pantalla bloqueada
 	     (equivalente iOS de ACCESS_BACKGROUND_LOCATION en AndroidManifest.xml). -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Gamonal Driver 2.0 necesita tu ubicacion para mostrar tu posicion en el mapa mientras tenes un servicio en camino.</string>
+	<string>ONE DRIVER Express necesita tu ubicacion para mostrar tu posicion en el mapa mientras tenes un servicio en camino.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Gamonal Driver 2.0 necesita compartir tu ubicacion en segundo plano durante tu horario laboral, aunque la pantalla este bloqueada o la app minimizada.</string>
+	<string>ONE DRIVER Express necesita compartir tu ubicacion en segundo plano durante tu horario laboral, aunque la pantalla este bloqueada o la app minimizada.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Gamonal Driver 2.0 usa la camara para que saques fotos de los mancatos pagamento, bollas, comprobantes y otros documentos del servicio.</string>
+	<string>ONE DRIVER Express usa la camara para que saques fotos de los mancatos pagamento, bollas, comprobantes y otros documentos del servicio.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Gamonal Driver 2.0 necesita acceso a tus fotos para que puedas adjuntar imagenes de documentos y comprobantes.</string>
+	<string>ONE DRIVER Express necesita acceso a tus fotos para que puedas adjuntar imagenes de documentos y comprobantes.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

@@ -33,7 +33,7 @@ export const UpdateBanner = () => {
       <div className="flex min-w-0 items-center gap-3">
         <DownloadIcon className="h-5 w-5 shrink-0 text-brand" />
         <p className="text-[13px] text-ink-50">
-          <strong className="font-semibold">Hay una versión nueva</strong> de Gamonal Driver ({latest.versionName}).
+          <strong className="font-semibold">Hay una versión nueva</strong> de ONE DRIVER Express ({latest.versionName}).
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">

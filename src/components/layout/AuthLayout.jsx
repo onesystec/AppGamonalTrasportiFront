@@ -39,7 +39,7 @@ const FeatureIcon = ({ children }) => (
 
 const Wordmark = ({ className }) => (
   <span className={className}>
-    Gamonal <span className="text-sidebar-active">Driver 2.0</span>
+    ONE DRIVER <span className="text-sidebar-active">Express</span>
   </span>
 );
 
@@ -87,7 +87,7 @@ export const AuthLayout = ({ children, title, subtitle, footer }) => (
         </div>
 
         <p className={`text-[12px] text-white/60 ${SHADOW}`}>
-          &copy; {new Date().getFullYear()} Gamonal Driver 2.0. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} ONE DRIVER Express. Todos los derechos reservados.
         </p>
       </div>
     </aside>
@@ -107,7 +107,7 @@ export const AuthLayout = ({ children, title, subtitle, footer }) => (
         </div>
         <img
           src={logo}
-          alt="Gamonal Driver 2.0"
+          alt="ONE DRIVER Express"
           className="absolute bottom-0 left-1/2 h-20 w-20 -translate-x-1/2 translate-y-1/2 rounded-full shadow-lg ring-4 ring-white dark:ring-[#050d1b]"
         />
       </div>
@@ -132,7 +132,7 @@ export const AuthLayout = ({ children, title, subtitle, footer }) => (
       </div>
 
       <p className="relative z-10 pb-6 text-center text-[12px] text-ink-500 lg:hidden">
-        &copy; {new Date().getFullYear()} Gamonal Driver 2.0
+        &copy; {new Date().getFullYear()} ONE DRIVER Express
       </p>
     </main>
   </div>

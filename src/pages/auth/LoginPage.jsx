@@ -42,7 +42,7 @@ export const LoginPage = () => {
   return (
     <AuthLayout
       title="Bienvenido"
-      subtitle="Inicia sesión en Gamonal Driver 2.0"
+      subtitle="Inicia sesión en ONE DRIVER Express"
       footer={
         <>
           ¿No tienes cuenta?{" "}

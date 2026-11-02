@@ -48,7 +48,7 @@ export const useGpsRespaldo = () => {
       if (watcherId != null) return;
       watcherId = await BackgroundGeolocation.addWatcher(
         {
-          backgroundMessage: "El GPS del vehiculo no responde: Gamonal Driver 2.0 registra tu recorrido durante tu servicio.",
+          backgroundMessage: "El GPS del vehiculo no responde: ONE DRIVER Express registra tu recorrido durante tu servicio.",
           backgroundTitle: "GPS de respaldo activo",
           requestPermissions: true,
           stale: false,

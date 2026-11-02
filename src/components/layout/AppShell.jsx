@@ -465,11 +465,11 @@ const AppShellContent = () => {
           {/* Arriba: logo fijo y menu con scroll propio. Abajo (mas abajo): perfil, ajustes y cerrar sesion, siempre a la vista. */}
           <div className="flex min-h-0 flex-1 flex-col">
             <div className={clsx("flex shrink-0 items-center", compact ? "justify-center" : "gap-2 px-2")}>
-              <Link to="/" className="flex min-w-0 items-center gap-3" title={compact ? "Gamonal Driver 2.0" : undefined}>
-                <img src={logo} alt="Gamonal Driver 2.0" className="h-10 w-10 shrink-0 rounded-full" />
+              <Link to="/" className="flex min-w-0 items-center gap-3" title={compact ? "ONE DRIVER Express" : undefined}>
+                <img src={logo} alt="ONE DRIVER Express" className="h-10 w-10 shrink-0 rounded-full" />
                 {!compact && (
                   <span className="text-[16px] font-semibold text-sidebar-foreground">
-                    Gamonal <span className="text-sidebar-active">Driver 2.0</span>
+                    ONE DRIVER <span className="text-sidebar-active">Express</span>
                   </span>
                 )}
               </Link>
@@ -606,12 +606,12 @@ const AppShellContent = () => {
             >
               <img
                 src={logo}
-                alt="Gamonal Driver 2.0"
+                alt="ONE DRIVER Express"
                 className={clsx("h-10 w-10 shrink-0", isPrivileged ? "rounded-xl" : "rounded-full")}
               />
               {!isPrivileged && (
                 <span className="text-[20px] font-semibold text-ink-50">
-                  Gamonal <span className="text-brand">Driver 2.0</span>
+                  ONE DRIVER <span className="text-brand">Express</span>
                 </span>
               )}
             </button>
