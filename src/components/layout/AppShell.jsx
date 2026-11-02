@@ -10,7 +10,6 @@ import { AppUpdateProvider, useAppUpdate } from "../../context/AppUpdateContext"
 import { NotificationsProvider } from "../../context/NotificationsContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useGpsRespaldo } from "../../hooks/useGpsRespaldo";
-import { marcarEntrado } from "../../lib/entrada";
 import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
@@ -377,12 +376,6 @@ const AppShellContent = () => {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // La redireccion de entrada (Registros) ya se hizo: desde aqui "/" vuelve a ser Inicio. Al cerrar sesion se reinicia.
-  useEffect(() => {
-    marcarEntrado(true);
-    return () => marcarEntrado(false);
-  }, []);
-
   useLocationSharing();
   useGpsRespaldo();
   usePushNotifications();
@@ -505,9 +498,9 @@ const AppShellContent = () => {
             >
               {isPrivileged ? (
                 <>
-                  <SidebarNavTab to="/records" label="Registros" icon={ListIcon} compact={compact} />
                   <SidebarNavTab to="/" label="Inicio" icon={HomeIcon} compact={compact} />
                   <SidebarNavTab to="/resumen" label="Resumen" icon={ChecklistIcon} compact={compact} />
+                  <SidebarNavTab to="/records" label="Registros" icon={ListIcon} compact={compact} />
                   <SidebarNavTab to="/finanzas" label="Finanzas" icon={WalletIcon} compact={compact} />
                 </>
               ) : isRrhh ? (
@@ -661,9 +654,9 @@ const AppShellContent = () => {
       <nav className="fixed inset-x-0 bottom-0 z-20 flex w-full items-stretch border-t border-sidebar-border bg-sidebar/95 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)] sm:hidden">
         {isPrivileged ? (
           <>
-            <BottomNavTab to="/records" label="Registros" icon={ListIcon} />
             <BottomNavTab to="/" label="Inicio" icon={HomeIcon} />
             <BottomNavTab to="/resumen" label="Resumen" icon={ChecklistIcon} />
+            <BottomNavTab to="/records" label="Registros" icon={ListIcon} />
           </>
         ) : isRrhh ? (
           <>

@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { lazy, Suspense } from "react";
-import { NavLink, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { CalendarIcon, ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
@@ -9,6 +9,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useT } from "../../i18n/index.jsx";
 import { isEmbedded } from "../../lib/embedded";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
+import { haEntrado, marcarEntrado } from "../../lib/entrada";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
 
 const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").then((m) => ({ default: m.ClienteSeguimientoPage })));
@@ -38,13 +39,14 @@ const buildNav = (modulos) => {
     ...(modulos.includes("EN_VIVO") ? [{ to: "/cliente/en-vivo", label: "nav.live", icon: MapPinIcon }] : []),
     ...(verSeguimiento ? [{ to: "/cliente", label: "nav.tracking", icon: RouteIcon, end: true }] : []),
   ];
+  // El Registro va el primero de la barra, sin grupo.
+  const registro = modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : [];
   const otras = [
     ...(modulos.includes("DISPONIBILIDAD") ? [{ to: "/cliente/disponibilidad", label: "nav.availability", icon: CalendarIcon }] : []),
     // Registro e Historial son una sola vista (la hoja de servicios): con el Registro activo, el Historial se ve ahi mismo.
     ...(modulos.includes("HISTORIAL") && !modulos.includes("REGISTRO") ? [{ to: "/cliente/historial", label: "nav.history", icon: FileTextIcon }] : []),
-    ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : []),
   ];
-  return { mapa, otras };
+  return { registro, mapa, otras };
 };
 
 // Estructura de la vista de un usuario cliente: barra de navegacion a la izquierda (arriba, en el celular) con sus vistas, y a la derecha la
@@ -62,8 +64,16 @@ const ClienteShell = () => {
   const spedizioni = (user?.clienteAreas ?? []).map((key) => AREA_LABEL_BY_KEY[key] ?? key).join(" · ");
   const titulo = user?.cliente?.nombre ?? nombrePersona;
   const subtitulo = user?.cliente?.nombre ? nombrePersona : spedizioni;
-  const { mapa, otras } = buildNav(modulos);
-  const todas = [...mapa, ...otras];
+  const { registro, mapa, otras } = buildNav(modulos);
+  const todas = [...registro, ...mapa, ...otras];
+
+  // La entrada al Registro (ClienteInicio) se hace una sola vez: en cuanto se esta en otra vista, "Seguimiento" abre el seguimiento. Al cerrar
+  // sesion se reinicia.
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (pathname !== "/" && pathname !== "/cliente") marcarEntrado(true);
+  }, [pathname]);
+  useEffect(() => () => marcarEntrado(false), []);
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
 
   const marca = (
@@ -108,6 +118,16 @@ const ClienteShell = () => {
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-5 border-r border-line/10 bg-background px-3 py-4 lg:flex">
         <div className="px-1">{marca}</div>
         <nav aria-label={t("nav.views")} className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          {registro.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {registro.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={itemClass}>
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  {t(label)}
+                </NavLink>
+              ))}
+            </div>
+          )}
           {mapa.length > 0 && (
             <div className="flex flex-col gap-1">
               <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-400">{t("nav.groupMap")}</span>
@@ -161,11 +181,12 @@ const ClienteShell = () => {
   );
 };
 
-// Pantalla de inicio segun lo que tenga activo: seguimiento primero; si no, el mapa en vivo, el historial o el registro; si no, un aviso.
+// Pantalla de inicio segun lo que tenga activo: al entrar, el Registro; despues seguimiento primero; si no, el mapa en vivo, el historial o el registro; si no, un aviso.
 const ClienteInicio = () => {
   const t = useT();
   const { user } = useAuth();
   const modulos = user?.clienteModulos ?? [];
+  if (modulos.includes("REGISTRO") && !haEntrado()) return <Navigate to="/cliente/registro" replace />;
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
   if (modulos.includes("EN_VIVO")) return <Navigate to="/cliente/en-vivo" replace />;
   if (modulos.includes("DISPONIBILIDAD")) return <Navigate to="/cliente/disponibilidad" replace />;
