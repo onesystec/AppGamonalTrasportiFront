@@ -278,8 +278,52 @@ const MIN_ANCHO = 30;
 const MAX_ANCHO = 800;
 const ANCHO_BASE = { A: 150, B: 100, C: 200, D: 200, E: 150, F: 70, G: 90, R: 200 };
 const ANCHO_NUMERO_FILA = 48;
-// Con anchos ajustados, si a la derecha de la tabla queda al menos este espacio libre, el detalle de una fila (chofer, targa, bolla) se abre alli.
-const ANCHO_DETALLE_LATERAL = 320;
+
+// Con anchos ajustados, si a la derecha de la tabla sobra espacio, lo que se ve al abrir una fila (chofer, targa, bolla y quien la subio) pasa a ser columnas
+// a continuacion, en este orden: las que caben se muestran para todos los servicios; si caben todas, la flechita de abrir la fila ya no hace falta.
+const BOLLA_MAX_MINIATURAS = 3;
+const CeldaBolla = ({ detalle }) => {
+  const bollas = detalle?.data?.bollas ?? [];
+  if (detalle?.loading) return <span className="text-ink-400">…</span>;
+  if (bollas.length === 0) return null;
+  return (
+    <span className="flex items-center gap-1">
+      {bollas.slice(0, BOLLA_MAX_MINIATURAS).map((b) => (
+        <a key={b.id} href={b.url} target="_blank" rel="noreferrer" title="Foto de retiro (bolla)" className="block overflow-hidden rounded border border-line/30 hover:border-accent-400">
+          {b.esPdf ? (
+            <span className="flex h-7 w-7 items-center justify-center bg-line/10 text-[9px] font-semibold text-ink-100">PDF</span>
+          ) : (
+            <img src={b.url} alt="Foto de retiro (bolla)" loading="lazy" className="h-7 w-7 object-cover" />
+          )}
+        </a>
+      ))}
+      {bollas.length > BOLLA_MAX_MINIATURAS && <span className="text-[11px] text-ink-300">+{bollas.length - BOLLA_MAX_MINIATURAS}</span>}
+    </span>
+  );
+};
+const EXTRA_CHOFER = {
+  id: "H",
+  titulo: "CHOFER",
+  ancho: 150,
+  render: (s) =>
+    s.sinAsignar ? (
+      s.choferIndicado ? (
+        <span className="italic text-ink-300" title="Chofer indicado: lo confirma la oficina al aceptar">
+          {s.choferIndicado}
+        </span>
+      ) : (
+        ""
+      )
+    ) : (
+      (s.chofer ?? "")
+    ),
+};
+const EXTRA_TARGA = { id: "I", titulo: "TARGA", ancho: 100, render: (s) => s.targa ?? "" };
+const EXTRA_BOLLA = { id: "J", titulo: "BOLLA", ancho: 120, render: (s, detalle) => <CeldaBolla detalle={detalle} /> };
+const EXTRA_CARGADO_POR = { id: "K", titulo: "CARICATO DA", ancho: 190, render: (s) => (s.creadoPor ? `${s.creadoPor}${s.creadoPorRol ? ` · ${s.creadoPorRol}` : ""}` : "") };
+const EXTRA_CARGADO_EL = { id: "L", titulo: "CARICATO IL", ancho: 130, render: (s) => (s.creadoAt ? formatFechaHora(s.creadoAt) : "") };
+// Un servicio ya hecho trae sus fotos de entrega y bolla (contador); solo esos piden sus miniaturas.
+const tieneFotos = (s) => s.origen === "servicio" && s.fotos > 0;
 const useAnchosHoja = (variante) => {
   const [anchos, setAnchos] = useState({});
   const [aviso, setAviso] = useState(null); // { ok, texto } del ultimo guardado
@@ -345,7 +389,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
   const fija = Object.keys(anchos).length > 0;
   const anchoDe = (c) => anchos[c.id] ?? ANCHO_BASE[c.id] ?? 120;
   const anchoTabla = ANCHO_NUMERO_FILA + columnas.reduce((suma, c) => suma + anchoDe(c), 0);
-  // Espacio libre a la derecha de la tabla (cuando las columnas se achicaron): ahi se muestra el detalle de la fila abierta, aprovechando el hueco.
+  // Espacio libre a la derecha de la tabla (cuando las columnas se achicaron): ahi se agregan columnas con el chofer, la targa, etc., aprovechando el hueco.
   const contenedor = useRef(null);
   const [libre, setLibre] = useState(0);
   useEffect(() => {
@@ -360,7 +404,21 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
     observer.observe(el);
     return () => observer.disconnect();
   }, [fija, anchoTabla]);
-  const lateral = fija && libre >= ANCHO_DETALLE_LATERAL;
+  // Las columnas extra que caben, en orden (sin saltarse ninguna). Si caben las esenciales (chofer, targa y bolla), ya no se necesita abrir la fila; quien la
+  // subio y cuando se suman solo si sobra mas espacio (si no caben, salen al pasar el cursor por el numero de fila).
+  const esenciales = [EXTRA_CHOFER, EXTRA_TARGA, ...(verFotos ? [EXTRA_BOLLA] : [])];
+  const extras = [...esenciales, EXTRA_CARGADO_POR, EXTRA_CARGADO_EL];
+  const extrasVisibles = [];
+  let resto = fija ? libre : 0;
+  for (const e of extras) {
+    if (resto < e.ancho) break;
+    extrasVisibles.push(e);
+    resto -= e.ancho;
+  }
+  const todasCaben = extrasVisibles.length >= esenciales.length;
+  const hayBolla = extrasVisibles.includes(EXTRA_BOLLA);
+  const anchoExtras = extrasVisibles.reduce((suma, e) => suma + e.ancho, 0);
+  const colSpanTotal = columnas.length + extrasVisibles.length + (fija ? 1 : 0);
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
@@ -452,6 +510,22 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierta, rows]);
 
+  // Con la columna BOLLA a la vista se piden las miniaturas de los servicios que tienen fotos, de a pocos para no saturar.
+  useEffect(() => {
+    if (!hayBolla) return;
+    const cupo = 4 - Object.values(detalles).filter((d) => d.loading).length;
+    if (cupo <= 0) return;
+    const pendientes = rows.filter((r) => tieneFotos(r) && !detalles[r.id]).slice(0, cupo);
+    if (pendientes.length === 0) return;
+    setDetalles((prev) => ({ ...prev, ...Object.fromEntries(pendientes.map((r) => [r.id, { loading: true }])) }));
+    pendientes.forEach((r) =>
+      loadDetalle(r)
+        .then((data) => setDetalles((prev) => ({ ...prev, [r.id]: { data } })))
+        .catch((err) => setDetalles((prev) => ({ ...prev, [r.id]: { error: parseApiError(err).message } })))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hayBolla, rows, detalles]);
+
   const celda = (id, col, falta) =>
     clsx(
       "border border-line/25 px-2 py-1.5 align-middle text-[13px] text-ink-50",
@@ -464,13 +538,16 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
       <div ref={contenedor} tabIndex={0} onKeyDown={teclado} className="overflow-auto rounded-md border border-line/30 bg-popover outline-none">
         <table
           className={clsx("border-collapse select-none text-left", !fija && "w-full")}
-          style={fija ? { tableLayout: "fixed", width: "100%", minWidth: anchoTabla } : undefined}
+          style={fija ? { tableLayout: "fixed", width: "100%", minWidth: anchoTabla + anchoExtras } : undefined}
         >
           {fija && (
             <colgroup>
               <col style={{ width: ANCHO_NUMERO_FILA }} />
               {columnas.map((c) => (
                 <col key={c.id} style={{ width: anchoDe(c) }} />
+              ))}
+              {extrasVisibles.map((e) => (
+                <col key={e.id} style={{ width: e.ancho }} />
               ))}
               {/* Columna de relleno: se queda con el espacio que sobra a la derecha */}
               <col />
@@ -483,6 +560,11 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
               {columnas.map((c, i) => (
                 <th key={c.id} className={clsx("border border-line/25 bg-line/10 px-2 py-0.5 text-center text-[11px] font-normal text-ink-300", c.ancho)}>
                   {String.fromCharCode(65 + i)}
+                </th>
+              ))}
+              {extrasVisibles.map((e, i) => (
+                <th key={e.id} className="border border-line/25 bg-line/10 px-2 py-0.5 text-center text-[11px] font-normal text-ink-300">
+                  {String.fromCharCode(65 + columnas.length + i)}
                 </th>
               ))}
               {fija && <th className="border-0 p-0" />}
@@ -504,12 +586,17 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                   />
                 </th>
               ))}
+              {extrasVisibles.map((e) => (
+                <th key={e.id} className="overflow-hidden text-ellipsis whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
+                  {e.titulo}
+                </th>
+              ))}
               {fija && <th className="border-0 p-0" />}
             </tr>
           </thead>
           <tbody>
             {rows.map((s, i) => {
-              const extendida = abierta === s.id;
+              const extendida = abierta === s.id && !todasCaben;
               // Que celdas se pintan de rojo (faltan datos); en las filas rechazadas o anuladas no se avisa.
               const falta = Object.fromEntries(columnas.map((c) => [c.id, !s.omitirFaltantes && c.falta(s)]));
               return (
@@ -517,17 +604,21 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                   <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen && s.abrible !== false ? () => onOpen(s.id) : undefined}>
                     <th
                       scope="row"
-                      onClick={() => setAbierta(extendida ? null : s.id)}
-                      title={`${s.puntoTitulo ?? ""} · clic para ver chofer, targa y bolla`}
+                      onClick={todasCaben ? undefined : () => setAbierta(extendida ? null : s.id)}
+                      title={
+                        todasCaben
+                          ? [s.puntoTitulo, !extrasVisibles.includes(EXTRA_CARGADO_POR) && s.creadoPor && `Caricato da ${s.creadoPor}${s.creadoAt ? ` il ${formatFechaHora(s.creadoAt)}` : ""}`].filter(Boolean).join(" · ")
+                          : `${s.puntoTitulo ?? ""} · clic para ver chofer, targa e bolla`
+                      }
                       className={clsx(
-                        "sticky left-0 z-10 w-12 cursor-pointer border border-line/25 text-center text-[11px] font-normal transition-colors",
-                        extendida ? "bg-accent-500/25 text-ink-50" : "bg-line/10 text-ink-300 hover:bg-line/20"
+                        "sticky left-0 z-10 w-12 border border-line/25 text-center text-[11px] font-normal transition-colors",
+                        todasCaben ? "bg-line/10 text-ink-300" : clsx("cursor-pointer", extendida ? "bg-accent-500/25 text-ink-50" : "bg-line/10 text-ink-300 hover:bg-line/20")
                       )}
                     >
                       <span className="flex items-center justify-center gap-1.5">
                         <span className={clsx("h-1.5 w-1.5 rounded-full", s.punto ?? "bg-line")} />
                         {i + 2}
-                        <span className={clsx("text-[9px] transition-transform", extendida && "rotate-90")}>▶</span>
+                        {!todasCaben && <span className={clsx("text-[9px] transition-transform", extendida && "rotate-90")}>▶</span>}
                       </span>
                     </th>
                     {columnas.map((c) => {
@@ -564,21 +655,18 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
                         </td>
                       );
                     })}
-                    {/* Con espacio libre a la derecha, el detalle de la fila abierta se muestra aqui (sobre el hueco, sin mover las demas filas). */}
-                    {fija && (
-                      <td className="relative border-0 p-0 align-top">
-                        {extendida && lateral && (
-                          <div className="absolute left-2 top-1 z-10 w-[calc(100%-1rem)] rounded-md border border-line/30 bg-popover p-3 shadow-lg">
-                            <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
-                          </div>
-                        )}
+                    {/* Con espacio libre a la derecha: chofer, targa, bolla y quien la subio, como columnas a continuacion (solo lectura). */}
+                    {extrasVisibles.map((e) => (
+                      <td key={e.id} className="break-words border border-line/25 px-2 py-1.5 align-middle text-[13px] text-ink-50">
+                        {e.render(s, detalles[s.id])}
                       </td>
-                    )}
+                    ))}
+                    {fija && <td className="border-0 p-0" />}
                   </tr>
-                  {extendida && !lateral && (
+                  {extendida && (
                     <tr>
                       <th className="sticky left-0 z-10 border border-line/25 bg-accent-500/25" />
-                      <td colSpan={columnas.length + (fija ? 1 : 0)} className="border border-line/25 bg-line/[0.04] px-4 py-3">
+                      <td colSpan={colSpanTotal} className="border border-line/25 bg-line/[0.04] px-4 py-3">
                         <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
                       </td>
                     </tr>
@@ -589,7 +677,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
             {rows.length === 0 && (
               <tr>
                 <th className="sticky left-0 z-10 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">2</th>
-                <td colSpan={columnas.length + (fija ? 1 : 0)} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
+                <td colSpan={colSpanTotal} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
                   {vacio}
                 </td>
               </tr>
@@ -599,7 +687,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, onEditar, v
       </div>
       {errorEdicion && <p className="mt-2 text-[13px] text-danger-500">{errorEdicion}</p>}
       <p className="mt-2 text-[12px] text-ink-400">
-        Clicca sul numero di riga per vedere chofer, targa e bolla.{" "}
+        {todasCaben ? "Chofer, targa e bolla compaiono accanto a ogni servizio perché c'è spazio." : "Clicca sul numero di riga per vedere chofer, targa e bolla."}{" "}
         {onEditar
           ? "Seleziona una cella e scrivi per modificarla: Invio salva, Tab passa alla cella accanto, Esc annulla. Un servizio già creato permette di cambiare solo Shipment/Order, Tipo, Città ed ETA."
           : onOpen
@@ -630,6 +718,8 @@ export const filaDeSolicitud = (s) => ({
   milano: numeroMilano(s),
   sinAsignar: s.estado !== "ACEPTADA",
   choferIndicado: s.choferIndicado,
+  chofer: s.asignado?.chofer ?? null,
+  targa: s.asignado?.targa ?? null,
   creadoPor: s.creadoPor,
   creadoPorRol: s.creadoPorRol,
   creadoAt: s.createdAt,
@@ -661,6 +751,7 @@ export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   sinAsignar: false,
   chofer: s.chofer,
   targa: s.targa,
+  fotos: s.fotos ?? 0,
   omitirFaltantes: s.estado === "ANNULLATO",
   editable: "servicio",
 });
