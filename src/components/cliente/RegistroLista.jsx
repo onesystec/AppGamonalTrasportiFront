@@ -1,11 +1,10 @@
 import clsx from "clsx";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AreaBadge } from "../records/AreaBadge";
 import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
 import { BarsIcon, ClipboardListIcon, ClockIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
-import { EstadoPill } from "../solicitudes/SolicitudDetalle";
-import { aplicativoTexto, ESTADO_PILL, estadoTexto } from "./TablaServicios";
+import { aplicativoTexto } from "./TablaServicios";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { buildFullCsv, downloadCsv } from "../../lib/csv";
 import { AREA_ALL, RECORD_AREAS } from "../../lib/recordAreas";
@@ -41,6 +40,40 @@ const retrasoEta = (r, enCamino, ahora) => {
   return vencido > RETRASO_AVISO_MIN ? vencido : null;
 };
 
+// Un solo recorrido para todo: Richiesta ricevuta -> Programmato -> In viaggio -> Consegnato (mas Annullato / Riprogrammato / Rifiutata aparte).
+export const FASES = {
+  RICHIESTA: { paso: 0, pill: "bg-warning-500/15 text-warning-500" },
+  PROGRAMMATO: { paso: 1, pill: "bg-line/15 text-ink-200" },
+  IN_VIAGGIO: { paso: 2, pill: "bg-accent-500/15 text-accent-300" },
+  CONSEGNATO: { paso: 3, pill: "bg-success-500/15 text-success-500" },
+  RIPROGRAMMATO: { paso: null, pill: "bg-warning-500/15 text-warning-500" },
+  ANNULLATO: { paso: null, pill: "bg-danger-500/15 text-danger-500" },
+  RIFIUTATA: { paso: null, pill: "bg-danger-500/15 text-danger-500" },
+};
+const faseDeSolicitud = (s) => (s.estado === "RECHAZADA" ? "RIFIUTATA" : s.estado === "ACEPTADA" ? "PROGRAMMATO" : "RICHIESTA");
+const faseDeServicio = (r, enViaje) =>
+  r.estado === "ANNULLATO"
+    ? "ANNULLATO"
+    : r.estado === "RISCHEDULATO"
+      ? "RIPROGRAMMATO"
+      : r.estado === "CONSEGNATO"
+        ? "CONSEGNATO"
+        : enViaje || r.estado === "RITIRATO" || r.estado === "IN_CONSEGNA"
+          ? "IN_VIAGGIO"
+          : "PROGRAMMATO";
+
+// Lo que falta por completar (lo que la hoja pintaba de rojo y que el cliente puede escribir): codigos, tipo, cliente, ciudad / consegna, ritiro y ETA.
+const faltantes = ({ extra, shipment, order, tipo, cliente, destino, ritiro, eta }) =>
+  [
+    !shipment && (extra ? "Codice" : "Shipment"),
+    !extra && !order && "Order",
+    !extra && !tipo && "Tipo",
+    !extra && !cliente && "Cliente",
+    !destino && (extra ? "Consegna" : "Città"),
+    extra && !ritiro && "Ritiro",
+    !eta && "ETA",
+  ].filter(Boolean);
+
 export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) => {
   const enCamino = new Map((seguimiento?.enCamino ?? []).map((s) => [s.id, s]));
   const hechos = new Set(servicios.map((r) => r.id));
@@ -67,10 +100,14 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       fotos: 0,
       retraso: null,
       pendiente: s.estado === "PENDIENTE",
+      fase: faseDeSolicitud(s),
+      faltan: s.estado === "RECHAZADA" ? [] : faltantes({ extra: s.servicio === "EXTRA_PIAZZA", shipment: s.shipment, order: s.orderNumero, tipo: s.tipoPedido, cliente: s.cliente, destino: s.destinazione, ritiro: s.ritiro, eta: !s.etaPendiente }),
       solicitud: s,
     }));
   const deServicio = servicios.map((r) => {
     const sol = porRecord.get(r.id);
+    const extra = areaDeServicio(r).startsWith("piazza");
+    const fase = faseDeServicio(r, enCamino.has(r.id));
     return {
       key: `r-${r.id}`,
       origen: "servicio",
@@ -92,6 +129,8 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       fotos: r.fotos ?? 0,
       retraso: retrasoEta(r, enCamino, ahora),
       pendiente: !FINALES.has(r.estado) && !r.llegoAt,
+      fase,
+      faltan: fase === "ANNULLATO" ? [] : faltantes({ extra, shipment: r.shipment ?? sol?.shipment, order: r.orderNumero ?? sol?.orderNumero, tipo: r.tipoPedido, cliente: r.cliente, destino: r.ciudad || r.destino, ritiro: sol?.ritiro, eta: r.etaPlan }),
       servicio: r,
     };
   });
@@ -100,6 +139,7 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
 
 // CSV de lo que se ve (mes, area y busqueda activas): una fila por servicio o solicitud, con la puntualidad para cuadrar la facturacion. El portal es en italiano.
 const fechaHoraCsv = (iso) => (iso ? `${new Date(iso).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })} ${horaRoma(iso)}` : "");
+const FASE_CSV = { RICHIESTA: "Richiesta ricevuta", PROGRAMMATO: "Programmato", IN_VIAGGIO: "In viaggio", CONSEGNATO: "Consegnato", RIPROGRAMMATO: "Riprogrammato", ANNULLATO: "Annullato", RIFIUTATA: "Rifiutata" };
 const COLUMNAS_CSV = ["Shipment / Codice", "Order / Secondo codice", "Servizio", "Cliente", "Ritiro", "Destinazione", "Tipo", "Data e ora previste", "Arrivo", "Puntualità (min)", "Stato", "Targa", "Autista", "N°", "KM"];
 export const filasACsv = (filas, area) =>
   filas.map((f) => [
@@ -113,12 +153,21 @@ export const filasACsv = (filas, area) =>
     fechaHoraCsv(f.eta),
     fechaHoraCsv(f.llegoAt),
     f.servicio?.puntualidadMin ?? "",
-    f.origen === "solicitud" ? f.solicitud.estado : f.servicio.estadoLabel,
+    FASE_CSV[f.fase],
     f.targa ?? "",
     f.chofer ?? "",
     f.numero ?? "",
     f.km ?? "",
   ]);
+
+// Filtros de estado de la lista: coincide(fila) decide si entra.
+const FILTROS = {
+  all: { coincide: () => true },
+  late: { coincide: (f) => f.retraso != null },
+  incomplete: { coincide: (f) => f.faltan.length > 0 },
+  open: { coincide: (f) => f.fase === "RICHIESTA" || f.fase === "PROGRAMMATO" || f.fase === "IN_VIAGGIO" },
+  done: { coincide: (f) => f.fase === "CONSEGNATO" },
+};
 
 const GRID =
   "grid min-w-[780px] grid-cols-[minmax(130px,1.1fr)_minmax(120px,1.3fr)_minmax(80px,0.8fr)_minmax(90px,0.9fr)_96px_minmax(100px,0.9fr)_44px] items-center gap-3 px-4";
@@ -177,11 +226,29 @@ export const BotonGaleria = ({ servicio, onFotos, className }) => {
 
 const EstadoFila = ({ fila }) => {
   const t = useT();
-  const { language } = useLanguage();
-  return fila.origen === "solicitud" ? (
-    <EstadoPill estado={fila.solicitud.estado} />
-  ) : (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ESTADO_PILL[fila.servicio.estado] ?? "bg-line/15 text-ink-300"}`}>{estadoTexto(fila.servicio, t, language)}</span>
+  const fase = FASES[fila.fase];
+  return (
+    <span className="inline-flex flex-col items-start gap-1">
+      <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${fase.pill}`}>{t(`reg.fase.${fila.fase}`)}</span>
+      {fase.paso != null && (
+        <span className="flex gap-0.5" aria-hidden="true">
+          {[0, 1, 2, 3].map((n) => (
+            <span key={n} className={clsx("h-1 w-4 rounded-full", n <= fase.paso ? "bg-accent-400" : "bg-line/20")} />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+};
+
+// "Da completare: Cliente, ETA": lo que todavia falta de la solicitud o del servicio.
+const DaCompletare = ({ faltan, className }) => {
+  const t = useT();
+  if (!faltan.length) return null;
+  return (
+    <span className={clsx("inline-block max-w-full rounded-md bg-warning-500/15 px-2 py-0.5 text-[11px] font-semibold leading-tight text-warning-500", className)} title={faltan.join(", ")}>
+      {t("reg.toComplete")}: {faltan.join(", ")}
+    </span>
   );
 };
 
@@ -229,6 +296,7 @@ const Tarjeta = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) =
       </div>
       {fila.llegoAt && <span className="text-[11px] text-ink-400">{t("reg.arrived", { time: horaRoma(fila.llegoAt) })}</span>}
       {fila.retraso != null && <RetrasoPill min={fila.retraso} className="self-start" />}
+      <DaCompletare faltan={fila.faltan} className="self-start" />
     </div>
   );
 };
@@ -271,6 +339,7 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
         <span className="block truncate text-[11px] text-ink-400">
           {[fila.orden && `Order ${fila.orden}`, fila.cliente, fila.ritiro && `${t("reg.pickup")}: ${fila.ritiro}`, fila.tipo, fila.km && `${fila.km} km`].filter(Boolean).join(" · ")}
         </span>
+        <DaCompletare faltan={fila.faltan} className="mt-1" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-ink-100">{fila.targa ?? "—"}</span>
@@ -299,6 +368,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
   const { language } = useLanguage();
   const [areaKey, setAreaKey] = useState(AREA_ALL);
   const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState("all");
   // El dia de hoy empieza abierto.
   const [abiertos, setAbiertos] = useState(() => new Set([diaRoma(new Date().toISOString())]));
 
@@ -316,7 +386,8 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
   const totalKm = Object.values(stats).reduce((sum, s) => sum + s.km, 0);
 
   const q = busqueda.trim().toLowerCase();
-  const visibles = useMemo(
+  // Area y busqueda; sobre eso se aplica el filtro de estado (los contadores de los filtros salen de esta base).
+  const base = useMemo(
     () =>
       filas.filter(
         (f) =>
@@ -325,6 +396,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
       ),
     [filas, areaKey, q]
   );
+  const visibles = useMemo(() => base.filter(FILTROS[filtro].coincide), [base, filtro]);
 
   const dias = useMemo(() => {
     const porDia = new Map();
@@ -337,6 +409,12 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
         retrasos: items.filter((f) => f.retraso != null).length,
       }));
   }, [visibles]);
+
+  // Al filtrar o buscar se abren todos los dias que tienen resultados.
+  useEffect(() => {
+    if (filtro !== "all" || q) setAbiertos(new Set(dias.map((d) => d.dia)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtro, q, areaKey]);
 
   const hoy = diaRoma(new Date().toISOString());
   const pendientesHoy = useMemo(
@@ -397,6 +475,28 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        <div role="group" aria-label={t("hist.status")} className="mt-3 flex flex-wrap gap-2">
+          {Object.entries(FILTROS).map(([key, { coincide }]) => {
+            const count = base.filter(coincide).length;
+            const activo = filtro === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => setFiltro(key)}
+                className={clsx(
+                  "rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors",
+                  activo ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50",
+                  key === "late" && count > 0 && !activo && "text-danger-500",
+                  key === "incomplete" && count > 0 && !activo && "text-warning-500"
+                )}
+              >
+                {t(`reg.filter.${key}`)} <span className="opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px] xl:items-start">
