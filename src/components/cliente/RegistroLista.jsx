@@ -3,10 +3,11 @@ import { useMemo, useState } from "react";
 import { AreaBadge } from "../records/AreaBadge";
 import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
-import { BarsIcon, ClipboardListIcon, ClockIcon, ImageIcon, SearchIcon } from "../ui/icons";
+import { BarsIcon, ClipboardListIcon, ClockIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
 import { EstadoPill } from "../solicitudes/SolicitudDetalle";
 import { aplicativoTexto, ESTADO_PILL, estadoTexto } from "./TablaServicios";
 import { useLanguage, useT } from "../../i18n/index.jsx";
+import { buildFullCsv, downloadCsv } from "../../lib/csv";
 import { AREA_ALL, RECORD_AREAS } from "../../lib/recordAreas";
 import { horaRoma, minutosTexto, RETRASO_AVISO_MIN } from "../../lib/seguimiento";
 import { kmDeSolicitud } from "../../lib/solicitudes";
@@ -96,6 +97,28 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
   });
   return [...deSolicitud, ...deServicio];
 };
+
+// CSV de lo que se ve (mes, area y busqueda activas): una fila por servicio o solicitud, con la puntualidad para cuadrar la facturacion. El portal es en italiano.
+const fechaHoraCsv = (iso) => (iso ? `${new Date(iso).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })} ${horaRoma(iso)}` : "");
+const COLUMNAS_CSV = ["Shipment / Codice", "Order / Secondo codice", "Servizio", "Cliente", "Ritiro", "Destinazione", "Tipo", "Data e ora previste", "Arrivo", "Puntualità (min)", "Stato", "Targa", "Autista", "N°", "KM"];
+export const filasACsv = (filas, area) =>
+  filas.map((f) => [
+    f.codigo,
+    f.orden ?? "",
+    area(f.area),
+    f.cliente,
+    f.ritiro ?? "",
+    f.destino,
+    f.tipo ?? "",
+    fechaHoraCsv(f.eta),
+    fechaHoraCsv(f.llegoAt),
+    f.servicio?.puntualidadMin ?? "",
+    f.origen === "solicitud" ? f.solicitud.estado : f.servicio.estadoLabel,
+    f.targa ?? "",
+    f.chofer ?? "",
+    f.numero ?? "",
+    f.km ?? "",
+  ]);
 
 const GRID =
   "grid min-w-[780px] grid-cols-[minmax(130px,1.1fr)_minmax(120px,1.3fr)_minmax(80px,0.8fr)_minmax(90px,0.9fr)_96px_minmax(100px,0.9fr)_44px] items-center gap-3 px-4";
@@ -331,7 +354,20 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
             <h2 className="text-[15px] font-semibold text-ink-50">
               {t("reg.servicesOf")} · {nombreMes}
             </h2>
-            <span className="text-[12px] text-ink-400">{areaKey === AREA_ALL ? t("reg.allAreas") : AREAS.find((a) => a.key === areaKey)?.label}</span>
+            <span className="flex items-center gap-3">
+              <span className="text-[12px] text-ink-400">{areaKey === AREA_ALL ? t("reg.allAreas") : AREAS.find((a) => a.key === areaKey)?.label}</span>
+              <button
+                type="button"
+                disabled={visibles.length === 0}
+                onClick={() =>
+                  downloadCsv(`Servizi_${month}.csv`, buildFullCsv({ columnas: COLUMNAS_CSV, filas: filasACsv(visibles, (key) => RECORD_AREAS.find((a) => a.key === key)?.label ?? key) }))
+                }
+                className="inline-flex items-center gap-1.5 rounded-full border border-line/25 px-3 py-1.5 text-[12px] font-semibold text-ink-100 transition hover:bg-line/10 disabled:pointer-events-none disabled:opacity-40"
+              >
+                <DownloadIcon className="h-3.5 w-3.5" />
+                {t("reg.exportCsv")}
+              </button>
+            </span>
           </header>
 
           <div className="flex flex-col gap-2.5 border-t border-line/10 p-4">

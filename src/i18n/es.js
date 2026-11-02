@@ -123,6 +123,7 @@ export const es = {
   "reg.colPhotos": "Fotos",
   "reg.gallery": "Galeria de fotos",
   "reg.photoDelivery": "Fotos de la entrega",
+  "reg.exportCsv": "Exportar CSV",
   "reg.noPhotoPickup": "Todavia no hay foto del retiro",
   "reg.noPhotoDelivery": "Todavia no hay foto de la entrega",
   "reg.serviceTitle": "Servicio {code}",

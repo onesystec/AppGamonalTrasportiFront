@@ -122,6 +122,7 @@ export const it = {
   "reg.colPhotos": "Foto",
   "reg.gallery": "Galleria foto",
   "reg.photoDelivery": "Foto della consegna",
+  "reg.exportCsv": "Esporta CSV",
   "reg.noPhotoPickup": "Non c'è ancora la foto del ritiro",
   "reg.noPhotoDelivery": "Non c'è ancora la foto della consegna",
   "reg.serviceTitle": "Servizio {code}",
