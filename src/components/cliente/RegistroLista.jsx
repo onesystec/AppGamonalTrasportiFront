@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { AreaBadge } from "../records/AreaBadge";
 import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
-import { BarsIcon, CheckCircleIcon, ClipboardListIcon, ClockIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
+import { BarsIcon, ClipboardListIcon, ClockIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
 import { aplicativoTexto } from "./TablaServicios";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { buildFullCsv, downloadCsv } from "../../lib/csv";
@@ -403,18 +403,6 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
     }
     return out;
   }, [filas]);
-  // Puntualidad del mes: de los servicios con hora de llegada por GPS, cuantos llegaron a tiempo (hasta 5 min de margen) y cuanto se retrasaron los demas.
-  const puntualidad = useMemo(() => {
-    const llegados = filas.filter((f) => f.origen === "servicio" && f.llegoAt && f.servicio.puntualidadMin != null);
-    const tarde = llegados.filter((f) => f.servicio.puntualidadMin > RETRASO_AVISO_MIN);
-    return {
-      llegados: llegados.length,
-      aTiempo: llegados.length - tarde.length,
-      pct: llegados.length ? Math.round(((llegados.length - tarde.length) / llegados.length) * 100) : null,
-      retrasoMedio: tarde.length ? Math.round(tarde.reduce((sum, f) => sum + f.servicio.puntualidadMin, 0) / tarde.length) : 0,
-      enRetraso: filas.filter((f) => f.retraso != null && !f.llegoAt).length,
-    };
-  }, [filas]);
   const total = filas.length;
   const totalKm = Object.values(stats).reduce((sum, s) => sum + s.km, 0);
 
@@ -617,27 +605,6 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                 {cuenta(total)} · {Math.round(totalKm).toLocaleString(language === "it" ? "it-IT" : "es-AR")} km
               </span>
             </p>
-          </PanelShell>
-
-          <PanelShell icon={CheckCircleIcon} title={t("reg.punctuality")}>
-            {puntualidad.pct == null ? (
-              <p className="py-1 text-[13px] text-ink-300">{t("reg.punctualityNone")}</p>
-            ) : (
-              <>
-                <div className="flex items-end justify-between gap-3">
-                  <span className={clsx("text-[30px] font-semibold leading-none", puntualidad.pct >= 90 ? "text-success-500" : puntualidad.pct >= 75 ? "text-warning-500" : "text-danger-500")}>{puntualidad.pct}%</span>
-                  <span className="text-right text-[12px] text-ink-300">{t("reg.punctualityOf", { ok: puntualidad.aTiempo, total: puntualidad.llegados })}</span>
-                </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line/15">
-                  <div className={clsx("h-full rounded-full", puntualidad.pct >= 90 ? "bg-success-500" : puntualidad.pct >= 75 ? "bg-warning-500" : "bg-danger-500")} style={{ width: `${puntualidad.pct}%` }} />
-                </div>
-                <p className="mt-3 flex items-center justify-between border-t border-line/10 pt-3 text-[12px] text-ink-300">
-                  <span>{t("reg.avgDelay")}</span>
-                  <span className="font-medium text-ink-100">{puntualidad.retrasoMedio ? minutosTexto(puntualidad.retrasoMedio) : "—"}</span>
-                </p>
-              </>
-            )}
-            {puntualidad.enRetraso > 0 && <p className="mt-2 text-[12px] font-medium text-danger-500">{t("reg.lateNow", { count: puntualidad.enRetraso })}</p>}
           </PanelShell>
 
           <PanelShell icon={ClockIcon} title={t("reg.pendingToday")}>
