@@ -62,7 +62,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  // DHL Milano: el texto de DHL que se pega para rellenar la solicitud (todo este proceso va en italiano).
+  // DHL Milano / DHL Roma / AB Service: el texto que se pega para rellenar la solicitud (todo este proceso va en italiano).
   const [texto, setTexto] = useState("");
   const [leyendo, setLeyendo] = useState(false);
   const [lectura, setLectura] = useState(null); // { avisos, duplicados, tipoOrigen }
@@ -73,8 +73,8 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
   const esAb = form.servicio === "AB_SERVICE";
   const esRoma = form.servicio === "DHL_ROMA";
   const esMilano = form.servicio === "DHL_MILANO";
-  // DHL Milano y AB Service se pueden rellenar pegando el texto (AB Service ademas localiza los lugares del mensaje).
-  const usaTexto = esMilano || esAb;
+  // DHL Milano, DHL Roma y AB Service se pueden rellenar pegando el texto (AB Service ademas localiza los lugares del mensaje).
+  const usaTexto = esMilano || esRoma || esAb;
 
   // Lee el texto pegado y rellena lo que encuentra (Shipment, Order, cliente, tipo, ciudad, ETA, km); el resto lo completa quien envia.
   const leerTexto = async () => {
@@ -91,6 +91,8 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         shipment: d.shipment ?? prev.shipment,
         orderNumero: d.orderNumero ?? prev.orderNumero,
         tipoPedido: d.tipoPedido ?? prev.tipoPedido,
+        // El numero de Milano / Roma que dice el mensaje ("ROMA 2", "ASSEGNATO ROMA 4").
+        aplicativo: d.aplicativo ?? prev.aplicativo,
         descripcion: d.descripcion,
       }));
       setLectura({ avisos: d.avisos ?? [], duplicados: d.duplicados ?? [], tipoOrigen: d.tipoOrigen ?? null, lugares: d.lugares ?? [] });
@@ -242,9 +244,9 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
               onChange={onChange("choferIndicado")}
               error={fieldErrors.choferIndicado?.[0]}
             />
-            {esMilano && (
+            {(esMilano || esRoma) && (
               <label className="block" htmlFor="sol-milano">
-                <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Numero di Milano (facoltativo)</span>
+                <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{esRoma ? "Numero di Roma (facoltativo)" : "Numero di Milano (facoltativo)"}</span>
                 <select
                   id="sol-milano"
                   value={form.aplicativo}
@@ -287,7 +289,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         </label>
       )}
 
-      {aplicativos.length > 0 && !esMilano && (
+      {aplicativos.length > 0 && !usaTexto && (
         <label className="block" htmlFor="sol-aplicativo">
           <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{t("form.numberLabel")}</span>
           <select id="sol-aplicativo" value={form.aplicativo} onChange={onChange("aplicativo")} className="glass-input w-full rounded-xl px-4 py-3 text-[15px] text-ink-50">

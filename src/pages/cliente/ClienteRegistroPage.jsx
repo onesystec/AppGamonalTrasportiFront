@@ -23,8 +23,8 @@ import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib
 
 const REFRESH_MS = 60 * 1000;
 
-// Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: AB Service no usa el numero de Milano).
-const HOJAS = { DHL_MILANO: "dhl", AB_SERVICE: "ab" };
+// Los tipos que van en la hoja tipo Google Sheets (el valor es su variante: DHL Roma llama ROMA a la ultima columna y AB Service no usa ese numero).
+const HOJAS = { DHL_MILANO: "dhl", DHL_ROMA: "roma", AB_SERVICE: "ab" };
 
 // En que pestana va un servicio ya hecho (Historial): DHL Milano / DHL Roma, AB Service y el resto como Extra Piazza.
 const tipoDeServicio = (r) => (r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "DHL_ROMA" : "DHL_MILANO") : r.spedizzione === "AB_SERVICE" ? "AB_SERVICE" : "EXTRA_PIAZZA");

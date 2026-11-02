@@ -6,9 +6,9 @@ import { PUNTO_ESTADO } from "../cliente/TablaServicios";
 import { formatFechaHora, kmDeSolicitud } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 
-// Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano. Se usa en el
+// Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano y DHL Roma. Se usa en el
 // Registro de Piazza (las solicitudes: HojaDhlMilano) y en el Historial de servicios (los servicios ya hechos: HojaServicios con sus propias filas).
-// Columnas: SHIPMENT/ORDER (una sola celda, uno encima del otro), TIPO, CLIENTE, CIUDAD, ETA, KM y MILANO (el numero de Milano asignado).
+// Columnas: SHIPMENT/ORDER (una sola celda, uno encima del otro), TIPO, CLIENTE, CIUDAD, ETA, KM y MILANO / ROMA (el numero asignado de la zona; AB no lo usa).
 // - Clic en el numero de fila (a la izquierda): la fila se extiende hacia abajo y muestra Chofer, Targa y la foto de retiro (bolla).
 // - Clic en una celda: la selecciona. Doble clic (si hay onOpen): abre el registro.
 // Una celda sin dato (o incompleta, como SHIPMENT/ORDER con solo uno de los dos) se pinta de rojo apagado para que se vea que falta completarla
@@ -29,11 +29,12 @@ const COLUMNAS = [
 const ESTADO_PUNTO = { PENDIENTE: "bg-warning-500", ACEPTADA: "bg-success-500", RECHAZADA: "bg-danger-500" };
 const ESTADO_TITULO = { PENDIENTE: "In attesa", ACEPTADA: "Accettata", RECHAZADA: "Rifiutata" };
 
-// "MILANO_12" -> "12". Lo asignado por la oficina manda; si todavia no hay servicio, el numero que propuso el cliente (en tono suave).
+// "MILANO_12" -> "12", "ROMA_2" -> "2". Lo asignado por la oficina manda; si todavia no hay servicio, el numero que propuso el cliente (en tono suave).
+const sinZona = (aplicativo) => aplicativo.replace(/^(?:MILANO|ROMA)_/, "");
 const numeroMilano = (s) => {
   const asignado = s.asignado?.aplicativo;
-  if (asignado) return { texto: asignado.replace("MILANO_", ""), propuesto: false };
-  if (s.aplicativo) return { texto: s.aplicativo.replace("MILANO_", ""), propuesto: true };
+  if (asignado) return { texto: sinZona(asignado), propuesto: false };
+  if (s.aplicativo) return { texto: sinZona(s.aplicativo), propuesto: true };
   return { texto: "", propuesto: false };
 };
 
@@ -72,7 +73,7 @@ const AVISO_FALTA = {
   D: () => "Manca la città",
   E: () => "Manca l'ETA",
   F: () => "Mancano i km",
-  G: () => "Numero di Milano non ancora assegnato",
+  G: (s, variante) => (variante === "roma" ? "Numero di Roma non ancora assegnato" : "Numero di Milano non ancora assegnato"),
 };
 
 const Panel = ({ row, detalle, verFotos }) => {
@@ -122,8 +123,8 @@ const Dato = ({ titulo, children }) => (
 );
 
 export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
-  // AB Service no usa el numero de Milano: sin la columna G.
-  const columnas = variante === "ab" ? COLUMNAS.filter((c) => c.letra !== "G") : COLUMNAS;
+  // AB Service no usa el numero de Milano: sin la columna G. En Roma la columna se llama ROMA.
+  const columnas = variante === "ab" ? COLUMNAS.filter((c) => c.letra !== "G") : COLUMNAS.map((c) => (c.letra === "G" && variante === "roma" ? { ...c, titulo: "ROMA" } : c));
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
@@ -174,7 +175,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
             {rows.map((s, i) => {
               const extendida = abierta === s.id;
               const falta = faltantes(s, variante);
-              const tip = (col) => (falta[col] ? AVISO_FALTA[col](s) : undefined);
+              const tip = (col) => (falta[col] ? AVISO_FALTA[col](s, variante) : undefined);
               return (
                 <Fragment key={s.id}>
                   <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen && s.abrible !== false ? () => onOpen(s.id) : undefined}>
@@ -284,14 +285,14 @@ export const filaDeServicio = (s, puntoTitulo) => ({
   ciudad: s.ciudad ?? "",
   eta: s.etaPlan,
   km: s.km != null ? String(Math.round(s.km * 10) / 10).replace(".", ",") : null,
-  milano: { texto: s.aplicativo?.startsWith("MILANO_") ? s.aplicativo.replace("MILANO_", "") : "", propuesto: false },
+  milano: { texto: s.aplicativo ? sinZona(s.aplicativo) : "", propuesto: false },
   sinAsignar: false,
   chofer: s.chofer,
   targa: s.targa,
   omitirFaltantes: s.estado === "ANNULLATO",
 });
 
-// La hoja unica de DHL Milano: las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
+// La hoja unica de cada servicio (DHL Milano, DHL Roma, AB Service): las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
 // cuyo servicio ya esta en la lista no se repite (se ve el servicio); si el servicio quedo fuera (otro mes, otra empresa), se sigue viendo la solicitud.
 export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio, variante = "dhl" }) => {
   const idsServicios = new Set(servicios.map((r) => r.id));

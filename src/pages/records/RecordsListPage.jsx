@@ -350,7 +350,7 @@ const PendingPanel = ({ records: pending, closeTo, onChangeEstado, updatingId, s
   </PanelShell>
 );
 
-// "Da un testo" (el proceso va en italiano): pega el texto de un servicio de DHL Milano y se leen Shipment, Order, cliente, tipo, ciudad y ETA (queda como solicitud pendiente).
+// "Da un testo" (el proceso va en italiano): pega el texto de un servicio de DHL Milano o DHL Roma y se leen Shipment, Order, cliente, tipo, ciudad y ETA (queda como solicitud pendiente).
 const DesdeTextoButton = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -846,7 +846,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                 <RouteIcon className="h-4 w-4" />
                 Compactar
               </button>
-              {availableAreas.some((a) => a.key === "dhl-milano") && <DesdeTextoButton />}
+              {availableAreas.some((a) => a.key === "dhl-milano" || a.key === "dhl-roma") && <DesdeTextoButton />}
               <NewServiceMenu areas={availableAreas} activeKey={areaKey} />
             </>
           ) : (

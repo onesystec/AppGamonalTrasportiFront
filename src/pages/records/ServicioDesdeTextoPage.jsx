@@ -12,12 +12,15 @@ import { Textarea } from "../../components/ui/Textarea";
 import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
+import { APLICATIVO_OPTIONS, TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
 import { crearDesdeTextoRequest, leerTextoRequest } from "../../lib/solicitudes.api";
 import { formatFechaHora, notifySolicitudesChanged, toRomeInput } from "../../lib/solicitudes";
 
-// Por ahora solo DHL Milano.
-const SERVICIO = "DHL_MILANO";
+// Por ahora DHL Milano y DHL Roma.
+const SERVICIOS = {
+  DHL_MILANO: { label: "DHL Milano", zona: "MILANO", numeroLabel: "Numero di Milano" },
+  DHL_ROMA: { label: "DHL Roma", zona: "ROMA", numeroLabel: "Numero di Roma" },
+};
 
 // Tipo dell'ordine: menu a tendina con ASAP / SCHEDULED. Quello scritto nel testo o dedotto dall'ETA arriva già scelto (e con "suggerito" accanto),
 // e si cambia scegliendo un'altra voce.
@@ -41,7 +44,8 @@ const TipoSelect = ({ value, origen, onChange }) => (
   </div>
 );
 
-// Servicio desde un texto pegado (todo el proceso va en italiano): el bot de reglas (sin IA, sin costo) lee el texto y rellena Shipment, Order, cliente, tipo, ciudad y ETA.
+// Servicio desde un texto pegado (todo el proceso va en italiano): el bot de reglas (sin IA, sin costo) lee el texto y rellena Shipment, Order, cliente, tipo, ciudad, ETA,
+// y el numero de Milano / Roma.
 // Quien pega corrige lo que haga falta y lo guarda como solicitud PENDIENTE (con el texto completo como descripcion); despues se completa el
 // resto del formulario (chofer, vehiculo, km...) y al crear el servicio la solicitud queda aceptada.
 export const ServicioDesdeTextoPage = () => {
@@ -51,6 +55,8 @@ export const ServicioDesdeTextoPage = () => {
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const closeTo = "/records/dhl-ab-service";
 
+  const [servicio, setServicio] = useState("DHL_MILANO");
+  const zona = SERVICIOS[servicio];
   const [texto, setTexto] = useState("");
   const [clients, setClients] = useState(null);
   const [lectura, setLectura] = useState(null);
@@ -76,7 +82,7 @@ export const ServicioDesdeTextoPage = () => {
     setError("");
     setCreada(null);
     try {
-      const d = await leerTextoRequest(SERVICIO, texto);
+      const d = await leerTextoRequest(servicio, texto);
       setLectura({
         descripcion: d.descripcion,
         shipment: d.shipment ?? "",
@@ -86,6 +92,7 @@ export const ServicioDesdeTextoPage = () => {
         tipoPedido: d.tipoPedido ?? "",
         tipoOrigen: d.tipoOrigen ?? null,
         ciudad: d.ciudad ?? "",
+        aplicativo: d.aplicativo ?? "",
         eta: d.eta ? toRomeInput(d.eta) : "",
         avisos: d.avisos ?? [],
         duplicados: d.duplicados ?? [],
@@ -104,7 +111,7 @@ export const ServicioDesdeTextoPage = () => {
     setError("");
     try {
       const solicitud = await crearDesdeTextoRequest({
-        servicio: SERVICIO,
+        servicio,
         cliente: clienteNombre,
         destinazione: lectura.ciudad.trim(),
         fechaHora: lectura.eta,
@@ -112,6 +119,7 @@ export const ServicioDesdeTextoPage = () => {
         shipment: lectura.shipment,
         orderNumero: lectura.orderNumero,
         tipoPedido: lectura.tipoPedido,
+        aplicativo: lectura.aplicativo,
       });
       setCreada(solicitud);
       notifySolicitudesChanged();
@@ -133,7 +141,7 @@ export const ServicioDesdeTextoPage = () => {
   const completarAhora = () =>
     navigate("/records/dhl-ab-service/new", {
       replace: true,
-      state: { backgroundLocation: location.state?.backgroundLocation, spedizzione: "DHL", zona: "MILANO", solicitud: creada },
+      state: { backgroundLocation: location.state?.backgroundLocation, spedizzione: "DHL", zona: zona.zona, solicitud: creada },
     });
 
   if (!isPrivileged) return <Navigate to="/" replace />;
@@ -148,9 +156,9 @@ export const ServicioDesdeTextoPage = () => {
         </div>
 
         <div>
-          <h1 className="text-[24px] font-semibold text-ink-50">Servizio da un testo - DHL Milano</h1>
+          <h1 className="text-[24px] font-semibold text-ink-50">Servizio da un testo - {zona.label}</h1>
           <p className="mt-1 text-[14px] text-ink-300">
-            Incolla il testo del servizio: si leggono Shipment, Order, cliente, tipo, città ed ETA. Il resto lo completa una persona prima di accettarlo.
+            Incolla il testo del servizio: si leggono Shipment, Order, cliente, tipo, città, ETA, numero di zona. Il resto lo completa una persona prima di accettarlo.
           </p>
         </div>
 
@@ -179,6 +187,21 @@ export const ServicioDesdeTextoPage = () => {
             <GlassCard>
               <h2 className="text-[17px] font-medium text-ink-50">Testo del servizio</h2>
               <Alert>{error}</Alert>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {Object.entries(SERVICIOS).map(([value, s]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setServicio(value);
+                      setLectura(null);
+                    }}
+                    className={`rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${servicio === value ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
               <div className="mt-4">
                 <Textarea
                   id="texto"
@@ -240,6 +263,13 @@ export const ServicioDesdeTextoPage = () => {
                     value={lectura.tipoPedido}
                     origen={lectura.tipoOrigen}
                     onChange={(v) => setLectura((prev) => ({ ...prev, tipoPedido: v, tipoOrigen: v ? "manual" : null }))}
+                  />
+                  <Select
+                    id="lec-numero"
+                    label={`${zona.numeroLabel} (facoltativo)`}
+                    value={lectura.aplicativo}
+                    onChange={(e) => setCampo("aplicativo", e.target.value)}
+                    options={[{ value: "", label: "— Nessuno —" }, ...APLICATIVO_OPTIONS.filter((o) => o.value.startsWith(`${zona.zona}_`))]}
                   />
                   <TextField id="lec-ciudad" label="Città" value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
                   <TextField
