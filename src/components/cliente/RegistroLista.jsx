@@ -173,7 +173,7 @@ const FILTROS = {
 };
 
 const GRID =
-  "grid min-w-[780px] grid-cols-[minmax(130px,1.1fr)_minmax(120px,1.3fr)_minmax(80px,0.8fr)_minmax(90px,0.9fr)_96px_minmax(100px,0.9fr)_44px] items-center gap-3 px-4";
+  "grid min-w-[820px] grid-cols-[minmax(130px,1.1fr)_minmax(120px,1.3fr)_minmax(80px,0.8fr)_minmax(90px,0.9fr)_132px_minmax(100px,0.9fr)_44px] items-center gap-3 px-4";
 
 const ChevronIcon = ({ open }) => (
   <svg className={`h-4 w-4 shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -520,7 +520,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_330px] xl:items-start">
+      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_330px] 2xl:items-start">
         <section className="glass-surface min-w-0 rounded-2xl">
           <header className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
             <h2 className="text-[15px] font-semibold text-ink-50">
@@ -560,15 +560,15 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                   </button>
                   {abierto && (
                     <div className="border-t border-line/10 pb-2">
-                      <div className="hidden overflow-x-auto md:block">
+                      <div className="hidden overflow-x-auto xl:block">
                         <Cabecera />
-                        <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
+                        <div className="flex min-w-[820px] flex-col gap-0.5 px-2">
                           {items.map((f) => (
                             <Fila key={f.key} fila={f} verFotos={verFotos} verSeguimiento={verSeguimiento} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                           ))}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2 p-2 md:hidden">
+                      <div className="flex flex-col gap-2 p-2 xl:hidden">
                         {items.map((f) => (
                           <Tarjeta key={f.key} fila={f} verFotos={verFotos} verSeguimiento={verSeguimiento} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                         ))}
@@ -581,7 +581,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
           </div>
         </section>
 
-        <aside className="flex flex-col gap-5 xl:sticky xl:top-6">
+        <aside className="flex flex-col gap-5 2xl:sticky 2xl:top-6">
           <PanelShell icon={BarsIcon} title={t("reg.monthSummary")}>
             <div className="grid grid-cols-2 gap-2.5">
               {AREAS.map((a) => (
