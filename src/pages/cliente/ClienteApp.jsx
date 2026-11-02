@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { PageLoader } from "../../components/ui/PageLoader";
-import { CalendarIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardListIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardListIcon, CloseIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useT } from "../../i18n/index.jsx";
@@ -100,6 +100,18 @@ const ClienteShell = () => {
   // Celular: menu de vistas que se abre al tocar el logo; se cierra al elegir una vista.
   const [menuAbierto, setMenuAbierto] = useState(false);
   useEffect(() => setMenuAbierto(false), [pathname]);
+  // Con el menu abierto: Escape lo cierra y la pagina de atras no se desplaza.
+  useEffect(() => {
+    if (!menuAbierto) return undefined;
+    const onKey = (e) => e.key === "Escape" && setMenuAbierto(false);
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [menuAbierto]);
 
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
 
@@ -195,6 +207,33 @@ const ClienteShell = () => {
         </div>
       </aside>
 
+      {/* Celular: el menu de vistas se despliega de izquierda a derecha sobre la pagina. */}
+      <div className={clsx("fixed inset-0 z-50 lg:hidden", !menuAbierto && "pointer-events-none")} aria-hidden={!menuAbierto}>
+        <button
+          type="button"
+          tabIndex={menuAbierto ? 0 : -1}
+          aria-label={t("common.close")}
+          onClick={() => setMenuAbierto(false)}
+          className={clsx("absolute inset-0 bg-black/60 transition-opacity duration-200", menuAbierto ? "opacity-100" : "opacity-0")}
+        />
+        <aside
+          className={clsx(
+            "absolute inset-y-0 left-0 flex w-[78%] max-w-[300px] flex-col gap-5 border-r border-line/10 bg-background px-3 py-4 shadow-2xl transition-transform duration-200",
+            menuAbierto ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-start gap-2 px-1">
+            <div className="min-w-0 flex-1">{marca()}</div>
+            <button type="button" onClick={() => setMenuAbierto(false)} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </div>
+          <nav aria-label={t("nav.views")} className="flex flex-1 flex-col gap-4 overflow-y-auto">
+            {grupos(false)}
+          </nav>
+        </aside>
+      </div>
+
       <div className="min-w-0 flex-1">
         {/* Celular: la cabecera es el boton del menu (al tocar el logo se ven las vistas). */}
         <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur lg:hidden">
@@ -207,15 +246,10 @@ const ClienteShell = () => {
               className="flex min-w-0 flex-1 items-center gap-2 rounded-xl text-left"
             >
               <span className="min-w-0 flex-1">{marca()}</span>
-              <ChevronDownIcon className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", menuAbierto && "rotate-180")} />
+              <ChevronRightIcon className="h-5 w-5 shrink-0 text-ink-300" />
             </button>
             {acciones()}
           </div>
-          {menuAbierto && (
-            <nav aria-label={t("nav.views")} className="flex max-h-[70dvh] flex-col gap-3 overflow-y-auto border-t border-line/10 px-3 py-3">
-              {grupos(false)}
-            </nav>
-          )}
         </header>
         <main className="w-full px-4 py-4 lg:px-6">
           <Suspense fallback={<PageLoader />}>
