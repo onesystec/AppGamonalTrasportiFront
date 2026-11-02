@@ -13,6 +13,10 @@ export const getClienteSeguimientoRequest = () => api.get("/cliente/seguimiento"
 // Recorrido que le falta a la furgoneta hasta la parada del cliente (null si ya llego o no hay posicion).
 export const getClienteRutaRequest = (id) => api.get(`/cliente/seguimiento/${id}/ruta`).then((res) => res.data.data.ruta);
 
+// Ancho de las columnas de las hojas tipo Excel: { dhl: { A: 120, ... }, ... }. Lo que fija una persona de la empresa lo ven todas.
+export const getHojaAnchosRequest = () => api.get("/cliente/hoja-anchos").then((res) => res.data.data.anchos);
+export const saveHojaAnchosRequest = (hoja, anchos) => api.put(`/cliente/hoja-anchos/${hoja}`, { anchos }).then((res) => res.data.data.anchos);
+
 export const getClienteServiciosRequest = (month) => api.get("/cliente/servicios", { params: { month } }).then((res) => res.data.data);
 
 export const exportClienteServiciosRequest = (month) => api.get("/cliente/exportar", { params: { month } }).then((res) => res.data.data);

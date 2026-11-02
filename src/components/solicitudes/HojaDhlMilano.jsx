@@ -1,7 +1,7 @@
 import clsx from "clsx";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { parseApiError } from "../../lib/api";
-import { getClienteFotosRequest } from "../../lib/cliente.api";
+import { getClienteFotosRequest, getHojaAnchosRequest, saveHojaAnchosRequest } from "../../lib/cliente.api";
 import { PUNTO_ESTADO } from "../cliente/TablaServicios";
 import { formatFechaHora, kmDeSolicitud } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
@@ -158,9 +158,76 @@ const Dato = ({ titulo, children }) => (
   </div>
 );
 
+// Ancho de las columnas que ajusta quien usa la hoja (arrastrando el borde del titulo): se guarda en el servidor y lo ven todos los de la empresa.
+// Con anchos guardados la tabla pasa a diseño fijo (como Excel: cada columna mide lo que dice y sobra espacio a la derecha); sin ellos, se ajusta sola.
+const MIN_ANCHO = 30;
+const MAX_ANCHO = 800;
+const ANCHO_BASE = { A: 150, B: 100, C: 200, D: 200, E: 150, F: 70, G: 90, R: 200 };
+const ANCHO_NUMERO_FILA = 48;
+const useAnchosHoja = (variante) => {
+  const [anchos, setAnchos] = useState({});
+  const [aviso, setAviso] = useState(null); // { ok, texto } del ultimo guardado
+  const ultimos = useRef({});
+  ultimos.current = anchos;
+
+  useEffect(() => {
+    let cancelado = false;
+    setAnchos({});
+    getHojaAnchosRequest()
+      .then((todos) => !cancelado && setAnchos(todos[variante] ?? {}))
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [variante]);
+
+  const guardar = (nuevos) =>
+    saveHojaAnchosRequest(variante, nuevos)
+      .then(() => setAviso({ ok: true, texto: "Larghezza salvata per tutti." }))
+      .catch((err) => setAviso({ ok: false, texto: parseApiError(err).message }));
+
+  // Arrastrar el borde derecho del titulo: se ve el cambio mientras se mueve y se guarda al soltar. El primer arrastre fija el ancho que tiene
+  // cada columna en ese momento (las demas no se mueven).
+  const empezarArrastre = (e, id, columnas) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const celdas = [...e.currentTarget.parentElement.parentElement.children].slice(1);
+    const actuales = Object.fromEntries(columnas.map((c, i) => [c.id, Math.round(celdas[i]?.getBoundingClientRect().width ?? ANCHO_BASE[c.id] ?? 120)]));
+    const base = Object.fromEntries(Object.entries({ ...actuales, ...ultimos.current }).map(([k, v]) => [k, Math.min(MAX_ANCHO, Math.max(MIN_ANCHO, v))]));
+    const inicio = base[id];
+    const x0 = e.clientX;
+    let ancho = inicio;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const mover = (ev) => {
+      ancho = Math.min(MAX_ANCHO, Math.max(MIN_ANCHO, Math.round(inicio + ev.clientX - x0)));
+      setAnchos({ ...base, [id]: ancho });
+    };
+    const soltar = () => {
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+      window.removeEventListener("pointercancel", soltar);
+      if (ancho !== inicio || Object.keys(ultimos.current).length === 0) guardar({ ...base, [id]: ancho });
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+    window.addEventListener("pointercancel", soltar);
+  };
+
+  // Doble clic en un borde: todas las columnas vuelven al ancho automatico.
+  const restablecer = () => {
+    setAnchos({});
+    guardar({});
+  };
+
+  return { anchos, aviso, empezarArrastre, restablecer };
+};
+
 export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = "dhl", vacio = "Nessun servizio per questo mese." }) => {
   // Cada servicio tiene sus columnas: AB Service no usa el numero de Milano; en Roma la ultima columna es ROMA; Extra Piazza lleva CODICE, RITIRO y CONSEGNA.
   const columnas = columnasDe(variante);
+  const { anchos, aviso, empezarArrastre, restablecer } = useAnchosHoja(variante);
+  const fija = Object.keys(anchos).length > 0;
+  const anchoDe = (c) => anchos[c.id] ?? ANCHO_BASE[c.id] ?? 120;
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
@@ -186,7 +253,18 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
   return (
     <div>
       <div className="overflow-auto rounded-md border border-line/30 bg-popover">
-        <table className="w-full border-collapse select-none text-left">
+        <table
+          className={clsx("border-collapse select-none text-left", !fija && "w-full")}
+          style={fija ? { tableLayout: "fixed", width: ANCHO_NUMERO_FILA + columnas.reduce((suma, c) => suma + anchoDe(c), 0) } : undefined}
+        >
+          {fija && (
+            <colgroup>
+              <col style={{ width: ANCHO_NUMERO_FILA }} />
+              {columnas.map((c) => (
+                <col key={c.id} style={{ width: anchoDe(c) }} />
+              ))}
+            </colgroup>
+          )}
           <thead>
             {/* Letras de columna, como en Sheets */}
             <tr>
@@ -201,8 +279,17 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
             <tr>
               <th className="sticky left-0 z-20 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">1</th>
               {columnas.map((c) => (
-                <th key={c.id} className="whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50">
+                <th key={c.id} className={clsx("relative whitespace-nowrap border border-line/25 bg-line/[0.06] px-2 py-1.5 text-left text-[12px] font-bold text-ink-50", fija && "overflow-hidden text-ellipsis")}>
                   {c.titulo}
+                  {/* Borde para cambiar el ancho: arrastrar; doble clic = ancho automatico */}
+                  <span
+                    role="separator"
+                    aria-orientation="vertical"
+                    title="Trascina per cambiare la larghezza · doppio clic: ripristina tutte"
+                    onPointerDown={(e) => empezarArrastre(e, c.id, columnas)}
+                    onDoubleClick={restablecer}
+                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize touch-none hover:bg-[#1a73e8]/60"
+                  />
                 </th>
               ))}
             </tr>
@@ -233,7 +320,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
                     {columnas.map((c) => (
                       <td
                         key={c.id}
-                        className={clsx(celda(s.id, c.id, falta), c.clase, c.claseFila?.(s))}
+                        className={clsx(celda(s.id, c.id, falta), c.clase, c.claseFila?.(s), fija && "!whitespace-normal break-words")}
                         title={falta[c.id] ? c.aviso(s) : c.titulo_fila?.(s)}
                         onClick={() => setSeleccion(`${s.id}:${c.id}`)}
                       >
@@ -264,7 +351,8 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, variante = 
         </table>
       </div>
       <p className="mt-2 text-[12px] text-ink-400">
-        Clicca sul numero di riga per vedere chofer, targa e bolla{onOpen ? " · doppio clic su una cella per aprire o modificare la richiesta" : ""}. Le celle in rosso hanno dati mancanti.
+        Clicca sul numero di riga per vedere chofer, targa e bolla{onOpen ? " · doppio clic su una cella per aprire o modificare la richiesta" : ""}. Le celle in rosso hanno dati mancanti. Trascina il bordo di un titolo per cambiare la larghezza della colonna (vale per tutti).
+        {aviso && <span className={aviso.ok ? "ml-2 text-success-500" : "ml-2 text-danger-500"}>{aviso.texto}</span>}
       </p>
     </div>
   );
