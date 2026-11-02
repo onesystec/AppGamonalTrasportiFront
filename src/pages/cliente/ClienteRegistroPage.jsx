@@ -110,6 +110,7 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
 // historial y, si el servicio ya esta entregado, la oficina recibe un aviso.
 const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
   const t = useT();
+  const { language } = useLanguage();
   const r = fila.servicio;
   const extra = fila.area === "piazza-milano" || fila.area === "piazza-roma";
   const inicial = useMemo(
@@ -153,7 +154,7 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
     ["N°", fila.numero],
     [t("hist.plate"), fila.targa],
     [t("hist.driver"), fila.chofer],
-    [t("hist.status"), r.estadoLabel],
+    [t("hist.status"), estadoTexto(r, t, language)],
   ].filter(([, valor]) => valor);
 
   return (

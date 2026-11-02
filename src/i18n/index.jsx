@@ -62,12 +62,17 @@ export const useLanguage = () => {
 export const useT = () => useLanguage().t;
 
 // El personal de la oficina (no el cliente, cuyo idioma lo manda OneSystec) usa el idioma guardado en su cuenta, en cualquier dispositivo.
+// El usuario cliente (Piazza) ve siempre todo en italiano, aunque OneSystec mande otro idioma.
 export const IdiomaSync = () => {
   const { realUser } = useAuth();
-  const { setLanguage } = useLanguage();
-  const idioma = realUser && realUser.cargo !== "CLIENTE" ? realUser.idioma : null;
+  const { language, setLanguage } = useLanguage();
+  const esCliente = realUser?.cargo === "CLIENTE";
+  const idioma = realUser && !esCliente ? realUser.idioma : null;
   useEffect(() => {
     if (idioma) setLanguage(idioma);
   }, [idioma, setLanguage]);
+  useEffect(() => {
+    if (esCliente && language !== "it") setLanguage("it");
+  }, [esCliente, language, setLanguage]);
   return null;
 };

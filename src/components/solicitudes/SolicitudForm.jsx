@@ -254,7 +254,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
             )}
             <TextField
               id="sol-chofer"
-              label="Chofer (facoltativo)"
+              label="Autista (facoltativo)"
               placeholder="Es. Kevin Fernandez"
               value={form.choferIndicado}
               onChange={onChange("choferIndicado")}

@@ -134,7 +134,7 @@ export const es = {
   "req.PENDIENTE": "Pendiente",
   "req.ACEPTADA": "Aceptada",
   "req.RECHAZADA": "Rechazada",
-  "detail.type": "Tipo",
+  "detail.type": "Servicio",
   "detail.dateTime": "Fecha y hora",
   "detail.kmTotal": "Totale",
   "detail.kmDestination": "KM destino",

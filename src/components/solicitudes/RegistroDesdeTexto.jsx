@@ -70,7 +70,7 @@ export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistere
           setDuplicados(null);
         }}
       />
-      <p className="text-[12px] text-ink-400">I dati che non si riescono a leggere restano in rosso nella tabella: li completi direttamente lì.</p>
+      <p className="text-[12px] text-ink-400">I dati che non si riescono a leggere li puoi completare dopo, aprendo la richiesta dalla lista.</p>
 
       {duplicados && (
         <div className="rounded-xl border border-danger-500/40 bg-danger-500/10 px-3 py-2.5 text-[13px] text-ink-100">

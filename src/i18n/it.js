@@ -133,7 +133,7 @@ export const it = {
   "req.PENDIENTE": "In attesa",
   "req.ACEPTADA": "Accettata",
   "req.RECHAZADA": "Rifiutata",
-  "detail.type": "Tipo",
+  "detail.type": "Servizio",
   "detail.dateTime": "Data e ora",
   "detail.kmTotal": "Totale",
   "detail.kmDestination": "KM destino",
