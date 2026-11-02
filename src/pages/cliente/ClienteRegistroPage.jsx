@@ -9,6 +9,7 @@ import { CloseIcon, PlusIcon } from "../../components/ui/icons";
 import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
 import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
+import { RegistroDesdeTexto } from "../../components/solicitudes/RegistroDesdeTexto";
 import { SolicitudForm } from "../../components/solicitudes/SolicitudForm";
 import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudWhatsappButton";
 import { useAuth } from "../../context/AuthContext";
@@ -350,19 +351,34 @@ export const ClienteRegistroPage = () => {
 
       {form && (
         <Modal title={form.solicitud ? t("reg.editTitle") : t("reg.new")} onClose={() => setForm(null)}>
-          <SolicitudForm
-            solicitud={form.solicitud}
-            onCancel={() => setForm(null)}
-            onSaved={(saved) => {
-              setForm(null);
-              setSelectedId(saved.id);
-              setServicio(saved.servicio);
-              // Un registro con fecha de otro mes se ve en ese mes.
-              const savedMonth = new Date(saved.fechaHora).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
-              if (savedMonth !== month) setMonth(savedMonth);
-              else load();
-            }}
-          />
+          {form.solicitud ? (
+            <SolicitudForm
+              solicitud={form.solicitud}
+              onCancel={() => setForm(null)}
+              onSaved={(saved) => {
+                setForm(null);
+                setSelectedId(saved.id);
+                setServicio(saved.servicio);
+                // Un registro con fecha de otro mes se ve en ese mes.
+                const savedMonth = new Date(saved.fechaHora).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+                if (savedMonth !== month) setMonth(savedMonth);
+                else load();
+              }}
+            />
+          ) : (
+            // Registrar nuevo: solo el texto. La fila aparece en la hoja (lo que falte, en rojo) y se completa y edita ahi.
+            <RegistroDesdeTexto
+              servicioInicial={servicio}
+              onCancel={() => setForm(null)}
+              onRegistered={(saved) => {
+                setForm(null);
+                setServicio(saved.servicio);
+                const savedMonth = new Date(saved.fechaHora).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+                if (savedMonth !== month) setMonth(savedMonth);
+                else load();
+              }}
+            />
+          )}
         </Modal>
       )}
 

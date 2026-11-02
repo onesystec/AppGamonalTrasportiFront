@@ -30,7 +30,7 @@ export const SolicitudDetalle = ({ solicitud: s }) => {
       <Fila label="Ritiro">{s.ritiro}</Fila>
       <Fila label="Tipo">{s.tipoPedido}</Fila>
       <Fila label={s.servicio === "EXTRA_PIAZZA" ? "Consegna" : "Destinazione"}>{s.destinazione}</Fila>
-      <Fila label={t("detail.dateTime")}>{formatFechaHora(s.fechaHora)}</Fila>
+      <Fila label={t("detail.dateTime")}>{s.etaPendiente ? "Da completare" : formatFechaHora(s.fechaHora)}</Fila>
       <Fila label="Fornitore">{s.fornitore}</Fila>
       <Fila label="Aut. ritiro">{s.autRitiro}</Fila>
       <Fila label={s.servicio === "AB_SERVICE" ? t("detail.kmTotal") : t("detail.kmDestination")}>{s.km != null ? `${kmDeSolicitud(s)} km` : s.kmTexto}</Fila>

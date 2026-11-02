@@ -713,7 +713,8 @@ export const filaDeSolicitud = (s) => ({
   tipoPedido: s.tipoPedido,
   cliente: s.cliente,
   ciudad: s.destinazione,
-  eta: s.fechaHora,
+  // Una ETA pendiente (el texto no la traia): la fecha guardada es solo un relleno, la celda queda vacia (en rojo) hasta escribirla.
+  eta: s.etaPendiente ? null : s.fechaHora,
   km: kmDeSolicitud(s),
   milano: numeroMilano(s),
   sinAsignar: s.estado !== "ACEPTADA",

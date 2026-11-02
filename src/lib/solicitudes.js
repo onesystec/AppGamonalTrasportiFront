@@ -118,7 +118,8 @@ export const solicitudToFormDefaults = (s) => ({
   shipment: s.shipment ?? "",
   orderNumero: s.orderNumero ?? "",
   tipoPedido: s.tipoPedido ?? "",
-  eta: toRomeInput(s.fechaHora),
+  // Con la ETA pendiente (el texto no la traia) el formulario del servicio la pide vacia.
+  eta: s.etaPendiente ? "" : toRomeInput(s.fechaHora),
   kilometros: s.km != null ? String(s.km) : "",
   pagoRecibido: s.pagato != null ? String(s.pagato) : "",
   // Varie 2 es lo que se cobra aparte (ej. espera onsite): queda como costo de espera.

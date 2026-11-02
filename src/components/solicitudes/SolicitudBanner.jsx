@@ -34,7 +34,7 @@ export const SolicitudBanner = ({ solicitud, clienteEncontrado }) => (
         : `Completando una solicitud de ${solicitud.empresa ?? solicitud.creadoPor ?? "un cliente"}`}
     </span>
     <span className="mt-1 block">
-      {solicitud.servicioLabel} · {solicitud.cliente} · {solicitud.destinazione} · {formatFechaHora(solicitud.fechaHora)}
+      {solicitud.servicioLabel} · {solicitud.cliente} · {solicitud.destinazione} · {solicitud.etaPendiente ? "ETA por completar" : formatFechaHora(solicitud.fechaHora)}
       {solicitud.km != null ? ` · ${solicitud.km} km` : solicitud.kmTexto ? ` · ${solicitud.kmTexto}` : ""}
       {solicitud.pagato != null ? ` · Pagato ${formatCurrency(solicitud.pagato)} (queda como monto recibido)` : ""}
       {solicitud.pagato50 ? " · Pagato al 50%" : ""}
