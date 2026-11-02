@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { Fragment, useEffect, useState } from "react";
 import { parseApiError } from "../../lib/api";
+import { getClienteFotosRequest } from "../../lib/cliente.api";
+import { PUNTO_ESTADO } from "../cliente/TablaServicios";
 import { formatFechaHora, kmDeSolicitud } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 
@@ -173,7 +175,7 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
               const tip = (col) => (falta[col] ? AVISO_FALTA[col](s) : undefined);
               return (
                 <Fragment key={s.id}>
-                  <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen ? () => onOpen(s.id) : undefined}>
+                  <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen && s.abrible !== false ? () => onOpen(s.id) : undefined}>
                     <th
                       scope="row"
                       onClick={() => setAbierta(extendida ? null : s.id)}
@@ -244,27 +246,72 @@ export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Ne
   );
 };
 
-// Registro de Piazza: las solicitudes del cliente. El detalle (chofer, targa y bolla) existe solo cuando la oficina ya las acepto.
-export const HojaDhlMilano = ({ items, onOpen, verFotos }) => {
-  const rows = items.map((s) => ({
-    id: s.id,
-    punto: ESTADO_PUNTO[s.estado],
-    puntoTitulo: ESTADO_TITULO[s.estado] ?? s.estado,
-    shipment: s.shipment,
-    orderNumero: s.orderNumero,
-    tipoPedido: s.tipoPedido,
-    cliente: s.cliente,
-    ciudad: s.destinazione,
-    eta: s.fechaHora,
-    km: kmDeSolicitud(s),
-    milano: numeroMilano(s),
-    sinAsignar: s.estado !== "ACEPTADA",
-    choferIndicado: s.choferIndicado,
-    omitirFaltantes: s.estado === "RECHAZADA",
-  }));
+// Una solicitud del cliente como fila de la hoja. El detalle (chofer, targa y bolla) existe solo cuando la oficina ya la acepto.
+export const filaDeSolicitud = (s) => ({
+  id: s.id,
+  origen: "solicitud",
+  abrible: true,
+  punto: ESTADO_PUNTO[s.estado],
+  puntoTitulo: ESTADO_TITULO[s.estado] ?? s.estado,
+  shipment: s.shipment,
+  orderNumero: s.orderNumero,
+  tipoPedido: s.tipoPedido,
+  cliente: s.cliente,
+  ciudad: s.destinazione,
+  eta: s.fechaHora,
+  km: kmDeSolicitud(s),
+  milano: numeroMilano(s),
+  sinAsignar: s.estado !== "ACEPTADA",
+  choferIndicado: s.choferIndicado,
+  omitirFaltantes: s.estado === "RECHAZADA",
+});
+
+// Un servicio ya hecho (el historial) como fila de la hoja: de solo lectura, con el chofer y la targa que ya trae.
+export const filaDeServicio = (s, puntoTitulo) => ({
+  id: s.id,
+  origen: "servicio",
+  abrible: false,
+  punto: PUNTO_ESTADO[s.estado] ?? "bg-accent-400",
+  puntoTitulo,
+  shipment: s.shipment,
+  orderNumero: s.orderNumero,
+  tipoPedido: s.tipoPedido,
+  cliente: s.cliente ?? "",
+  ciudad: s.ciudad ?? "",
+  eta: s.etaPlan,
+  km: s.km != null ? String(Math.round(s.km * 10) / 10).replace(".", ",") : null,
+  milano: { texto: s.aplicativo?.startsWith("MILANO_") ? s.aplicativo.replace("MILANO_", "") : "", propuesto: false },
+  sinAsignar: false,
+  chofer: s.chofer,
+  targa: s.targa,
+  omitirFaltantes: s.estado === "ANNULLATO",
+});
+
+// La hoja unica de DHL Milano: las solicitudes del cliente (Registro) y los servicios ya hechos (Historial) en la misma tabla. Una solicitud aceptada
+// cuyo servicio ya esta en la lista no se repite (se ve el servicio); si el servicio quedo fuera (otro mes, otra empresa), se sigue viendo la solicitud.
+export const HojaMixta = ({ solicitudes = [], servicios = [], onOpen, verFotos, estadoTexto, vacio }) => {
+  const idsServicios = new Set(servicios.map((r) => r.id));
+  const rows = [
+    ...solicitudes.filter((s) => !(s.recordId && idsServicios.has(s.recordId))).map(filaDeSolicitud),
+    ...servicios.map((r) => filaDeServicio(r, estadoTexto ? estadoTexto(r) : r.estadoLabel)),
+  ].sort((a, b) => new Date(b.eta) - new Date(a.eta));
+
   const loadDetalle = async (row) => {
-    const { asignado, bollas } = await getDetalleSolicitudRequest(row.id);
-    return { chofer: asignado?.chofer ?? null, targa: asignado?.targa ?? null, bollas };
+    if (row.origen === "solicitud") {
+      const { asignado, bollas } = await getDetalleSolicitudRequest(row.id);
+      return { chofer: asignado?.chofer ?? null, targa: asignado?.targa ?? null, bollas };
+    }
+    const fotos = verFotos ? await getClienteFotosRequest(row.id) : [];
+    return {
+      chofer: row.chofer,
+      targa: row.targa,
+      bollas: fotos.filter((f) => f.codigo === "BOLLA").map((f) => ({ id: f.id, url: f.url, esPdf: f.esPdf })),
+    };
   };
-  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} vacio="Nessuna richiesta per questo mese." />;
+  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} vacio={vacio} />;
 };
+
+// Solo solicitudes (el usuario sin acceso al historial).
+export const HojaDhlMilano = ({ items, onOpen, verFotos }) => (
+  <HojaMixta solicitudes={items} onOpen={onOpen} verFotos={verFotos} vacio="Nessuna richiesta per questo mese." />
+);

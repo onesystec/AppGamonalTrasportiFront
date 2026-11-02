@@ -6,13 +6,15 @@ import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
-import { HojaDhlMilano } from "../../components/solicitudes/HojaDhlMilano";
+import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
+import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
 import { SolicitudForm } from "../../components/solicitudes/SolicitudForm";
 import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudWhatsappButton";
 import { useAuth } from "../../context/AuthContext";
-import { useT } from "../../i18n/index.jsx";
+import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
+import { getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
 import { currentMonth } from "../../lib/finanzas";
 import { formatCurrency } from "../../lib/format";
@@ -20,6 +22,9 @@ import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS } from "../../lib/s
 import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib/solicitudes.api";
 
 const REFRESH_MS = 60 * 1000;
+
+// En que pestana va un servicio ya hecho (Historial): DHL Milano / DHL Roma, AB Service y el resto como Extra Piazza.
+const tipoDeServicio = (r) => (r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "DHL_ROMA" : "DHL_MILANO") : r.spedizzione === "AB_SERVICE" ? "AB_SERVICE" : "EXTRA_PIAZZA");
 
 const Modal = ({ title, onClose, children }) => {
   const t = useT();
@@ -169,23 +174,34 @@ const TablaRegistros = ({ items, servicio, onSelect }) => {
 // AB Service). La oficina los completa y los acepta; aqui se ve en que estado esta cada uno.
 export const ClienteRegistroPage = () => {
   const t = useT();
+  const { language } = useLanguage();
   const { user } = useAuth();
+  // Registro e Historial son una sola vista: con el modulo HISTORIAL, a las solicitudes se suman los servicios ya hechos (la misma hoja).
+  const verHistorial = Boolean(user?.clienteModulos?.includes("HISTORIAL"));
+  const verFotos = Boolean(user?.clienteModulos?.includes("FOTOS"));
   const [month, setMonth] = useState(currentMonth);
   const [servicio, setServicio] = useState("DHL_MILANO");
   const [items, setItems] = useState(null);
+  const [servicios, setServicios] = useState([]);
+  const [fotosDe, setFotosDe] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(null); // null | { solicitud?: Solicitud }
   const [selectedId, setSelectedId] = useState(null);
 
   const load = useCallback(
     () =>
-      listSolicitudesClienteRequest(month)
-        .then((list) => {
+      Promise.all([
+        listSolicitudesClienteRequest(month),
+        // Si el historial falla, las solicitudes se siguen viendo.
+        verHistorial ? getClienteServiciosRequest(month).then((r) => r.servicios).catch(() => []) : Promise.resolve([]),
+      ])
+        .then(([list, hechos]) => {
           setItems(list);
+          setServicios(hechos);
           setError("");
         })
         .catch((err) => setError(parseApiError(err).message)),
-    [month]
+    [month, verHistorial]
   );
 
   useEffect(() => {
@@ -195,6 +211,15 @@ export const ClienteRegistroPage = () => {
   }, [load]);
 
   const porServicio = useMemo(() => Object.fromEntries(SOLICITUD_SERVICIOS.map((t) => [t.value, (items ?? []).filter((s) => s.servicio === t.value)])), [items]);
+  const serviciosPorTipo = useMemo(
+    () => Object.fromEntries(SOLICITUD_SERVICIOS.map((t) => [t.value, servicios.filter((r) => tipoDeServicio(r) === t.value)])),
+    [servicios]
+  );
+  // Una solicitud aceptada cuyo servicio ya esta en la lista no se repite: se ve el servicio.
+  const visibles = useMemo(() => {
+    const ids = new Set(servicios.map((r) => r.id));
+    return Object.fromEntries(SOLICITUD_SERVICIOS.map((t) => [t.value, porServicio[t.value].filter((s) => !(s.recordId && ids.has(s.recordId)))]));
+  }, [porServicio, servicios]);
 
   if (!user?.clienteModulos?.includes("REGISTRO")) return <Navigate to="/cliente" replace />;
 
@@ -230,7 +255,7 @@ export const ClienteRegistroPage = () => {
             )}
           >
             {t.label}
-            {items && <span className="ml-1.5 opacity-70">{porServicio[t.value].length}</span>}
+            {items && <span className="ml-1.5 opacity-70">{visibles[t.value].length + serviciosPorTipo[t.value].length}</span>}
           </button>
         ))}
       </div>
@@ -239,16 +264,34 @@ export const ClienteRegistroPage = () => {
       {!items && !error && <PageLoader />}
       {items && servicio === "DHL_MILANO" && (
         <>
-          {/* Escritorio: la hoja tipo Google Sheets. En el celular se mantiene la tabla de siempre. */}
+          {/* Escritorio: la hoja tipo Google Sheets con las solicitudes y los servicios. En el celular, las tablas de siempre. */}
           <div className="hidden lg:block">
-            <HojaDhlMilano items={porServicio.DHL_MILANO} onOpen={setSelectedId} verFotos={Boolean(user?.clienteModulos?.includes("FOTOS"))} />
+            <HojaMixta
+              solicitudes={porServicio.DHL_MILANO}
+              servicios={serviciosPorTipo.DHL_MILANO}
+              onOpen={setSelectedId}
+              verFotos={verFotos}
+              estadoTexto={(r) => estadoTexto(r, t, language)}
+              vacio="Nessuna richiesta o servizio per questo mese."
+            />
           </div>
-          <div className="lg:hidden">
-            <TablaRegistros items={porServicio.DHL_MILANO} servicio={servicio} onSelect={setSelectedId} />
+          <div className="flex flex-col gap-4 lg:hidden">
+            <TablaRegistros items={visibles.DHL_MILANO} servicio={servicio} onSelect={setSelectedId} />
+            {serviciosPorTipo.DHL_MILANO.length > 0 && <TablaServicios servicios={serviciosPorTipo.DHL_MILANO} verFotos={verFotos} onFotos={setFotosDe} />}
           </div>
         </>
       )}
-      {items && servicio !== "DHL_MILANO" && <TablaRegistros items={porServicio[servicio]} servicio={servicio} onSelect={setSelectedId} />}
+      {items && servicio !== "DHL_MILANO" && (
+        <div className="flex flex-col gap-4">
+          <TablaRegistros items={visibles[servicio]} servicio={servicio} onSelect={setSelectedId} />
+          {serviciosPorTipo[servicio].length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[14px] font-semibold text-ink-100">Servizi</h2>
+              <TablaServicios servicios={serviciosPorTipo[servicio]} verFotos={verFotos} onFotos={setFotosDe} />
+            </div>
+          )}
+        </div>
+      )}
 
       {selected && !form && (
         <VistaRapida
@@ -279,6 +322,8 @@ export const ClienteRegistroPage = () => {
           />
         </Modal>
       )}
+
+      {fotosDe && <FotosModal servicio={fotosDe} onClose={() => setFotosDe(null)} />}
     </div>
   );
 };

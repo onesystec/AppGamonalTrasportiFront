@@ -40,7 +40,8 @@ const buildNav = (modulos) => {
   ];
   const otras = [
     ...(modulos.includes("DISPONIBILIDAD") ? [{ to: "/cliente/disponibilidad", label: "nav.availability", icon: CalendarIcon }] : []),
-    ...(modulos.includes("HISTORIAL") ? [{ to: "/cliente/historial", label: "nav.history", icon: FileTextIcon }] : []),
+    // Registro e Historial son una sola vista (la hoja de servicios): con el Registro activo, el Historial se ve ahi mismo.
+    ...(modulos.includes("HISTORIAL") && !modulos.includes("REGISTRO") ? [{ to: "/cliente/historial", label: "nav.history", icon: FileTextIcon }] : []),
     ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : []),
   ];
   return { mapa, otras };
@@ -168,13 +169,19 @@ const ClienteInicio = () => {
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
   if (modulos.includes("EN_VIVO")) return <Navigate to="/cliente/en-vivo" replace />;
   if (modulos.includes("DISPONIBILIDAD")) return <Navigate to="/cliente/disponibilidad" replace />;
-  if (modulos.includes("HISTORIAL")) return <Navigate to="/cliente/historial" replace />;
   if (modulos.includes("REGISTRO")) return <Navigate to="/cliente/registro" replace />;
+  if (modulos.includes("HISTORIAL")) return <Navigate to="/cliente/historial" replace />;
   return (
     <p className="px-1 py-10 text-center text-[14px] text-ink-300">
       {t("nav.noSections")}
     </p>
   );
+};
+
+// El Historial y el Registro son una sola vista: quien tiene el Registro, entra al Historial por el Registro.
+const HistorialORegistro = () => {
+  const { user } = useAuth();
+  return user?.clienteModulos?.includes("REGISTRO") ? <Navigate to="/cliente/registro" replace /> : <ClienteHistorialPage />;
 };
 
 export const ClienteApp = () => (
@@ -183,7 +190,7 @@ export const ClienteApp = () => (
       <Route path="/cliente" element={<ClienteInicio />} />
       <Route path="/cliente/en-vivo" element={<ClienteEnVivoPage />} />
       <Route path="/cliente/disponibilidad" element={<ClienteDisponibilidadPage />} />
-      <Route path="/cliente/historial" element={<ClienteHistorialPage />} />
+      <Route path="/cliente/historial" element={<HistorialORegistro />} />
       <Route path="/cliente/registro" element={<ClienteRegistroPage />} />
       <Route path="*" element={<Navigate to="/cliente" replace />} />
     </Route>
