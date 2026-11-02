@@ -166,8 +166,8 @@ export const NewDhlAbServiceRecordPage = () => {
     const direccion = exactoVigente
       ? { direccion: calle.trim(), lat: exactoVigente.lat, lng: exactoVigente.lng }
       : buildAddress({ calle, cap, ciudad });
-    // DHL/AB Service no maneja codigos propios: se genera uno interno solo para
-    // cumplir la columna unica de la base, no se le muestra al usuario.
+    // DHL/AB Service no piden un codigo: se genera uno interno para la columna unica de la base. En DHL, con Shipment, el servidor lo
+    // reemplaza por el propio Shipment (ese es el codigo del servicio).
     const codigo = `${form.spedizzione}-${Date.now()}`;
 
     const payload = Object.fromEntries(
