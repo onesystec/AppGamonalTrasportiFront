@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { AreaBadge } from "../records/AreaBadge";
 import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
-import { BarsIcon, CameraIcon, ClipboardListIcon, ClockIcon, SearchIcon } from "../ui/icons";
+import { BarsIcon, ClipboardListIcon, ClockIcon, ImageIcon, SearchIcon } from "../ui/icons";
 import { EstadoPill } from "../solicitudes/SolicitudDetalle";
 import { aplicativoTexto, ESTADO_PILL, estadoTexto } from "./TablaServicios";
 import { useLanguage, useT } from "../../i18n/index.jsx";
@@ -96,7 +96,7 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
 };
 
 const GRID =
-  "grid min-w-[820px] grid-cols-[minmax(150px,1.1fr)_minmax(140px,1.4fr)_minmax(90px,0.8fr)_minmax(100px,0.9fr)_110px_minmax(120px,1fr)] items-center gap-3 px-4";
+  "grid min-w-[780px] grid-cols-[minmax(130px,1.1fr)_minmax(120px,1.3fr)_minmax(80px,0.8fr)_minmax(90px,0.9fr)_96px_minmax(100px,0.9fr)_44px] items-center gap-3 px-4";
 
 const ChevronIcon = ({ open }) => (
   <svg className={`h-4 w-4 shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -123,27 +123,29 @@ const Cabecera = () => {
       <span>{t("hist.driver")}</span>
       <span>{t("hist.status")}</span>
       <span>{t("reg.colEta")}</span>
+      <span className="text-center">{t("reg.colPhotos")}</span>
     </div>
   );
 };
 
-// Icono de foto: la del retiro (la bolla) o la de la entrega.
-export const BotonFoto = ({ servicio, tipo, onFotos, className }) => {
+// Icono de la galeria de fotos del servicio (retiro y entrega): abre el visor con las dos partes.
+export const BotonGaleria = ({ servicio, onFotos, className }) => {
   const t = useT();
-  const etiqueta = t(tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery");
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        onFotos(servicio, tipo);
+        onFotos(servicio);
       }}
-      aria-label={etiqueta}
-      title={etiqueta}
+      aria-label={t("reg.gallery")}
+      title={t("reg.gallery")}
       className={clsx("relative rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50", className)}
     >
-      <CameraIcon className="h-[18px] w-[18px]" />
-      <span className="absolute -bottom-0.5 right-0 text-[9px] font-bold leading-none">{tipo === "BOLLA" ? "R" : "E"}</span>
+      <ImageIcon className="h-5 w-5" />
+      {servicio.fotos > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold leading-none text-white">{servicio.fotos}</span>
+      )}
     </button>
   );
 };
@@ -204,19 +206,14 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
           </span>
         )}
       </span>
-      <span className="flex min-w-0 items-center justify-between gap-2">
+      <span className="min-w-0">
         <span className="min-w-0">
           <span className="block truncate text-ink-100">{fila.eta ? horaRoma(fila.eta) : <span className="text-danger-500">—</span>}</span>
           {fila.llegoAt && <span className="block truncate text-[11px] text-ink-400">{t("reg.arrived", { time: horaRoma(fila.llegoAt) })}</span>}
           {fila.retraso != null && <RetrasoPill min={fila.retraso} className="mt-1" />}
         </span>
-        {verFotos && fila.fotos > 0 && (
-          <span className="flex shrink-0 items-center">
-            {fila.servicio.fotosRetiro > 0 && <BotonFoto servicio={fila.servicio} tipo="BOLLA" onFotos={onFotos} />}
-            {fila.servicio.fotosEntrega > 0 && <BotonFoto servicio={fila.servicio} tipo="FOTO_ENTREGA" onFotos={onFotos} />}
-          </span>
-        )}
       </span>
+      <span className="flex justify-center">{verFotos && fila.fotos > 0 && <BotonGaleria servicio={fila.servicio} onFotos={onFotos} />}</span>
     </div>
   );
 };
@@ -354,7 +351,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                   {abierto && (
                     <div className="overflow-x-auto border-t border-line/10 pb-2">
                       <Cabecera />
-                      <div className="flex min-w-[820px] flex-col gap-0.5 px-2">
+                      <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
                         {items.map((f) => (
                           <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                         ))}

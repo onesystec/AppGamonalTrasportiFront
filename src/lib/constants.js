@@ -222,6 +222,7 @@ export const VEHICLE_STATUS_TONE = {
 
 export const TIPO_ARCHIVO_LABELS = {
   CMR: "CMR",
+  BOLLA: "Foto del retiro (bolla)",
   FOTO_ENTREGA: "Foto de entrega",
   FACTURA: "Factura",
   COMPROBANTE: "Comprobante",

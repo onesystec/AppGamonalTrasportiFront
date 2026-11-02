@@ -8,7 +8,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
 import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
-import { BotonFoto, RegistroLista } from "../../components/cliente/RegistroLista";
+import { BotonGaleria, RegistroLista } from "../../components/cliente/RegistroLista";
 import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
 import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
@@ -173,10 +173,10 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
           </dl>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {verFotos && (
-              <>
-                <FotoAcceso servicio={r} tipo="BOLLA" cantidad={r.fotosRetiro} onFotos={onFotos} />
-                <FotoAcceso servicio={r} tipo="FOTO_ENTREGA" cantidad={r.fotosEntrega} onFotos={onFotos} />
-              </>
+              <span className={`inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100 ${r.fotos > 0 ? "" : "opacity-40"}`}>
+                <BotonGaleria servicio={r} onFotos={r.fotos > 0 ? onFotos : () => {}} />
+                {t("reg.gallery")}
+              </span>
             )}
             <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
               {t("reg.editData")}
@@ -226,20 +226,6 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
         </>
       )}
     </Modal>
-  );
-};
-
-// Boton con el icono de foto del retiro o de la entrega y su nombre; apagado si todavia no hay foto.
-const FotoAcceso = ({ servicio, tipo, cantidad, onFotos }) => {
-  const t = useT();
-  const vacia = !cantidad;
-  return (
-    <span className={vacia ? "opacity-40" : undefined} title={vacia ? t(tipo === "BOLLA" ? "reg.noPhotoPickup" : "reg.noPhotoDelivery") : undefined}>
-      <span className="inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100">
-        <BotonFoto servicio={servicio} tipo={tipo} onFotos={vacia ? () => {} : onFotos} />
-        {t(tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery")}
-      </span>
-    </span>
   );
 };
 
@@ -436,7 +422,7 @@ export const ClienteRegistroPage = () => {
           verFotos={verFotos}
           onOpenSolicitud={setSelectedId}
           onOpenServicio={setServicioSel}
-          onFotos={(servicio, tipo) => setFotosDe(tipo ? { ...servicio, tipo } : servicio)}
+          onFotos={setFotosDe}
         />
       )}
       {items && MOSTRAR_HOJA_EXCEL && HOJAS[servicio] && (
@@ -554,7 +540,7 @@ export const ClienteRegistroPage = () => {
           fila={servicioSel}
           verFotos={verFotos}
           onClose={() => setServicioSel(null)}
-          onFotos={(servicio, tipo) => setFotosDe({ ...servicio, tipo })}
+          onFotos={setFotosDe}
           onSaved={() => {
             setServicioSel(null);
             load();

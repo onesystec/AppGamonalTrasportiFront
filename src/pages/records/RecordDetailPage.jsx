@@ -823,17 +823,20 @@ export const RecordDetailPage = () => {
     }
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
+  // Las fotos que quiera el chofer (hay servicios con mas de cinco): se pueden elegir varias a la vez y se suben una por una.
+  const handleUpload = (tipo) => async (e) => {
+    const picked = [...(e.target.files ?? [])];
     e.target.value = "";
-    if (!file) return;
+    if (picked.length === 0) return;
 
     setUploading(true);
     setUploadError("");
 
     try {
-      const newFile = await uploadRecordFileRequest(id, file, "FOTO_ENTREGA");
-      setFiles((prev) => [newFile, ...prev]);
+      for (const file of picked) {
+        const newFile = await uploadRecordFileRequest(id, file, tipo);
+        setFiles((prev) => [newFile, ...prev]);
+      }
     } catch (err) {
       setUploadError(parseApiError(err).message);
     } finally {
@@ -1208,32 +1211,42 @@ const RecordSummaryView = ({
       <h2 className="text-[17px] font-medium text-ink-50">Archivos</h2>
       <p className="mt-1 text-[13px] text-ink-300">
         {isChofer
-          ? "Sube tu foto de entrega para confirmar el servicio."
+          ? "Sube las fotos del retiro y de la entrega: todas las que hagan falta."
           : "Documentos y comprobantes cargados para este registro."}
       </p>
 
       <Alert>{uploadError}</Alert>
 
-      {isChofer && (
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <CameraPickButton
-            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10"
-            label="Tomar foto de entrega"
-            onChange={onUpload}
-            disabled={uploading}
-          />
-          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10">
-            {uploading ? <Spinner /> : "Elegir foto o archivo"}
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              className="hidden"
-              onChange={onUpload}
-              disabled={uploading}
-            />
-          </label>
-        </div>
-      )}
+      {isChofer &&
+        [
+          { tipo: "BOLLA", titulo: "Fotos del retiro (bolla)", camara: "Tomar foto del retiro" },
+          { tipo: "FOTO_ENTREGA", titulo: "Fotos de la entrega", camara: "Tomar foto de entrega" },
+        ].map(({ tipo, titulo, camara }) => (
+          <div key={tipo} className="mt-4">
+            <h3 className="text-[14px] font-semibold text-ink-50">
+              {titulo} <span className="font-normal text-ink-400">({files.filter((f) => f.tipoArchivo === tipo).length})</span>
+            </h3>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <CameraPickButton
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10"
+                label={camara}
+                onChange={onUpload(tipo)}
+                disabled={uploading}
+              />
+              <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium text-ink-50 hover:bg-line/10">
+                {uploading ? <Spinner /> : "Elegir fotos o archivos"}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={onUpload(tipo)}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
 
       <p className="mt-2 text-[12px] text-ink-400">
         Las fotos de comprobante se borran solas pasados 3 meses desde que se suben.

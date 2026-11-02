@@ -39,7 +39,7 @@ export const FotosModal = ({ servicio, onClose }) => {
   useEffect(() => {
     let cancelled = false;
     getClienteFotosRequest(servicio.id)
-      .then((list) => !cancelled && setFotos(servicio.tipo ? list.filter((f) => f.codigo === servicio.tipo) : list))
+      .then((list) => !cancelled && setFotos(list))
       .catch((err) => !cancelled && setError(parseApiError(err).message));
     return () => {
       cancelled = true;
@@ -52,10 +52,7 @@ export const FotosModal = ({ servicio, onClose }) => {
       <div className="relative max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[17px] font-semibold text-ink-50">
-              {t("hist.photosOf", { code: servicio.codigo })}
-              {servicio.tipo && ` · ${t(servicio.tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery")}`}
-            </h2>
+            <h2 className="text-[17px] font-semibold text-ink-50">{t("hist.photosOf", { code: servicio.codigo })}</h2>
             <p className="text-[13px] text-ink-300">{servicio.destino}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
@@ -68,19 +65,38 @@ export const FotosModal = ({ servicio, onClose }) => {
             <Spinner />
           </div>
         )}
-        {fotos?.length === 0 && <p className="py-6 text-center text-[14px] text-ink-300">{t("hist.noPhotos")}</p>}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {fotos?.map((f) => (
-            <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-line/10 hover:border-line/30">
-              {f.esPdf ? (
-                <span className="flex h-72 items-center justify-center bg-line/10 text-[14px] font-medium text-ink-100">{t("hist.openPdf")}</span>
-              ) : (
-                <img src={f.url} alt={f.tipo} className="h-72 w-full bg-black/20 object-contain" loading="lazy" />
-              )}
-              <span className="block px-3 py-2 text-[13px] text-ink-300">{f.tipo}</span>
-            </a>
-          ))}
-        </div>
+        {fotos && (
+          <div className="flex flex-col gap-5">
+            {[
+              { codigo: "BOLLA", titulo: t("reg.photoPickup"), vacio: t("reg.noPhotoPickup") },
+              { codigo: "FOTO_ENTREGA", titulo: t("reg.photoDelivery"), vacio: t("reg.noPhotoDelivery") },
+            ].map(({ codigo, titulo, vacio }) => {
+              const lista = fotos.filter((f) => f.codigo === codigo);
+              return (
+                <section key={codigo}>
+                  <h3 className="mb-2 text-[14px] font-semibold text-ink-100">
+                    {titulo} <span className="font-normal text-ink-400">({lista.length})</span>
+                  </h3>
+                  {lista.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-line/20 py-4 text-center text-[13px] text-ink-400">{vacio}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {lista.map((f) => (
+                        <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-line/10 hover:border-line/30">
+                          {f.esPdf ? (
+                            <span className="flex h-72 items-center justify-center bg-line/10 text-[14px] font-medium text-ink-100">{t("hist.openPdf")}</span>
+                          ) : (
+                            <img src={f.url} alt={titulo} className="h-72 w-full bg-black/20 object-contain" loading="lazy" />
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

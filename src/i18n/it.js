@@ -119,6 +119,8 @@ export const it = {
   "reg.pendingHint": "Servizi di oggi non ancora arrivati, i più urgenti per primi.",
   "reg.noPendingToday": "Nessun servizio in sospeso oggi.",
   "reg.photoPickup": "Foto del ritiro",
+  "reg.colPhotos": "Foto",
+  "reg.gallery": "Galleria foto",
   "reg.photoDelivery": "Foto della consegna",
   "reg.noPhotoPickup": "Non c'è ancora la foto del ritiro",
   "reg.noPhotoDelivery": "Non c'è ancora la foto della consegna",
