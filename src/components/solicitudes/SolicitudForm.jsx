@@ -11,8 +11,19 @@ import { APLICATIVO_OPTIONS, TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
 import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
 import { createSolicitudRequest, leerTextoClienteRequest, updateSolicitudRequest } from "../../lib/solicitudes.api";
 
+// Extra Piazza se elige por zona (Milano o Roma).
+const OPCIONES = SOLICITUD_SERVICIOS.flatMap((s) =>
+  s.value === "EXTRA_PIAZZA"
+    ? [
+        { key: "EXTRA_PIAZZA_MILANO", label: "Extra Piazza Milano", servicio: "EXTRA_PIAZZA", zona: "MILANO" },
+        { key: "EXTRA_PIAZZA_ROMA", label: "Extra Piazza Roma", servicio: "EXTRA_PIAZZA", zona: "ROMA" },
+      ]
+    : [{ key: s.value, label: s.label, servicio: s.value }]
+);
+
 const EMPTY = {
   servicio: "DHL_MILANO",
+  zona: "MILANO",
   cliente: "",
   destinazione: "",
   fechaHora: "",
@@ -34,6 +45,7 @@ const EMPTY = {
 
 const fromSolicitud = (s) => ({
   servicio: s.servicio,
+  zona: s.zona ?? "MILANO",
   cliente: s.cliente,
   destinazione: s.destinazione,
   fechaHora: toRomeInput(s.fechaHora),
@@ -132,6 +144,7 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       orderNumero: usaTexto ? form.orderNumero : "",
       tipoPedido: usaTexto && !esExtra ? form.tipoPedido : "",
       ritiro: esExtra ? form.ritiro : "",
+      zona: esExtra ? form.zona : "",
       choferIndicado: usaTexto ? form.choferIndicado : "",
     };
     try {
@@ -153,14 +166,17 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       <div>
         <span className="mb-1.5 block text-[13px] font-medium text-ink-300">{t("form.service")}</span>
         <div className="flex flex-wrap gap-2">
-          {SOLICITUD_SERVICIOS.map((s) => (
+          {OPCIONES.map((s) => (
             <button
-              key={s.value}
+              key={s.key}
               type="button"
-              onClick={() => setServicio(s.value)}
+              onClick={() => {
+                setServicio(s.servicio);
+                if (s.zona) set("zona", s.zona);
+              }}
               className={clsx(
                 "rounded-full px-4 py-2 text-[13px] font-medium transition-colors",
-                form.servicio === s.value ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"
+                form.servicio === s.servicio && (!s.zona || form.zona === s.zona) ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"
               )}
             >
               {s.label}

@@ -9,8 +9,19 @@ import { registrarDesdeTextoClienteRequest } from "../../lib/solicitudes.api";
 
 // Nueva registracion del portal de Piazza (todo en italiano): el cliente elige el servicio, pega TODO el texto y pulsa "Registra". Se lee y se crea la fila en la
 // hoja con lo que se pudo leer; lo que falte queda en rojo para completarlo ahi mismo, en la propia hoja.
+// Extra Piazza se elige por zona (cada una sale de su lugar de espera): Milano o Roma.
+const OPCIONES = SOLICITUD_SERVICIOS.flatMap((s) =>
+  s.value === "EXTRA_PIAZZA"
+    ? [
+        { value: "EXTRA_PIAZZA_MILANO", label: "Extra Piazza Milano", servicio: "EXTRA_PIAZZA", zona: "MILANO" },
+        { value: "EXTRA_PIAZZA_ROMA", label: "Extra Piazza Roma", servicio: "EXTRA_PIAZZA", zona: "ROMA" },
+      ]
+    : [{ value: s.value, label: s.label, servicio: s.value }]
+);
+
 export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistered, onCancel }) => {
-  const [servicio, setServicio] = useState(servicioInicial);
+  const [opcion, setOpcion] = useState(servicioInicial === "EXTRA_PIAZZA" ? "EXTRA_PIAZZA_MILANO" : servicioInicial);
+  const { servicio, zona } = OPCIONES.find((o) => o.value === opcion) ?? OPCIONES[0];
   const [texto, setTexto] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -20,7 +31,7 @@ export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistere
     setSaving(true);
     setError("");
     try {
-      const res = await registrarDesdeTextoClienteRequest({ servicio, texto, confirmar });
+      const res = await registrarDesdeTextoClienteRequest({ servicio, ...(zona ? { zona } : {}), texto, confirmar });
       if (!res.creada) {
         setDuplicados(res.duplicados);
         return;
@@ -40,17 +51,17 @@ export const RegistroDesdeTexto = ({ servicioInicial = "DHL_MILANO", onRegistere
       <div>
         <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Servizio</span>
         <div className="flex flex-wrap gap-2">
-          {SOLICITUD_SERVICIOS.map((s) => (
+          {OPCIONES.map((s) => (
             <button
               key={s.value}
               type="button"
               onClick={() => {
-                setServicio(s.value);
+                setOpcion(s.value);
                 setDuplicados(null);
               }}
               className={clsx(
                 "rounded-full px-4 py-2 text-[13px] font-medium transition-colors",
-                servicio === s.value ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"
+                opcion === s.value ? "bg-brand text-brand-foreground" : "bg-line/10 text-ink-300 hover:text-ink-50"
               )}
             >
               {s.label}
