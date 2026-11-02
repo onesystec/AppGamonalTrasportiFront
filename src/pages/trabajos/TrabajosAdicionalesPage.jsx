@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { GlassCard } from "../../components/ui/GlassCard";
+import { Celda, FilaExpandible, ListaExpandible } from "../../components/ui/ListaExpandible";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { TextField } from "../../components/ui/TextField";
@@ -40,15 +41,17 @@ const Fact = ({ label, children }) => (
 );
 
 // Datos del trabajo (los mismos para el chofer y para quien revisa).
-const Detalle = ({ t, showDriver }) => (
+const Detalle = ({ t, showDriver, sinEncabezado = false }) => (
   <div className="flex flex-col gap-3">
-    <div className="flex flex-wrap items-start justify-between gap-2">
-      <div className="min-w-0">
-        {showDriver && t.driver && <p className="text-[15px] font-semibold text-ink-50">{t.driver.nombre} {t.driver.apellido}</p>}
-        <p className="text-[14px] font-medium text-ink-50">{t.areaLabel}</p>
+    {!sinEncabezado && (
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          {showDriver && t.driver && <p className="text-[15px] font-semibold text-ink-50">{t.driver.nombre} {t.driver.apellido}</p>}
+          <p className="text-[14px] font-medium text-ink-50">{t.areaLabel}</p>
+        </div>
+        <EstadoChip estado={t.estado} />
       </div>
-      <EstadoChip estado={t.estado} />
-    </div>
+    )}
     <p className="whitespace-pre-wrap text-[14px] text-ink-200">{t.descripcion}</p>
     <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
       <Fact label="Inicio">{formatRomeDateTime(t.inicio)}</Fact>
@@ -168,27 +171,42 @@ const ChoferView = () => {
 
       {!items && !error && <PageLoader />}
       {items?.length === 0 && !editing && <p className="px-1 py-6 text-[14px] text-ink-400">Todavia no cargaste ningun trabajo adicional.</p>}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {items?.map((t) => (
-          <GlassCard key={t.id}>
-            <Detalle t={t} />
-            {t.estado !== "APROBADO" && (
-              <div className="mt-4 flex flex-wrap justify-end gap-2">
-                <Button variant="ghost" className="sm:w-auto sm:px-4" onClick={() => { setNotice(""); setEditing(t); }}>
-                  {t.estado === "DEVUELTO" ? "Corregir" : "Editar"}
-                </Button>
-                <Button variant="ghost" className="sm:w-auto sm:px-4" onClick={() => handleDelete(t)}>Borrar</Button>
-              </div>
-            )}
-          </GlassCard>
-        ))}
-      </div>
+      {items?.length > 0 && (
+        <ListaExpandible>
+          {items.map((t) => (
+            <FilaExpandible
+              key={t.id}
+              resumen={
+                <>
+                  <Celda ancho="sm:w-32" className="font-semibold text-ink-50">{t.areaLabel}</Celda>
+                  <Celda ancho="sm:min-w-[200px] sm:flex-1" title={t.descripcion} className="text-ink-200">{t.descripcion}</Celda>
+                  <Celda ancho="sm:w-36" className="text-ink-300">{formatRomeDateTime(t.inicio)}</Celda>
+                  <Celda ancho="sm:w-24" className="font-medium text-ink-50">{formatHours(t.horas)}</Celda>
+                  <EstadoChip estado={t.estado} />
+                </>
+              }
+              acciones={
+                t.estado !== "APROBADO" ? (
+                  <>
+                    <Button variant="ghost" className="sm:w-auto sm:px-3 sm:py-1.5 sm:text-[12px]" onClick={() => { setNotice(""); setEditing(t); }}>
+                      {t.estado === "DEVUELTO" ? "Corregir" : "Editar"}
+                    </Button>
+                    <Button variant="ghost" className="sm:w-auto sm:px-3 sm:py-1.5 sm:text-[12px]" onClick={() => handleDelete(t)}>Borrar</Button>
+                  </>
+                ) : null
+              }
+            >
+              <Detalle t={t} sinEncabezado />
+            </FilaExpandible>
+          ))}
+        </ListaExpandible>
+      )}
     </div>
   );
 };
 
 // ---------------------------------------------------------------- responsable / admin
-const ReviewCard = ({ t, onDone }) => {
+const ReviewCard = ({ t, onDone, embedded = false }) => {
   const [mode, setMode] = useState(null); // null | "ajustar" | "devolver"
   const [nota, setNota] = useState("");
   const [inicio, setInicio] = useState(toRomeDateTimeInputValue(t.inicio));
@@ -209,9 +227,10 @@ const ReviewCard = ({ t, onDone }) => {
     }
   };
 
+  const Marco = embedded ? "div" : GlassCard;
   return (
-    <GlassCard>
-      <Detalle t={t} showDriver />
+    <Marco>
+      <Detalle t={t} showDriver sinEncabezado={embedded} />
       {t.estado === "PENDIENTE" ? (
         <div className="mt-4 flex flex-col gap-3">
           <Alert>{error}</Alert>
@@ -245,7 +264,48 @@ const ReviewCard = ({ t, onDone }) => {
           )}
         </div>
       ) : null}
-    </GlassCard>
+    </Marco>
+  );
+};
+
+// Una fila de la lista de la oficina: chofer, area, descripcion, inicio, horas y estado; "Aprobar" en la fila si no tiene avisos. El detalle (con ajustar y devolver) se abre al pulsar.
+const FilaTrabajo = ({ t, onDone }) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const rapida = t.estado === "PENDIENTE" && !(t.avisos?.length > 0);
+  const aprobar = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await reviewTrabajoAdicionalRequest(t.id, { accion: "APROBAR" });
+      onDone();
+    } catch (err) {
+      setError(parseApiError(err).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <FilaExpandible
+      error={error}
+      resumen={
+        <>
+          <Celda ancho="sm:w-36" className="font-semibold text-ink-50">{t.driver ? `${t.driver.nombre} ${t.driver.apellido}` : "-"}</Celda>
+          <Celda ancho="sm:w-28" className="text-ink-300">{t.areaLabel}</Celda>
+          <Celda ancho="sm:min-w-[200px] sm:flex-1" title={t.descripcion} className="text-ink-200">{t.descripcion}</Celda>
+          <Celda ancho="sm:w-36" className="text-ink-300">{formatRomeDateTime(t.inicio)}</Celda>
+          <Celda ancho="sm:w-24" className="font-medium text-ink-50">{formatHours(t.horas)}</Celda>
+          <EstadoChip estado={t.estado} />
+          {t.avisos?.length > 0 && <span title={t.avisos.join(" ")} className="text-[12px] font-semibold text-warning-500">⚠ {t.avisos.length}</span>}
+        </>
+      }
+      acciones={
+        rapida ? (
+          <Button className="sm:w-auto sm:px-4 sm:py-1.5 sm:text-[12px]" loading={busy} onClick={aprobar}>Aprobar</Button>
+        ) : null
+      }
+    >
+      <ReviewCard t={t} onDone={onDone} embedded />
+    </FilaExpandible>
   );
 };
 
@@ -283,11 +343,13 @@ const OficinaView = () => {
       <Alert>{error}</Alert>
       {!data && !error && <PageLoader />}
       {data?.items.length === 0 && <p className="px-1 py-6 text-[14px] text-ink-400">No hay trabajos adicionales en este estado.</p>}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {data?.items.map((t) => (
-          <ReviewCard key={`${t.id}-${t.estado}`} t={t} onDone={() => setVersion((v) => v + 1)} />
-        ))}
-      </div>
+      {data?.items.length > 0 && (
+        <ListaExpandible>
+          {data.items.map((t) => (
+            <FilaTrabajo key={`${t.id}-${t.estado}`} t={t} onDone={() => setVersion((v) => v + 1)} />
+          ))}
+        </ListaExpandible>
+      )}
     </div>
   );
 };

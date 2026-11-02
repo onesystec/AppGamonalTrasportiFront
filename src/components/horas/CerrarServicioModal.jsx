@@ -57,6 +57,7 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [esperaEstado, setEsperaEstado] = useState(null); // PENDIENTE = la espera espera la aprobacion de un responsable
   // Lo que el chofer declara sobre peajes y carburante de este servicio.
   const [declared, setDeclared] = useState(() => ({
     sinPeajeIda: Boolean(record.faltantes?.declarado?.sinPeajeIda),
@@ -101,10 +102,11 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
     setSaving(true);
     setError("");
     try {
-      await cierreServicioRequest(record.id, {
+      const cierre = await cierreServicioRequest(record.id, {
         esperaMin: Number(esperaMin) || 0,
         ...(comentarios.trim() ? { comentarios: comentarios.trim() } : {}),
       });
+      setEsperaEstado(cierre?.esperaEstado ?? null);
       // Las fotos de la bolla, una por una; las que se suban bien no se vuelven a mandar si algo falla despues.
       let remaining = bollas;
       while (remaining.length > 0) {
@@ -142,7 +144,9 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
             <CheckCircleIcon className="h-12 w-12 text-success-500" />
             <h2 className="text-[19px] font-semibold text-ink-50">Servicio terminado</h2>
             <p className="text-[14px] text-ink-300">
-              Tu espera quedó registrada.
+              {esperaEstado === "PENDIENTE"
+                ? "Tu espera quedó registrada: un responsable la revisa y, cuando la apruebe, se suma a tu pago."
+                : "Tu espera quedó registrada."}
             </p>
             <div className="mt-2 w-full rounded-2xl bg-warning-500/10 px-4 py-3 text-left">
               <p className="text-[14px] font-medium text-ink-50">¿Pasaste por algun peaje sin pagar?</p>
@@ -182,7 +186,7 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
             <MinutesField
               id="cierre-espera"
               label="Espera (minutos)"
-              hint="Tiempo que esperaste al cliente en este servicio. Se paga aparte."
+              hint="Tiempo que esperaste al cliente en este servicio. Se paga aparte cuando un responsable la aprueba."
               value={esperaMin}
               onChange={setEsperaMin}
             />

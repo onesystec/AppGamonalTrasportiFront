@@ -63,6 +63,7 @@ export const payCalcText = (item, reglas) => {
     );
   }
   if (item.esperaHoras > 0) parts.push(`+ ${nf(item.esperaHoras)} h de espera x ${nf(reglas.esperaHoraEur)} EUR`);
+  else if (item.esperaPendienteHoras > 0) parts.push(`(${nf(item.esperaPendienteHoras)} h de espera por aprobar: todavia no suman)`);
   if (item.reperibilidad) {
     const motivo = item.reperibilidad === "FESTIVO" ? "festivo" : item.reperibilidad === "NOCHE" ? "noche" : "fin de semana";
     parts.push(`+ ${nf(item.pagoReperibilidad)} EUR de reperibilidad (${motivo})`);

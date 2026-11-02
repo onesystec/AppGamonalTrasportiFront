@@ -196,6 +196,7 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
             {driver.horasManejo > 0 && ` - ${formatHours(driver.horasManejo)} de manejo (km ÷ ${kmh})`}
             {driver.horas > 0 && ` - ${nf(driver.horas)} h`}
             {driver.esperaHoras > 0 && ` - ${nf(driver.esperaHoras)} h de espera`}
+            {driver.esperaPendienteHoras > 0 && ` - ${nf(driver.esperaPendienteHoras)} h de espera por aprobar (no suman)`}
             {driver.salidasReperibilidad > 0 &&
               ` - ${driver.salidasReperibilidad} ${driver.salidasReperibilidad === 1 ? "salida" : "salidas"} de reperibilidad${driver.salidasNoche > 0 ? ` (${driver.salidasNoche} de noche)` : ""} (+${formatCurrency(driver.pagoReperibilidad)})`}
             {driver.horasPorAprobar > 0 && ` - ${driver.horasPorAprobar} con horas por aprobar`}

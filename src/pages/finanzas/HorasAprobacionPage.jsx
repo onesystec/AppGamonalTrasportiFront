@@ -4,6 +4,7 @@ import { Link, useLocation, useOutletContext } from "react-router-dom";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
+import { Celda, FilaExpandible, ListaExpandible } from "../../components/ui/ListaExpandible";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { AlertTriangleIcon, CheckCircleIcon } from "../../components/ui/icons";
@@ -311,7 +312,7 @@ const EstimacionBlock = ({ recordId, estimacion, declaredMin, onUpdate, onApplyE
 
 // Una jornada enviada por un chofer: lo declarado, avisos para mirar dos veces y las tres salidas
 // (aprobar tal cual, ajustar y aprobar, o devolver con un motivo).
-const ReviewCard = ({ item, onReviewed }) => {
+const ReviewCard = ({ item, onReviewed, embedded = false }) => {
   const location = useLocation();
   const j = item.jornada;
   const [mode, setMode] = useState(null); // null | "ajustar" | "devolver"
@@ -347,7 +348,8 @@ const ReviewCard = ({ item, onReviewed }) => {
   };
 
   return (
-    <section className="glass-surface rounded-2xl p-4 sm:p-5">
+    <section className={embedded ? "" : "glass-surface rounded-2xl p-4 sm:p-5"}>
+      {!embedded && (
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <span className="block text-[15px] font-semibold text-ink-50">{item.chofer ?? "Sin chofer"}</span>
@@ -364,6 +366,7 @@ const ReviewCard = ({ item, onReviewed }) => {
         </div>
         <HorasEstadoChip estado={j.estado} />
       </div>
+      )}
 
       {item.traspaso && (
         <p className="mt-3 rounded-lg bg-accent-500/10 px-3 py-2 text-[12px] text-ink-100">
@@ -609,6 +612,196 @@ const ReviewCard = ({ item, onReviewed }) => {
   );
 };
 
+// Pago por km: el chofer solo declara la espera al terminar el servicio. Hasta que un responsable la apruebe no suma al pago. Se aprueba tal cual, con otros
+// minutos (y el motivo, que ve el chofer) o se devuelve con una nota.
+const EsperaCard = ({ item, onReviewed, embedded = false }) => {
+  const location = useLocation();
+  const j = item.jornada;
+  const [mode, setMode] = useState(null); // null | "ajustar" | "devolver"
+  const [esperaMin, setEsperaMin] = useState(String(j.esperaMin));
+  const [nota, setNota] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async (body) => {
+    setSaving(true);
+    setError("");
+    try {
+      await reviewHorasRequest(item.id, body);
+      onReviewed(item.id);
+    } catch (err) {
+      setError(parseApiError(err).message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={embedded ? "" : "glass-surface rounded-2xl p-4 sm:p-5"}>
+      {!embedded && (
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="block text-[15px] font-semibold text-ink-50">{item.chofer ?? "Sin chofer"}</span>
+          <Link
+            to={`/records/${item.id}`}
+            state={{ backgroundLocation: location }}
+            className="block truncate text-[13px] text-accent-400 hover:text-accent-300"
+          >
+            {item.codigo} &middot; {[item.cliente, item.destinazione].filter(Boolean).join(" - ")}
+          </Link>
+          <span className="block text-[12px] text-ink-400">
+            {formatDate(item.fechaServicio)} {item.targa ? `- ${item.targa}` : ""}
+          </span>
+        </div>
+        <HorasEstadoChip estado={j.estado} />
+      </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Fact label="Espera declarada">{j.esperaMin} min</Fact>
+        <Fact label="Retiro planificado">{item.fechaRetiro ? formatRomeDateTime(item.fechaRetiro) : "-"}</Fact>
+        <Fact label="ETA">{item.eta ? formatRomeDateTime(item.eta) : "-"}</Fact>
+        <Fact label="Pago">
+          <span className="text-ink-300 line-through decoration-ink-500">{formatCurrency(item.pago.actual)}</span> {formatCurrency(item.pago.siAprobada)}
+        </Fact>
+      </div>
+      <p className="mt-2 text-[12px] text-ink-400">La espera no suma al pago hasta que la apruebes (el pago que se ve tachado es el actual; el otro, con la espera aprobada).</p>
+
+      {j.estado === "DEVUELTAS" && j.nota && <p className="mt-3 text-[12px] text-ink-400">Devuelto con la nota: {j.nota}</p>}
+
+      <Alert>{error}</Alert>
+
+      {mode === "ajustar" && (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl glass-surface-sm p-3.5">
+          <TextField id={`esp-${item.id}`} label="Espera aprobada (min)" type="number" min="0" step="5" value={esperaMin} onChange={(e) => setEsperaMin(e.target.value)} />
+          <Textarea id={`nota-${item.id}`} label="Motivo del ajuste (lo ve el chofer)" rows={2} value={nota} onChange={(e) => setNota(e.target.value)} />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" className="sm:w-auto sm:px-5" disabled={saving} onClick={() => setMode(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="sm:w-auto sm:px-5"
+              loading={saving}
+              disabled={!nota.trim()}
+              onClick={() => send({ accion: "APROBAR", esperaMin: Number(esperaMin) || 0, nota: nota.trim() })}
+            >
+              Aprobar con ajuste
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "devolver" && (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl glass-surface-sm p-3.5">
+          <Textarea id={`dev-${item.id}`} label="Que tiene que corregir el chofer" rows={2} value={nota} onChange={(e) => setNota(e.target.value)} />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" className="sm:w-auto sm:px-5" disabled={saving} onClick={() => setMode(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" className="sm:w-auto sm:px-5" loading={saving} disabled={!nota.trim()} onClick={() => send({ accion: "DEVOLVER", nota: nota.trim() })}>
+              Devolver al chofer
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!mode && j.estado === "PENDIENTE" && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button className="sm:w-auto sm:px-5 sm:py-2 sm:text-[13px]" loading={saving} onClick={() => send({ accion: "APROBAR" })}>
+            <CheckCircleIcon className="h-4 w-4" />
+            Aprobar
+          </Button>
+          <Button variant="ghost" className="sm:w-auto sm:px-5 sm:py-2 sm:text-[13px]" onClick={() => { setNota(""); setMode("ajustar"); }}>
+            Cambiar minutos y aprobar
+          </Button>
+          <Button variant="ghost" className="sm:w-auto sm:px-5 sm:py-2 sm:text-[13px]" onClick={() => { setNota(""); setMode("devolver"); }}>
+            Devolver
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+};
+
+// Una fila de la lista: chofer, servicio, fecha, lo declarado (espera o jornada), pago y estado. "Aprobar" en la fila solo para lo que no tiene avisos (una espera, o una
+// jornada sin nada raro); lo demas se abre para revisarlo (el detalle es la tarjeta de siempre).
+const FilaHoras = ({ item, onReviewed }) => {
+  const location = useLocation();
+  const j = item.jornada;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const avisos = item.avisos?.length ?? 0;
+  const rapida = j.estado === "PENDIENTE" && (item.soloEspera || avisos === 0);
+
+  const aprobar = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await reviewHorasRequest(item.id, { accion: "APROBAR" });
+      onReviewed(item.id);
+    } catch (err) {
+      setError(parseApiError(err).message);
+      setSaving(false);
+    }
+  };
+
+  const declarado = item.soloEspera
+    ? `Espera ${j.esperaMin} min`
+    : j.inicio && j.fin
+      ? `Jornada ${formatHours((item.totalMin ?? 0) / 60)}${j.esperaMin ? ` + ${j.esperaMin} min de espera` : ""}`
+      : "Solo totales";
+
+  return (
+    <FilaExpandible
+      error={error}
+      resumen={
+        <>
+          <Celda ancho="sm:w-36" className="font-semibold text-ink-50">
+            {item.chofer ?? "Sin chofer"}
+          </Celda>
+          <Celda ancho="sm:min-w-[200px] sm:flex-1" title={[item.cliente, item.destinazione].filter(Boolean).join(" - ")}>
+            <Link
+              to={`/records/${item.id}`}
+              state={{ backgroundLocation: location }}
+              onClick={(e) => e.stopPropagation()}
+              className="text-accent-400 hover:text-accent-300"
+            >
+              {item.codigo}
+            </Link>{" "}
+            <span className="text-ink-300">{[item.cliente, item.destinazione].filter(Boolean).join(" - ")}</span>
+          </Celda>
+          <Celda ancho="sm:w-20" className="text-ink-300">
+            {formatDate(item.fechaServicio)}
+          </Celda>
+          <Celda ancho="sm:w-44" className="text-ink-100">
+            {declarado}
+          </Celda>
+          <Celda ancho="sm:w-36" title="Pago actual y pago con lo declarado aprobado">
+            <span className="text-ink-400 line-through decoration-ink-500">{formatCurrency(item.pago.actual)}</span> <span className="font-medium text-ink-50">{formatCurrency(item.pago.siAprobada)}</span>
+          </Celda>
+          <span className="flex items-center gap-2">
+            <HorasEstadoChip estado={j.estado} />
+            {avisos > 0 && (
+              <span title={`${avisos} aviso(s) para mirar dos veces`} className="text-warning-500">
+                <AlertTriangleIcon className="h-4 w-4" />
+              </span>
+            )}
+          </span>
+        </>
+      }
+      acciones={
+        rapida ? (
+          <Button className="sm:w-auto sm:px-4 sm:py-1.5 sm:text-[12px]" loading={saving} onClick={aprobar}>
+            <CheckCircleIcon className="h-4 w-4" />
+            Aprobar
+          </Button>
+        ) : null
+      }
+    >
+      {item.soloEspera ? <EsperaCard item={item} onReviewed={onReviewed} embedded /> : <ReviewCard item={item} onReviewed={onReviewed} embedded />}
+    </FilaExpandible>
+  );
+};
+
 const FILTERS = [
   { value: "PENDIENTE", label: "En revision" },
   { value: "DEVUELTAS", label: "Devueltas" },
@@ -652,8 +845,8 @@ export const HorasAprobacionPage = () => {
       <GpsEstadoBanner />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[14px] text-ink-300">
-          Horas que enviaron los choferes. Hasta que las apruebes se les paga por kilometros; al aprobarlas
-          cuentan por hora, de dia o de noche (la reperibilidad de fin de semana, festivos y servicios de noche se suma en ambos casos).
+          Esperas que declaran los choferes al terminar un servicio: no suman al pago hasta que las apruebes (tal cual, con otros minutos o devolviendolas).
+          Si queda alguna jornada de horas enviada con el metodo anterior, aparece igual: al aprobarla cuenta por hora, de dia o de noche.
         </p>
         <SegmentedControl options={FILTERS} value={estado} onChange={setEstado} />
       </div>
@@ -662,15 +855,15 @@ export const HorasAprobacionPage = () => {
       {!items && !error && <PageLoader />}
       {items && items.length === 0 && (
         <p className="px-1 py-6 text-[14px] text-ink-400">
-          {estado === "PENDIENTE" ? "No hay horas esperando aprobacion." : "No hay horas devueltas."}
+          {estado === "PENDIENTE" ? "No hay esperas ni horas esperando aprobacion." : "No hay esperas ni horas devueltas."}
         </p>
       )}
       {items && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ListaExpandible>
           {items.map((item) => (
-            <ReviewCard key={`${item.id}-${item.jornada.estado}`} item={item} onReviewed={handleReviewed} />
+            <FilaHoras key={`${item.id}-${item.jornada.estado}`} item={item} onReviewed={handleReviewed} />
           ))}
-        </div>
+        </ListaExpandible>
       )}
     </div>
   );

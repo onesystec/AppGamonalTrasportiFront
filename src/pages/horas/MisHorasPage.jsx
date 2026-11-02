@@ -51,6 +51,7 @@ const ServiceCard = ({ service }) => {
             "Sin km cargados todavia."
           )}
           {service.esperaHoras > 0 && <> &middot; {formatHours(service.esperaHoras)} de espera</>}
+          {service.esperaPendienteHoras > 0 && <> &middot; {formatHours(service.esperaPendienteHoras)} de espera por aprobar</>}
         </p>
       )}
 
