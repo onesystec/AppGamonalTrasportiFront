@@ -96,6 +96,12 @@ export const GRUPO_LABELS = Object.fromEntries(
 
 // Spedizzione seleccionable al crear un servicio en la seccion DHL - AB Service
 // (Extras Piazza sigue quedando fijo como EXTRA_PIAZZA).
+// DHL: tipo del pedido, como lo escribe el cliente en su texto.
+export const TIPO_PEDIDO_OPTIONS = [
+  { value: "ASAP", label: "ASAP" },
+  { value: "SCHEDULED", label: "SCHEDULED" },
+];
+
 export const SPEDIZZIONE_OPTIONS = [
   { value: "DHL", label: "DHL" },
   { value: "AB_SERVICE", label: "AB Service" },

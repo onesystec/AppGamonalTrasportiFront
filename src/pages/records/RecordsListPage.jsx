@@ -10,6 +10,7 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ClipboardListIcon,
+  FileTextIcon,
   ClockIcon,
   DownloadIcon,
   PlusIcon,
@@ -348,6 +349,22 @@ const PendingPanel = ({ records: pending, closeTo, onChangeEstado, updatingId, s
     </div>
   </PanelShell>
 );
+
+// "Desde un texto": pega el texto de un servicio de DHL Milano y se leen Shipment, Order, cliente, tipo, ciudad y ETA (queda como solicitud pendiente).
+const DesdeTextoButton = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <button
+      type="button"
+      onClick={() => navigate("/records/desde-texto", { state: { backgroundLocation: location } })}
+      className="inline-flex items-center gap-2 rounded-full border border-line/25 px-5 py-2.5 text-[14px] font-semibold text-ink-50 transition hover:bg-line/10"
+    >
+      <FileTextIcon className="h-4 w-4" />
+      Desde un texto
+    </button>
+  );
+};
 
 // Boton "Nuevo servicio" dividido: el principal crea directo en el area activa (o abre el
 // menu si se esta viendo "Todos"); la flecha abre el menu para elegir cualquiera de las
@@ -829,6 +846,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                 <RouteIcon className="h-4 w-4" />
                 Compactar
               </button>
+              {availableAreas.some((a) => a.key === "dhl-milano") && <DesdeTextoButton />}
               <NewServiceMenu areas={availableAreas} activeKey={areaKey} />
             </>
           ) : (

@@ -110,8 +110,14 @@ export const buildWhatsappMessage = (s, now = new Date()) => {
 // El texto de KM que no es numero (NAVETTA HP) no tiene campo en el servicio real: va a la descripcion.
 const kmTextoSuelto = (s) => (s.kmTexto ? `KM: ${s.kmTexto}` : null);
 
+// Una solicitud creada a partir de un texto pegado (tiene Shipment u Order): su "destinazione" es solo la ciudad, no una calle.
+export const esSolicitudDeTexto = (s) => Boolean(s?.shipment || s?.orderNumero);
+
 // Valores que una solicitud pone de partida en el formulario real del servicio (la oficina completa el resto).
 export const solicitudToFormDefaults = (s) => ({
+  shipment: s.shipment ?? "",
+  orderNumero: s.orderNumero ?? "",
+  tipoPedido: s.tipoPedido ?? "",
   eta: toRomeInput(s.fechaHora),
   kilometros: s.km != null ? String(s.km) : "",
   pagoRecibido: s.pagato != null ? String(s.pagato) : "",

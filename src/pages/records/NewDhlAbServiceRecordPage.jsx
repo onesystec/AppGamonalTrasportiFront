@@ -14,12 +14,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
-import { APLICATIVO_OPTIONS, RECORD_STATUS_OPTIONS, SPEDIZZIONE_OPTIONS, ZONA_OPTIONS, destinoSugerencias, salidaPorDefectoLabel } from "../../lib/constants";
+import { APLICATIVO_OPTIONS, RECORD_STATUS_OPTIONS, SPEDIZZIONE_OPTIONS, TIPO_PEDIDO_OPTIONS, ZONA_OPTIONS, destinoSugerencias, salidaPorDefectoLabel } from "../../lib/constants";
 import { useTarifasKm } from "../../hooks/useTarifasKm";
 import { formatCurrency } from "../../lib/format";
 import { createRecordRequest } from "../../lib/records.api";
 import { SolicitudBanner } from "../../components/solicitudes/SolicitudBanner";
-import { findClientByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
+import { esSolicitudDeTexto, findClientByName, notifySolicitudesChanged, solicitudToFormDefaults } from "../../lib/solicitudes";
 import { DestinoSugerencias } from "../../components/records/DestinoSugerencias";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
@@ -33,6 +33,10 @@ const INITIAL_FORM = {
   driverId: "",
   vehicleId: "",
   aplicativo: "",
+  // DHL: numeros del pedido y su tipo (ASAP / SCHEDULED).
+  shipment: "",
+  orderNumero: "",
+  tipoPedido: "",
   // Default Milano (no vacio) - mismo criterio que NewRecordPage.jsx, para que el
   // switch Milano/Roma de Registros no vuelva a quedar con registros "sin zona".
   extrasPiazzaZona: "MILANO",
@@ -96,7 +100,11 @@ export const NewDhlAbServiceRecordPage = () => {
       pagoRecibido: d.pagoRecibido,
       costoEspera: d.costoEspera,
       descripcion: d.descripcion,
-      calle: solicitud.destinazione,
+      shipment: d.shipment,
+      orderNumero: d.orderNumero,
+      tipoPedido: d.tipoPedido,
+      // Una solicitud leida de un texto trae solo la ciudad; una de un cliente trae el destino escrito (va a la calle).
+      ...(esSolicitudDeTexto(solicitud) ? { ciudad: solicitud.destinazione } : { calle: solicitud.destinazione }),
       aplicativo: d.aplicativo.startsWith(`${base.extrasPiazzaZona}_`) ? d.aplicativo : "",
     };
   });
@@ -361,6 +369,34 @@ export const NewDhlAbServiceRecordPage = () => {
               onChange={handleChangeZona}
               error={fieldErrors.extrasPiazzaZona?.[0]}
             />
+
+            {form.spedizzione === "DHL" && (
+              <>
+                <TextField
+                  id="shipment"
+                  label="Shipment"
+                  value={form.shipment}
+                  onChange={handleChange("shipment")}
+                  error={fieldErrors.shipment?.[0]}
+                />
+                <TextField
+                  id="orderNumero"
+                  label="Order"
+                  value={form.orderNumero}
+                  onChange={handleChange("orderNumero")}
+                  error={fieldErrors.orderNumero?.[0]}
+                />
+                <SearchableSelect
+                  id="tipoPedido"
+                  label="Tipo"
+                  placeholder="ASAP o SCHEDULED"
+                  options={TIPO_PEDIDO_OPTIONS}
+                  value={form.tipoPedido}
+                  onChange={(v) => setField("tipoPedido", v)}
+                  error={fieldErrors.tipoPedido?.[0]}
+                />
+              </>
+            )}
 
             <SearchableSelect
               id="aplicativo"

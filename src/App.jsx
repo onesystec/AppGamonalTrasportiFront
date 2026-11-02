@@ -52,6 +52,9 @@ const DailySummaryPage = lazy(() =>
 );
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const ServicioDesdeTextoPage = lazy(() =>
+  import("./pages/records/ServicioDesdeTextoPage").then((m) => ({ default: m.ServicioDesdeTextoPage })),
+);
 const NewDhlAbServiceRecordPage = lazy(() =>
   import("./pages/records/NewDhlAbServiceRecordPage").then((m) => ({ default: m.NewDhlAbServiceRecordPage })),
 );
@@ -189,6 +192,7 @@ const OverlayRoutes = () => (
       <Route element={<ProtectedRoute />}>
         <Route path="/records/extras-piazza/new" element={<NewRecordPage />} />
         <Route path="/records/dhl-ab-service/new" element={<NewDhlAbServiceRecordPage />} />
+        <Route path="/records/desde-texto" element={<ServicioDesdeTextoPage />} />
         <Route path="/records/extras-stefania/new" element={<NewExtrasStefaniaRecordPage />} />
         <Route path="/records/:id" element={<RecordDetailPage />} />
         <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
@@ -323,6 +327,7 @@ function App() {
               <Route path="/records/extras-piazza/new" element={<NewRecordPage />} />
               <Route path="/records/dhl-ab-service" element={<RecordsListPage section="dhl-ab-service" />} />
               <Route path="/records/dhl-ab-service/new" element={<NewDhlAbServiceRecordPage />} />
+              <Route path="/records/desde-texto" element={<ServicioDesdeTextoPage />} />
               <Route path="/records/extras-stefania" element={<RecordsListPage section="extras-stefania" />} />
               <Route path="/records/extras-stefania/new" element={<NewExtrasStefaniaRecordPage />} />
               <Route path="/records/:id" element={<RecordDetailPage />} />

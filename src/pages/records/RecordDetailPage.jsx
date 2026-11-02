@@ -32,6 +32,7 @@ import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
 import {
   APLICATIVO_OPTIONS,
+  TIPO_PEDIDO_OPTIONS,
   RECORD_STATUS_OPTIONS,
   TIPO_ARCHIVO_LABELS,
   ZONA_LABELS,
@@ -388,6 +389,9 @@ const OWNER_FIELDS = [
   "driverId",
   "vehicleId",
   "aplicativo",
+  "shipment",
+  "orderNumero",
+  "tipoPedido",
   "extrasPiazzaZona",
   "stops",
   "descripcion",
@@ -433,6 +437,9 @@ const toFormState = (record) => ({
   pasaPorBrennero: Boolean(record.pasaPorBrennero),
   pasaPorFrejus: Boolean(record.pasaPorFrejus),
   aplicativo: record.aplicativo ?? "",
+  shipment: record.shipment ?? "",
+  orderNumero: record.orderNumero ?? "",
+  tipoPedido: record.tipoPedido ?? "",
   extrasPiazzaZona: record.extrasPiazzaZona ?? "",
   stops: record.stops?.length
     ? record.stops.map((s) => ({ direccion: s.direccion, cap: "", lat: null, lng: null }))
@@ -1075,6 +1082,9 @@ const RecordSummaryView = ({
         {record.extrasPiazzaZona && (
           <InfoRow label="Zona" value={ZONA_LABELS[record.extrasPiazzaZona]} />
         )}
+        {record.shipment && <InfoRow label="Shipment" value={record.shipment} />}
+        {record.orderNumero && <InfoRow label="Order" value={record.orderNumero} />}
+        {record.tipoPedido && <InfoRow label="Tipo" value={record.tipoPedido} />}
         <InfoRow
           label="Chofer"
           value={`${record.driver?.nombre ?? ""} ${record.driver?.apellido ?? ""}`}
@@ -1466,6 +1476,20 @@ const RecordEditForm = ({
                   value={form.extrasPiazzaZona}
                   onChange={handleChangeZona}
                 />
+              )}
+              {record.spedizzione === "DHL" && (
+                <>
+                  <TextField id="shipment" label="Shipment" value={form.shipment} onChange={handleChange("shipment")} />
+                  <TextField id="orderNumero" label="Order" value={form.orderNumero} onChange={handleChange("orderNumero")} />
+                  <SearchableSelect
+                    id="tipoPedido"
+                    label="Tipo"
+                    placeholder="ASAP o SCHEDULED"
+                    options={TIPO_PEDIDO_OPTIONS}
+                    value={form.tipoPedido}
+                    onChange={(v) => setField("tipoPedido", v)}
+                  />
+                </>
               )}
               {isDhlAb && (
                 <SearchableSelect
