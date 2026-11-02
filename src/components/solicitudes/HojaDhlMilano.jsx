@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { parseApiError } from "../../lib/api";
 import { editarCeldaRequest, getClienteFotosRequest, getHojaAnchosRequest, saveHojaAnchosRequest } from "../../lib/cliente.api";
 import { FotosModal, PUNTO_ESTADO } from "../cliente/TablaServicios";
@@ -186,6 +187,96 @@ const ETIQUETA_EDITOR = { shipment: "Shipment", orderNumero: "Order", ritiro: "R
 
 const clasesEditor = "w-full min-w-0 bg-popover px-2 py-1.5 text-[13px] text-ink-50 outline-none disabled:opacity-60";
 
+// Lista desplegable de la celda en edicion: abierta desde el primer momento, se puede recorrer con el teclado (flechas, Enter, Escape) o con el raton.
+const ListaEditor = ({ opciones, valor, guardando, onElegir, onCerrar }) => {
+  const caja = useRef(null);
+  const lista = useRef(null);
+  const [pos, setPos] = useState(null);
+  const [activa, setActiva] = useState(Math.max(0, opciones.findIndex((o) => o.value === valor)));
+
+  useEffect(() => {
+    caja.current?.focus({ preventScroll: true });
+    const r = caja.current.getBoundingClientRect();
+    const alto = Math.min(264, opciones.length * 34 + 8);
+    const abajo = window.innerHeight - r.bottom;
+    setPos({ left: r.left, width: Math.max(r.width, 120), top: abajo >= alto || abajo >= r.top ? r.bottom : r.top - alto, maxHeight: Math.min(264, Math.max(abajo >= r.top ? abajo : r.top, 120) - 8) });
+    // Pulsar fuera o mover la hoja cierra la lista sin cambiar nada.
+    const fuera = (e) => !caja.current?.contains(e.target) && !lista.current?.contains(e.target) && onCerrar();
+    const mover = (e) => !lista.current?.contains(e.target) && onCerrar();
+    document.addEventListener("pointerdown", fuera, true);
+    window.addEventListener("scroll", mover, true);
+    window.addEventListener("resize", onCerrar);
+    return () => {
+      document.removeEventListener("pointerdown", fuera, true);
+      window.removeEventListener("scroll", mover, true);
+      window.removeEventListener("resize", onCerrar);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    lista.current?.querySelector('[data-activa="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [activa, pos]);
+
+  const teclas = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCerrar();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiva((i) => Math.min(opciones.length - 1, i + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiva((i) => Math.max(0, i - 1));
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      onElegir(opciones[activa].value);
+    }
+  };
+
+  return (
+    <div
+      ref={caja}
+      tabIndex={0}
+      role="combobox"
+      aria-expanded="true"
+      aria-haspopup="listbox"
+      onKeyDown={teclas}
+      className={clsx(clasesEditor, "flex cursor-pointer items-center justify-between gap-2", guardando && "pointer-events-none opacity-60")}
+    >
+      <span className="truncate">{opciones.find((o) => o.value === valor)?.label ?? valor}</span>
+      <span className="text-[9px] text-ink-300">▼</span>
+      {pos &&
+        createPortal(
+          <ul
+            ref={lista}
+            role="listbox"
+            style={{ position: "fixed", left: pos.left, top: pos.top, minWidth: pos.width, maxHeight: pos.maxHeight }}
+            className="z-[1000] overflow-y-auto rounded-md border border-line/40 bg-popover py-1 shadow-xl"
+          >
+            {opciones.map((o, i) => (
+              <li
+                key={o.value}
+                role="option"
+                aria-selected={o.value === valor}
+                data-activa={i === activa}
+                onMouseEnter={() => setActiva(i)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onElegir(o.value);
+                }}
+                className={clsx("flex min-h-[34px] cursor-pointer items-center whitespace-nowrap px-3 text-[13px] text-ink-50", i === activa && "bg-accent-500/25", o.value === valor && "font-semibold")}
+              >
+                {o.label}
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )}
+    </div>
+  );
+};
+
 const EditorCelda = ({ columna, variante, inicial, guardando, onGuardar, onCancelar }) => {
   const [valores, setValores] = useState(inicial);
   const hecho = useRef(false);
@@ -229,23 +320,16 @@ const EditorCelda = ({ columna, variante, inicial, guardando, onGuardar, onCance
   };
   const cambiar = (campo) => (e) => setValores((prev) => ({ ...prev, [campo]: e.target.value }));
 
-  // Listas (tipo y numero de zona): al elegir una opcion se guarda.
+  // Listas (tipo y numero de zona): al elegir una opcion se guarda. No es un <select> nativo: su desplegable le quita el foco al campo y la celda se cerraba
+  // antes de poder elegir. Aqui la lista queda abierta hasta elegir, pulsar fuera o Escape.
   const lista = (campo, opciones) => (
-    <select
-      ref={primero}
-      value={valores[campo]}
-      disabled={guardando}
-      className={clasesEditor}
-      onChange={(e) => guardar(null, { ...valores, [campo]: e.target.value })}
-      onKeyDown={(e) => e.key === "Escape" && (e.preventDefault(), cancelar())}
-      onBlur={() => guardar(null)}
-    >
-      {opciones.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <ListaEditor
+      opciones={opciones}
+      valor={valores[campo]}
+      guardando={guardando}
+      onElegir={(v) => guardar(null, { ...valores, [campo]: v })}
+      onCerrar={cancelar}
+    />
   );
 
   if (campos[0] === "tipoPedido") return lista("tipoPedido", OPCIONES_TIPO);

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { haEntrado } from "./lib/entrada";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { GuestRoute } from "./components/layout/GuestRoute";
@@ -166,6 +167,14 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
   return isPrivileged === privileged ? children : <Navigate to={redirectTo} replace />;
 };
 
+// Inicio: la primera vez que la oficina abre la app va a Registros; despues "/" es el Inicio de siempre (el modo chofer del Admin tampoco se desvia).
+const InicioRoute = () => {
+  const { user, canUseDriverMode, driverMode } = useAuth();
+  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  if (isPrivileged && !(canUseDriverMode && driverMode) && !haEntrado()) return <Navigate to="/records" replace />;
+  return <DashboardPage />;
+};
+
 // Recursos Humanos (Busta paga + Memorandums) solo usa esa seccion, Choferes, Vehiculos y su perfil; cualquier otra direccion lo lleva a
 // Busta paga (el servidor ademas le niega todo lo demas).
 const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
@@ -276,7 +285,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<RrhhGuard />}>
             <Route element={<AppShell />}>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<InicioRoute />} />
               <Route path="/resumen" element={<RoleOnly privileged><DailySummaryPage /></RoleOnly>} />
               <Route path="/mis-horas" element={<MisHorasPage />} />
               <Route path="/trabajos-adicionales" element={<TrabajosAdicionalesPage />} />
