@@ -24,6 +24,9 @@ export const getClienteServiciosRequest = (month) => api.get("/cliente/servicios
 
 export const exportClienteServiciosRequest = (month) => api.get("/cliente/exportar", { params: { month } }).then((res) => res.data.data);
 
+// Cambios de un servicio (de la oficina y de la propia empresa).
+export const getClienteCambiosRequest = (id) => api.get(`/cliente/servicios/${id}/cambios`).then((res) => res.data.data.cambios);
+
 export const getClienteFotosRequest = (id) => api.get(`/cliente/servicios/${id}/fotos`).then((res) => res.data.data.fotos);
 
 // Admin: usuarios cliente (cargo CLIENTE). No se mezclan con la lista de choferes.

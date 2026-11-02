@@ -18,7 +18,7 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { editarCeldaRequest, getClienteMeRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
+import { editarCeldaRequest, getClienteCambiosRequest, getClienteMeRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
 import { horaRoma, minutosTexto } from "../../lib/seguimiento";
 import { currentMonth } from "../../lib/finanzas";
@@ -135,22 +135,35 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
     [r]
   );
   const [editando, setEditando] = useState(false);
+  const [cambios, setCambios] = useState(null); // historial: lo que cambio la oficina y la propia empresa
   const [valores, setValores] = useState(inicial);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const setCampo = (campo, valor) => setValores((prev) => ({ ...prev, [campo]: valor }));
 
+  useEffect(() => {
+    let cancelled = false;
+    getClienteCambiosRequest(r.id)
+      .then((list) => !cancelled && setCambios(list))
+      .catch(() => !cancelled && setCambios([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [r.id]);
+
+  const etiquetaCampo = (campo) => (extra && campo === "shipment" ? "Codice" : extra && campo === "orderNumero" ? "Secondo codice" : extra && campo === "ciudad" ? "Consegna" : t(`reg.campo.${campo}`));
+
   const guardar = async () => {
-    const cambios = {};
-    for (const campo of Object.keys(inicial)) if (String(valores[campo]).trim() !== String(inicial[campo]).trim()) cambios[campo] = valores[campo];
-    if (Object.keys(cambios).length === 0) {
+    const cambiosHechos = {};
+    for (const campo of Object.keys(inicial)) if (String(valores[campo]).trim() !== String(inicial[campo]).trim()) cambiosHechos[campo] = valores[campo];
+    if (Object.keys(cambiosHechos).length === 0) {
       setError(t("reg.noChanges"));
       return;
     }
     setGuardando(true);
     setError("");
     try {
-      await editarCeldaRequest({ origen: "servicio", id: r.id, cambios });
+      await editarCeldaRequest({ origen: "servicio", id: r.id, cambios: cambiosHechos });
       onSaved();
     } catch (err) {
       setError(parseApiError(err).message);
@@ -191,6 +204,26 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
               </div>
             ))}
           </dl>
+          {cambios && (
+            <div className="mt-5 border-t border-line/10 pt-4">
+              <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">{t("reg.history")}</h3>
+              {cambios.length === 0 ? (
+                <p className="text-[13px] text-ink-400">{t("reg.historyNone")}</p>
+              ) : (
+                <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
+                  {cambios.map((c) => (
+                    <li key={c.id} className="text-[13px] text-ink-200">
+                      <span className="text-ink-400">
+                        {formatFechaHora(c.fecha)} · {c.editor}
+                      </span>
+                      <br />
+                      <span className="font-medium text-ink-100">{etiquetaCampo(c.campo)}:</span> {c.anterior ?? "—"} → {c.nuevo ?? "—"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {verFotos && (
               <span className={`inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100 ${r.fotos > 0 ? "" : "opacity-40"}`}>
