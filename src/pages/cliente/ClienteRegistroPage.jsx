@@ -6,7 +6,9 @@ import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
-import { RegistroLista } from "../../components/cliente/RegistroLista";
+import { Select } from "../../components/ui/Select";
+import { TextField } from "../../components/ui/TextField";
+import { BotonFoto, RegistroLista } from "../../components/cliente/RegistroLista";
 import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
 import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
@@ -16,11 +18,12 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
+import { editarCeldaRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
+import { minutosTexto } from "../../lib/seguimiento";
 import { currentMonth } from "../../lib/finanzas";
 import { formatCurrency } from "../../lib/format";
-import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS } from "../../lib/solicitudes";
+import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
 import { deleteSolicitudRequest, listSolicitudesClienteRequest } from "../../lib/solicitudes.api";
 
 const REFRESH_MS = 60 * 1000;
@@ -99,6 +102,144 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
           ))}
       </div>
     </Modal>
+  );
+};
+
+// Vista rapida de un servicio ya creado por la oficina: sus datos, las fotos del retiro y de la entrega y, para quien lo pidio, modificar los pocos datos
+// que puede cambiar (Shipment / Order o codigos, Tipo, Ciudad y ETA). El resto (cliente, km, numero, chofer...) lo decide la oficina. Cada cambio queda en el
+// historial y, si el servicio ya esta entregado, la oficina recibe un aviso.
+const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
+  const t = useT();
+  const r = fila.servicio;
+  const extra = fila.area === "piazza-milano" || fila.area === "piazza-roma";
+  const inicial = useMemo(
+    () => ({ shipment: r.shipment ?? "", orderNumero: r.orderNumero ?? "", tipoPedido: r.tipoPedido ?? "", ciudad: r.ciudad || r.destino || "", eta: toRomeInput(r.etaPlan) }),
+    [r]
+  );
+  const [editando, setEditando] = useState(false);
+  const [valores, setValores] = useState(inicial);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const setCampo = (campo, valor) => setValores((prev) => ({ ...prev, [campo]: valor }));
+
+  const guardar = async () => {
+    const cambios = {};
+    for (const campo of Object.keys(inicial)) if (String(valores[campo]).trim() !== String(inicial[campo]).trim()) cambios[campo] = valores[campo];
+    if (Object.keys(cambios).length === 0) {
+      setError(t("reg.noChanges"));
+      return;
+    }
+    setGuardando(true);
+    setError("");
+    try {
+      await editarCeldaRequest({ origen: "servicio", id: r.id, cambios });
+      onSaved();
+    } catch (err) {
+      setError(parseApiError(err).message);
+      setGuardando(false);
+    }
+  };
+
+  const filas = [
+    [extra ? "Codice" : "Shipment", fila.codigo],
+    ["Cliente", fila.cliente],
+    [t("reg.pickup"), fila.ritiro],
+    [extra ? "Consegna" : "Città", fila.destino],
+    ["Tipo", fila.tipo],
+    ["ETA", formatFechaHora(r.etaPlan)],
+    [t("hist.arrival"), r.llegoAt ? formatFechaHora(r.llegoAt) : null],
+    ["KM", fila.km ? `${fila.km} km` : null],
+    ["N°", fila.numero],
+    [t("hist.plate"), fila.targa],
+    [t("hist.driver"), fila.chofer],
+    [t("hist.status"), r.estadoLabel],
+  ].filter(([, valor]) => valor);
+
+  return (
+    <Modal title={t("reg.serviceTitle", { code: fila.codigo || r.codigo })} onClose={onClose}>
+      <Alert>{error}</Alert>
+      {fila.retraso != null && (
+        <p className="mb-3 rounded-xl bg-danger-500/10 px-3 py-2 text-[13px] font-medium text-danger-500">{t("reg.late", { min: minutosTexto(fila.retraso) })}</p>
+      )}
+      {!editando ? (
+        <>
+          <dl className="flex flex-col gap-2.5">
+            {filas.map(([label, valor]) => (
+              <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="w-32 shrink-0 text-[12px] uppercase tracking-wide text-ink-400">{label}</dt>
+                <dd className="min-w-0 break-words text-[14px] text-ink-50">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {verFotos && (
+              <>
+                <FotoAcceso servicio={r} tipo="BOLLA" cantidad={r.fotosRetiro} onFotos={onFotos} />
+                <FotoAcceso servicio={r} tipo="FOTO_ENTREGA" cantidad={r.fotosEntrega} onFotos={onFotos} />
+              </>
+            )}
+            <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
+              {t("reg.editData")}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mb-3 text-[13px] text-ink-300">{t("reg.editHint")}</p>
+          {r.estado === "CONSEGNATO" && <p className="mb-3 rounded-xl bg-warning-500/10 px-3 py-2 text-[13px] text-warning-500">{t("reg.deliveredWarn")}</p>}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField id="vs-shipment" label={extra ? "Codice" : "Shipment"} value={valores.shipment} onChange={(e) => setCampo("shipment", e.target.value)} />
+            <TextField id="vs-order" label={extra ? "Secondo codice" : "Order"} value={valores.orderNumero} onChange={(e) => setCampo("orderNumero", e.target.value)} />
+            {!extra && (
+              <Select
+                id="vs-tipo"
+                label="Tipo"
+                value={valores.tipoPedido}
+                onChange={(e) => setCampo("tipoPedido", e.target.value)}
+                options={[
+                  { value: "", label: "—" },
+                  { value: "ASAP", label: "ASAP" },
+                  { value: "SCHEDULED", label: "SCHEDULED" },
+                ]}
+              />
+            )}
+            <TextField id="vs-ciudad" label={extra ? "Consegna" : "Città"} value={valores.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+            <TextField id="vs-eta" label="ETA" type="datetime-local" value={valores.eta} onChange={(e) => setCampo("eta", e.target.value)} />
+          </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <Button className="!w-auto px-5 py-2 text-[13px]" loading={guardando} onClick={guardar}>
+              {t("reg.saveChanges")}
+            </Button>
+            <Button
+              variant="ghost"
+              className="!w-auto px-4 py-2 text-[13px]"
+              disabled={guardando}
+              onClick={() => {
+                setEditando(false);
+                setValores(inicial);
+                setError("");
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+};
+
+// Boton con el icono de foto del retiro o de la entrega y su nombre; apagado si todavia no hay foto.
+const FotoAcceso = ({ servicio, tipo, cantidad, onFotos }) => {
+  const t = useT();
+  const vacia = !cantidad;
+  return (
+    <span className={vacia ? "opacity-40" : undefined} title={vacia ? t(tipo === "BOLLA" ? "reg.noPhotoPickup" : "reg.noPhotoDelivery") : undefined}>
+      <span className="inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100">
+        <BotonFoto servicio={servicio} tipo={tipo} onFotos={vacia ? () => {} : onFotos} />
+        {t(tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery")}
+      </span>
+    </span>
   );
 };
 
@@ -206,6 +347,7 @@ export const ClienteRegistroPage = () => {
   const [error, setError] = useState("");
   const [form, setForm] = useState(null); // null | { solicitud?: Solicitud }
   const [selectedId, setSelectedId] = useState(null);
+  const [servicioSel, setServicioSel] = useState(null);
 
   const load = useCallback(
     () =>
@@ -293,7 +435,8 @@ export const ClienteRegistroPage = () => {
           month={month}
           verFotos={verFotos}
           onOpenSolicitud={setSelectedId}
-          onFotos={setFotosDe}
+          onOpenServicio={setServicioSel}
+          onFotos={(servicio, tipo) => setFotosDe(tipo ? { ...servicio, tipo } : servicio)}
         />
       )}
       {items && MOSTRAR_HOJA_EXCEL && HOJAS[servicio] && (
@@ -404,6 +547,19 @@ export const ClienteRegistroPage = () => {
             />
           )}
         </Modal>
+      )}
+
+      {servicioSel && (
+        <VistaServicio
+          fila={servicioSel}
+          verFotos={verFotos}
+          onClose={() => setServicioSel(null)}
+          onFotos={(servicio, tipo) => setFotosDe({ ...servicio, tipo })}
+          onSaved={() => {
+            setServicioSel(null);
+            load();
+          }}
+        />
       )}
 
       {fotosDe && <FotosModal servicio={fotosDe} onClose={() => setFotosDe(null)} />}

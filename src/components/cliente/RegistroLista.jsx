@@ -127,21 +127,48 @@ const Cabecera = () => {
   );
 };
 
-const Fila = ({ fila, verFotos, onOpenSolicitud, onFotos }) => {
+// Icono de foto: la del retiro (la bolla) o la de la entrega.
+export const BotonFoto = ({ servicio, tipo, onFotos, className }) => {
+  const t = useT();
+  const etiqueta = t(tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery");
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onFotos(servicio, tipo);
+      }}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className={clsx("relative rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50", className)}
+    >
+      <CameraIcon className="h-[18px] w-[18px]" />
+      <span className="absolute -bottom-0.5 right-0 text-[9px] font-bold leading-none">{tipo === "BOLLA" ? "R" : "E"}</span>
+    </button>
+  );
+};
+
+const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const { language } = useLanguage();
   const area = RECORD_AREAS.find((a) => a.key === fila.area);
-  const abrible = fila.origen === "solicitud";
-  const Tag = abrible ? "button" : "div";
+  // Todas las filas abren su vista rapida (la solicitud o el servicio). Es un div y no un boton porque lleva botones de fotos dentro.
+  const abrir = () => (fila.origen === "solicitud" ? onOpenSolicitud(fila.id) : onOpenServicio(fila));
   return (
-    <Tag
-      type={abrible ? "button" : undefined}
-      onClick={abrible ? () => onOpenSolicitud(fila.id) : undefined}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={abrir}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          abrir();
+        }
+      }}
       className={clsx(
         GRID,
-        "w-full rounded-xl py-2.5 text-left text-[12px] text-ink-200 transition-colors",
-        fila.retraso != null ? "border-l-4 border-danger-500 bg-danger-500/[0.09] hover:bg-danger-500/[0.15]" : "hover:bg-line/[0.06]",
-        abrible && "cursor-pointer"
+        "w-full cursor-pointer rounded-xl py-2.5 text-left text-[12px] text-ink-200 transition-colors",
+        fila.retraso != null ? "border-l-4 border-danger-500 bg-danger-500/[0.09] hover:bg-danger-500/[0.15]" : "hover:bg-line/[0.06]"
       )}
     >
       <span className="flex min-w-0 items-center gap-2.5">
@@ -184,24 +211,17 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onFotos }) => {
           {fila.retraso != null && <RetrasoPill min={fila.retraso} className="mt-1" />}
         </span>
         {verFotos && fila.fotos > 0 && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFotos(fila.servicio);
-            }}
-            aria-label={t("hist.photosOf", { code: fila.codigo })}
-            className="shrink-0 rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50"
-          >
-            <CameraIcon className="h-[18px] w-[18px]" />
-          </button>
+          <span className="flex shrink-0 items-center">
+            {fila.servicio.fotosRetiro > 0 && <BotonFoto servicio={fila.servicio} tipo="BOLLA" onFotos={onFotos} />}
+            {fila.servicio.fotosEntrega > 0 && <BotonFoto servicio={fila.servicio} tipo="FOTO_ENTREGA" onFotos={onFotos} />}
+          </span>
         )}
       </span>
-    </Tag>
+    </div>
   );
 };
 
-export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verFotos, onOpenSolicitud, onFotos }) => {
+export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const { language } = useLanguage();
   const [areaKey, setAreaKey] = useState(AREA_ALL);
@@ -336,7 +356,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                       <Cabecera />
                       <div className="flex min-w-[820px] flex-col gap-0.5 px-2">
                         {items.map((f) => (
-                          <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onFotos={onFotos} />
+                          <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                         ))}
                       </div>
                     </div>

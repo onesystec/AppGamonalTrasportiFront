@@ -39,7 +39,7 @@ export const FotosModal = ({ servicio, onClose }) => {
   useEffect(() => {
     let cancelled = false;
     getClienteFotosRequest(servicio.id)
-      .then((list) => !cancelled && setFotos(list))
+      .then((list) => !cancelled && setFotos(servicio.tipo ? list.filter((f) => f.codigo === servicio.tipo) : list))
       .catch((err) => !cancelled && setError(parseApiError(err).message));
     return () => {
       cancelled = true;
@@ -52,7 +52,10 @@ export const FotosModal = ({ servicio, onClose }) => {
       <div className="relative max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[17px] font-semibold text-ink-50">{t("hist.photosOf", { code: servicio.codigo })}</h2>
+            <h2 className="text-[17px] font-semibold text-ink-50">
+              {t("hist.photosOf", { code: servicio.codigo })}
+              {servicio.tipo && ` · ${t(servicio.tipo === "BOLLA" ? "reg.photoPickup" : "reg.photoDelivery")}`}
+            </h2>
             <p className="text-[13px] text-ink-300">{servicio.destino}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
