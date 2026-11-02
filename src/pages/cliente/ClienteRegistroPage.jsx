@@ -8,7 +8,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
 import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
-import { BotonGaleria, RegistroLista } from "../../components/cliente/RegistroLista";
+import { BotonGaleria, RegistroLista, Segui } from "../../components/cliente/RegistroLista";
 import { estadoTexto, FotosModal, TablaServicios } from "../../components/cliente/TablaServicios";
 import { HojaMixta } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
@@ -20,7 +20,7 @@ import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
 import { editarCeldaRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
-import { minutosTexto } from "../../lib/seguimiento";
+import { horaRoma, minutosTexto } from "../../lib/seguimiento";
 import { currentMonth } from "../../lib/finanzas";
 import { formatCurrency } from "../../lib/format";
 import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
@@ -108,7 +108,7 @@ const VistaRapida = ({ solicitud, onClose, onEdit, onDeleted }) => {
 // Vista rapida de un servicio ya creado por la oficina: sus datos, las fotos del retiro y de la entrega y, para quien lo pidio, modificar los pocos datos
 // que puede cambiar (Shipment / Order o codigos, Tipo, Ciudad y ETA). El resto (cliente, km, numero, chofer...) lo decide la oficina. Cada cambio queda en el
 // historial y, si el servicio ya esta entregado, la oficina recibe un aviso.
-const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
+const VistaServicio = ({ fila, verFotos, verSeguimiento, onClose, onFotos, onSaved }) => {
   const t = useT();
   const { language } = useLanguage();
   const r = fila.servicio;
@@ -150,6 +150,7 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
     ["Tipo", fila.tipo],
     ["ETA", formatFechaHora(r.etaPlan)],
     [t("hist.arrival"), r.llegoAt ? formatFechaHora(r.llegoAt) : null],
+    [t("reg.estimatedLabel"), fila.enVivo?.llegadaEstimada ? horaRoma(fila.enVivo.llegadaEstimada) : null],
     ["KM", fila.km ? `${fila.km} km` : null],
     ["N°", fila.numero],
     [t("hist.plate"), fila.targa],
@@ -180,6 +181,7 @@ const VistaServicio = ({ fila, verFotos, onClose, onFotos, onSaved }) => {
                 {t("reg.gallery")}
               </span>
             )}
+            {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="!px-4 !py-2 !text-[13px]" />}
             <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
               {t("reg.editData")}
             </Button>
@@ -422,6 +424,7 @@ export const ClienteRegistroPage = () => {
           seguimiento={seguimiento}
           month={month}
           verFotos={verFotos}
+          verSeguimiento={verSeguimiento}
           onOpenSolicitud={setSelectedId}
           onOpenServicio={setServicioSel}
           onFotos={setFotosDe}
@@ -541,6 +544,7 @@ export const ClienteRegistroPage = () => {
         <VistaServicio
           fila={servicioSel}
           verFotos={verFotos}
+          verSeguimiento={verSeguimiento}
           onClose={() => setServicioSel(null)}
           onFotos={setFotosDe}
           onSaved={() => {

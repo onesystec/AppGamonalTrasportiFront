@@ -1,5 +1,6 @@
 import { GoogleMap, Marker, OverlayView, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import clsx from "clsx";
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "../../components/ui/Alert";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -99,7 +100,9 @@ export const ClienteSeguimientoPage = () => {
   const { isLoaded } = useJsApiLoader({ googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY, libraries: GOOGLE_MAPS_LIBRARIES, language });
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [selectedId, setSelectedId] = useState(null);
+  // Desde el Registro ("Segui") llega con ?servicio=<id>: ese servicio queda elegido en el mapa.
+  const [searchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState(() => searchParams.get("servicio"));
   const [map, setMap] = useState(null);
   const [ruta, setRuta] = useState(null);
   const fittedRef = useRef("");

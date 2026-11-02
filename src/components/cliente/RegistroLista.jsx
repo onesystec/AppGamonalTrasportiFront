@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { AreaBadge } from "../records/AreaBadge";
 import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
@@ -130,6 +131,8 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       retraso: retrasoEta(r, enCamino, ahora),
       pendiente: !FINALES.has(r.estado) && !r.llegoAt,
       fase,
+      // Posicion en vivo (si va en camino y el cliente tiene el seguimiento): hora estimada de llegada.
+      enVivo: enCamino.get(r.id) ?? null,
       faltan: fase === "ANNULLATO" ? [] : faltantes({ extra, shipment: r.shipment ?? sol?.shipment, order: r.orderNumero ?? sol?.orderNumero, tipo: r.tipoPedido, cliente: r.cliente, destino: r.ciudad || r.destino, ritiro: sol?.ritiro, eta: r.etaPlan }),
       servicio: r,
     };
@@ -241,6 +244,20 @@ const EstadoFila = ({ fila }) => {
   );
 };
 
+// Enlace al mapa del seguimiento con el servicio ya elegido (solo si va en camino).
+export const Segui = ({ id, className }) => {
+  const t = useT();
+  return (
+    <Link
+      to={`/cliente?servicio=${id}`}
+      onClick={(e) => e.stopPropagation()}
+      className={clsx("inline-flex items-center gap-1 rounded-full bg-accent-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent-300 hover:bg-accent-500/25", className)}
+    >
+      {t("reg.follow")} →
+    </Link>
+  );
+};
+
 // "Da completare: Cliente, ETA": lo que todavia falta de la solicitud o del servicio.
 const DaCompletare = ({ faltan, className }) => {
   const t = useT();
@@ -253,7 +270,7 @@ const DaCompletare = ({ faltan, className }) => {
 };
 
 // En el celular cada servicio es una tarjeta (la tabla obligaria a desplazar de lado).
-const Tarjeta = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+const Tarjeta = ({ fila, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const area = RECORD_AREAS.find((a) => a.key === fila.area);
   const abrir = () => (fila.origen === "solicitud" ? onOpenSolicitud(fila.id) : onOpenServicio(fila));
@@ -295,13 +312,15 @@ const Tarjeta = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) =
         </span>
       </div>
       {fila.llegoAt && <span className="text-[11px] text-ink-400">{t("reg.arrived", { time: horaRoma(fila.llegoAt) })}</span>}
+      {fila.enVivo?.llegadaEstimada && <span className="text-[11px] text-accent-300">{t("reg.estimated", { time: horaRoma(fila.enVivo.llegadaEstimada) })}</span>}
       {fila.retraso != null && <RetrasoPill min={fila.retraso} className="self-start" />}
+      {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="self-start" />}
       <DaCompletare faltan={fila.faltan} className="self-start" />
     </div>
   );
 };
 
-const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+const Fila = ({ fila, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const area = RECORD_AREAS.find((a) => a.key === fila.area);
   // Todas las filas abren su vista rapida (la solicitud o el servicio). Es un div y no un boton porque lleva botones de fotos dentro.
@@ -355,7 +374,9 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
         <span className="min-w-0">
           <span className="block truncate text-ink-100">{fila.eta ? horaRoma(fila.eta) : <span className="text-danger-500">—</span>}</span>
           {fila.llegoAt && <span className="block truncate text-[11px] text-ink-400">{t("reg.arrived", { time: horaRoma(fila.llegoAt) })}</span>}
+          {fila.enVivo?.llegadaEstimada && <span className="block truncate text-[11px] text-accent-300">{t("reg.estimated", { time: horaRoma(fila.enVivo.llegadaEstimada) })}</span>}
           {fila.retraso != null && <RetrasoPill min={fila.retraso} className="mt-1" />}
+          {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="mt-1" />}
         </span>
       </span>
       <span className="flex justify-center">{verFotos && fila.fotos > 0 && <BotonGaleria servicio={fila.servicio} onFotos={onFotos} />}</span>
@@ -363,7 +384,7 @@ const Fila = ({ fila, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
   );
 };
 
-export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verFotos, onOpenSolicitud, onOpenServicio, onFotos }) => {
+export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const { language } = useLanguage();
   const [areaKey, setAreaKey] = useState(AREA_ALL);
@@ -543,13 +564,13 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
                         <Cabecera />
                         <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
                           {items.map((f) => (
-                            <Fila key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
+                            <Fila key={f.key} fila={f} verFotos={verFotos} verSeguimiento={verSeguimiento} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                           ))}
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 p-2 md:hidden">
                         {items.map((f) => (
-                          <Tarjeta key={f.key} fila={f} verFotos={verFotos} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
+                          <Tarjeta key={f.key} fila={f} verFotos={verFotos} verSeguimiento={verSeguimiento} onOpenSolicitud={onOpenSolicitud} onOpenServicio={onOpenServicio} onFotos={onFotos} />
                         ))}
                       </div>
                     </div>
