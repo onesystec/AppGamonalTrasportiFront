@@ -4,10 +4,12 @@ import { parseApiError } from "../../lib/api";
 import { formatFechaHora, kmDeSolicitud } from "../../lib/solicitudes";
 import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 
-// DHL Milano del registro de Piazza, con el aspecto de una hoja de Google Sheets: letras de columna, numeros de fila, rejilla y celda seleccionada.
+// Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano. Se usa en el
+// Registro de Piazza (las solicitudes: HojaDhlMilano) y en el Historial de servicios (los servicios ya hechos: HojaServicios con sus propias filas).
 // Columnas: SHIPMENT/ORDER (una sola celda, uno encima del otro), TIPO, CLIENTE, CIUDAD, ETA, KM y MILANO (el numero de Milano asignado).
 // - Clic en el numero de fila (a la izquierda): la fila se extiende hacia abajo y muestra Chofer, Targa y la foto de retiro (bolla).
-// - Clic en una celda: la selecciona. Doble clic: abre el registro (ver, editar, borrar).
+// - Clic en una celda: la selecciona. Doble clic (si hay onOpen): abre el registro.
+// Cada fila: { id, punto, puntoTitulo, shipment, orderNumero, tipoPedido, cliente, ciudad, eta, km, milano: { texto, propuesto }, sinAsignar, chofer, targa }.
 const COLUMNAS = [
   { letra: "A", titulo: "SHIPMENT/ORDER", ancho: "min-w-[150px]" },
   { letra: "B", titulo: "TIPO", ancho: "min-w-[110px]" },
@@ -42,17 +44,17 @@ const CeldaShipmentOrder = ({ s }) => {
   return <span>{s.shipment || s.orderNumero || ""}</span>;
 };
 
-const Panel = ({ s, detalle, verFotos }) => {
-  if (s.estado !== "ACEPTADA") {
+const Panel = ({ row, detalle, verFotos }) => {
+  if (row.sinAsignar) {
     return <p className="text-[13px] text-ink-300">Non ancora assegnato: chofer, targa e bolla compaiono quando l'ufficio accetta la richiesta.</p>;
   }
   if (!detalle || detalle.loading) return <p className="text-[13px] text-ink-300">Caricamento…</p>;
   if (detalle.error) return <p className="text-[13px] text-danger-500">{detalle.error}</p>;
-  const { asignado, bollas } = detalle.data;
+  const { chofer, targa, bollas } = detalle.data;
   return (
     <div className="flex flex-wrap items-start gap-x-10 gap-y-3">
-      <Dato titulo="Chofer">{asignado?.chofer ?? "—"}</Dato>
-      <Dato titulo="Targa">{asignado?.targa ?? "—"}</Dato>
+      <Dato titulo="Chofer">{chofer ?? "—"}</Dato>
+      <Dato titulo="Targa">{targa ?? "—"}</Dato>
       {verFotos && (
         <Dato titulo="Foto de retiro (bolla)">
           {bollas.length === 0 ? (
@@ -83,21 +85,21 @@ const Dato = ({ titulo, children }) => (
   </div>
 );
 
-export const HojaDhlMilano = ({ items, onOpen, verFotos }) => {
+export const HojaServicios = ({ rows, onOpen, verFotos, loadDetalle, vacio = "Nessun servizio per questo mese." }) => {
   const [seleccion, setSeleccion] = useState(null); // `${id}:${columna}`
   const [abierta, setAbierta] = useState(null); // id de la fila extendida
   const [detalles, setDetalles] = useState({}); // id -> { loading, data, error }
 
-  // Al extender una fila ya aceptada se pide su detalle (chofer, targa, fotos de la bolla) una sola vez.
+  // Al extender una fila se pide su detalle (chofer, targa, fotos de la bolla) una sola vez.
   useEffect(() => {
-    const s = items.find((x) => x.id === abierta);
-    if (!s || s.estado !== "ACEPTADA" || detalles[s.id]) return;
-    setDetalles((prev) => ({ ...prev, [s.id]: { loading: true } }));
-    getDetalleSolicitudRequest(s.id)
-      .then((data) => setDetalles((prev) => ({ ...prev, [s.id]: { data } })))
-      .catch((err) => setDetalles((prev) => ({ ...prev, [s.id]: { error: parseApiError(err).message } })));
+    const row = rows.find((x) => x.id === abierta);
+    if (!row || row.sinAsignar || detalles[row.id]) return;
+    setDetalles((prev) => ({ ...prev, [row.id]: { loading: true } }));
+    loadDetalle(row)
+      .then((data) => setDetalles((prev) => ({ ...prev, [row.id]: { data } })))
+      .catch((err) => setDetalles((prev) => ({ ...prev, [row.id]: { error: parseApiError(err).message } })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierta, items]);
+  }, [abierta, rows]);
 
   const celda = (id, col) =>
     clsx(
@@ -130,23 +132,22 @@ export const HojaDhlMilano = ({ items, onOpen, verFotos }) => {
             </tr>
           </thead>
           <tbody>
-            {items.map((s, i) => {
-              const milano = numeroMilano(s);
+            {rows.map((s, i) => {
               const extendida = abierta === s.id;
               return (
                 <Fragment key={s.id}>
-                  <tr className="hover:bg-line/[0.04]" onDoubleClick={() => onOpen(s.id)}>
+                  <tr className="hover:bg-line/[0.04]" onDoubleClick={onOpen ? () => onOpen(s.id) : undefined}>
                     <th
                       scope="row"
                       onClick={() => setAbierta(extendida ? null : s.id)}
-                      title={`${ESTADO_TITULO[s.estado] ?? s.estado} · clic para ver chofer, targa y bolla`}
+                      title={`${s.puntoTitulo ?? ""} · clic para ver chofer, targa y bolla`}
                       className={clsx(
                         "sticky left-0 z-10 w-12 cursor-pointer border border-line/25 text-center text-[11px] font-normal transition-colors",
                         extendida ? "bg-accent-500/25 text-ink-50" : "bg-line/10 text-ink-300 hover:bg-line/20"
                       )}
                     >
                       <span className="flex items-center justify-center gap-1.5">
-                        <span className={clsx("h-1.5 w-1.5 rounded-full", ESTADO_PUNTO[s.estado] ?? "bg-line")} />
+                        <span className={clsx("h-1.5 w-1.5 rounded-full", s.punto ?? "bg-line")} />
                         {i + 2}
                         <span className={clsx("text-[9px] transition-transform", extendida && "rotate-90")}>▶</span>
                       </span>
@@ -161,45 +162,70 @@ export const HojaDhlMilano = ({ items, onOpen, verFotos }) => {
                       {s.cliente}
                     </td>
                     <td className={celda(s.id, "D")} onClick={() => setSeleccion(`${s.id}:D`)}>
-                      {s.destinazione}
+                      {s.ciudad}
                     </td>
                     <td className={clsx(celda(s.id, "E"), "whitespace-nowrap")} onClick={() => setSeleccion(`${s.id}:E`)}>
-                      {formatFechaHora(s.fechaHora)}
+                      {formatFechaHora(s.eta)}
                     </td>
                     <td className={clsx(celda(s.id, "F"), "text-right")} onClick={() => setSeleccion(`${s.id}:F`)}>
-                      {kmDeSolicitud(s) ?? ""}
+                      {s.km ?? ""}
                     </td>
                     <td
-                      className={clsx(celda(s.id, "G"), "text-center font-semibold", milano.propuesto && "font-normal italic text-ink-300")}
-                      title={milano.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : undefined}
+                      className={clsx(celda(s.id, "G"), "text-center font-semibold", s.milano?.propuesto && "font-normal italic text-ink-300")}
+                      title={s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : undefined}
                       onClick={() => setSeleccion(`${s.id}:G`)}
                     >
-                      {milano.texto}
+                      {s.milano?.texto ?? ""}
                     </td>
                   </tr>
                   {extendida && (
                     <tr>
                       <th className="sticky left-0 z-10 border border-line/25 bg-accent-500/25" />
                       <td colSpan={COLUMNAS.length} className="border border-line/25 bg-line/[0.04] px-4 py-3">
-                        <Panel s={s} detalle={detalles[s.id]} verFotos={verFotos} />
+                        <Panel row={s} detalle={detalles[s.id]} verFotos={verFotos} />
                       </td>
                     </tr>
                   )}
                 </Fragment>
               );
             })}
-            {items.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <th className="sticky left-0 z-10 border border-line/25 bg-line/10 text-center text-[11px] font-normal text-ink-300">2</th>
                 <td colSpan={COLUMNAS.length} className="border border-line/25 px-3 py-6 text-center text-[13px] text-ink-300">
-                  Nessuna richiesta per questo mese.
+                  {vacio}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[12px] text-ink-400">Clicca sul numero di riga per vedere chofer, targa e bolla · doppio clic su una cella per aprire o modificare la richiesta.</p>
+      <p className="mt-2 text-[12px] text-ink-400">
+        Clicca sul numero di riga per vedere chofer, targa e bolla{onOpen ? " · doppio clic su una cella per aprire o modificare la richiesta" : ""}.
+      </p>
     </div>
   );
+};
+
+// Registro de Piazza: las solicitudes del cliente. El detalle (chofer, targa y bolla) existe solo cuando la oficina ya las acepto.
+export const HojaDhlMilano = ({ items, onOpen, verFotos }) => {
+  const rows = items.map((s) => ({
+    id: s.id,
+    punto: ESTADO_PUNTO[s.estado],
+    puntoTitulo: ESTADO_TITULO[s.estado] ?? s.estado,
+    shipment: s.shipment,
+    orderNumero: s.orderNumero,
+    tipoPedido: s.tipoPedido,
+    cliente: s.cliente,
+    ciudad: s.destinazione,
+    eta: s.fechaHora,
+    km: kmDeSolicitud(s),
+    milano: numeroMilano(s),
+    sinAsignar: s.estado !== "ACEPTADA",
+  }));
+  const loadDetalle = async (row) => {
+    const { asignado, bollas } = await getDetalleSolicitudRequest(row.id);
+    return { chofer: asignado?.chofer ?? null, targa: asignado?.targa ?? null, bollas };
+  };
+  return <HojaServicios rows={rows} onOpen={onOpen} verFotos={verFotos} loadDetalle={loadDetalle} vacio="Nessuna richiesta per questo mese." />;
 };

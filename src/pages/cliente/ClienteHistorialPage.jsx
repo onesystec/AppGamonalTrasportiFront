@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { Alert } from "../../components/ui/Alert";
+import { HojaServicios } from "../../components/solicitudes/HojaDhlMilano";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
 import { CameraIcon, CloseIcon, DownloadIcon } from "../../components/ui/icons";
@@ -87,6 +88,84 @@ const FotosModal = ({ servicio, onClose }) => {
   );
 };
 
+// La tabla de siempre del historial (todos los servicios; en el celular y para lo que no es DHL Milano).
+const TablaServicios = ({ servicios, verFotos, onFotos }) => {
+  const t = useT();
+  const { language } = useLanguage();
+  return (
+      <div className="glass-surface overflow-x-auto rounded-2xl">
+        <table className="w-full min-w-[760px] border-collapse text-[13px]">
+          <thead>
+            <tr className="border-b border-line/10 text-left text-[11px] font-medium uppercase tracking-wide text-ink-400">
+              <th className="px-4 py-2.5">{t("hist.date")}</th>
+              <th className="px-2 py-2.5">{t("hist.service")}</th>
+              <th className="px-2 py-2.5">{t("hist.plate")}</th>
+              <th className="px-2 py-2.5">{t("hist.driverCircuit")}</th>
+              <th className="px-2 py-2.5">{t("hist.destination")}</th>
+              <th className="px-2 py-2.5">{t("hist.status")}</th>
+              <th className="px-2 py-2.5">{t("hist.arrival")}</th>
+              {verFotos && <th className="px-2 py-2.5 text-center">{t("hist.photos")}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {servicios.map((s) => (
+              <tr key={s.id} className="border-b border-line/[0.07] last:border-b-0">
+                <td className="whitespace-nowrap px-4 py-2.5 text-ink-100">{fechaCorta(s.fecha)}</td>
+                <td className="px-2 py-2.5 text-ink-300">{s.codigo}</td>
+                <td className="whitespace-nowrap px-2 py-2.5 font-semibold text-ink-50">{s.targa ?? "—"}</td>
+                <td className="whitespace-nowrap px-2 py-2.5">
+                  <span className="block text-ink-100">{s.chofer ?? "—"}</span>
+                  {s.aplicativo && <span className="block text-[12px] text-ink-400">{aplicativoTexto(s.aplicativo)}</span>}
+                </td>
+                <td className="max-w-[280px] px-2 py-2.5 text-ink-100">{s.destino}</td>
+                <td className="px-2 py-2.5">
+                  <span className={clsx("whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium", ESTADO_PILL[s.estado] ?? "bg-line/15 text-ink-300")}>
+                    {estadoTexto(s, t, language)}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-2 py-2.5 text-ink-300">
+                  {s.llegoAt ? (
+                    <>
+                      {horaRoma(s.llegoAt)} <span className="text-ink-400">· {puntualidad(s.puntualidadMin, t)}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                {verFotos && (
+                  <td className="px-2 py-2.5 text-center">
+                    {s.fotos > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => onFotos(s)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-accent-400 hover:bg-line/10"
+                      >
+                        <CameraIcon className="h-4 w-4" />
+                        {s.fotos}
+                      </button>
+                    ) : (
+                      <span className="text-ink-400">—</span>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+  );
+};
+
+// DHL Milano: lo que se ve en la hoja tipo Excel (los demas servicios siguen en la tabla de siempre).
+const esDhlMilano = (s) => s.spedizzione === "DHL" && s.zona !== "ROMA";
+
+const PUNTO_ESTADO = {
+  CONSEGNATO: "bg-success-500",
+  ANNULLATO: "bg-danger-500",
+  RISCHEDULATO: "bg-warning-500",
+};
+
 export const ClienteHistorialPage = () => {
   const t = useT();
   const { language } = useLanguage();
@@ -149,6 +228,34 @@ export const ClienteHistorialPage = () => {
     }
   };
 
+  // Filas de la hoja de DHL Milano (la hoja pide chofer/targa/bolla al abrir cada fila: el chofer y la targa ya vienen en el servicio).
+  const milano = (data?.servicios ?? []).filter(esDhlMilano);
+  const otros = (data?.servicios ?? []).filter((s) => !esDhlMilano(s));
+  const filasMilano = milano.map((s) => ({
+    id: s.id,
+    punto: PUNTO_ESTADO[s.estado] ?? "bg-accent-400",
+    puntoTitulo: estadoTexto(s, t, language),
+    shipment: s.shipment,
+    orderNumero: s.orderNumero,
+    tipoPedido: s.tipoPedido,
+    cliente: s.cliente ?? "",
+    ciudad: s.ciudad ?? "",
+    eta: s.etaPlan,
+    km: s.km != null ? String(Math.round(s.km * 10) / 10).replace(".", ",") : null,
+    milano: { texto: s.aplicativo?.startsWith("MILANO_") ? s.aplicativo.replace("MILANO_", "") : "", propuesto: false },
+    sinAsignar: false,
+    chofer: s.chofer,
+    targa: s.targa,
+  }));
+  const loadDetalle = async (row) => {
+    const fotos = verFotos ? await getClienteFotosRequest(row.id) : [];
+    return {
+      chofer: row.chofer,
+      targa: row.targa,
+      bollas: fotos.filter((f) => f.codigo === "BOLLA").map((f) => ({ id: f.id, url: f.url, esPdf: f.esPdf })),
+    };
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -177,66 +284,24 @@ export const ClienteHistorialPage = () => {
       {data?.servicios.length === 0 && <p className="px-1 py-6 text-[14px] text-ink-400">{t("hist.none")}</p>}
 
       {data?.servicios.length > 0 && (
-        <div className="glass-surface overflow-x-auto rounded-2xl">
-          <table className="w-full min-w-[760px] border-collapse text-[13px]">
-            <thead>
-              <tr className="border-b border-line/10 text-left text-[11px] font-medium uppercase tracking-wide text-ink-400">
-                <th className="px-4 py-2.5">{t("hist.date")}</th>
-                <th className="px-2 py-2.5">{t("hist.service")}</th>
-                <th className="px-2 py-2.5">{t("hist.plate")}</th>
-                <th className="px-2 py-2.5">{t("hist.driverCircuit")}</th>
-                <th className="px-2 py-2.5">{t("hist.destination")}</th>
-                <th className="px-2 py-2.5">{t("hist.status")}</th>
-                <th className="px-2 py-2.5">{t("hist.arrival")}</th>
-                {verFotos && <th className="px-2 py-2.5 text-center">{t("hist.photos")}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {data.servicios.map((s) => (
-                <tr key={s.id} className="border-b border-line/[0.07] last:border-b-0">
-                  <td className="whitespace-nowrap px-4 py-2.5 text-ink-100">{fechaCorta(s.fecha)}</td>
-                  <td className="px-2 py-2.5 text-ink-300">{s.codigo}</td>
-                  <td className="whitespace-nowrap px-2 py-2.5 font-semibold text-ink-50">{s.targa ?? "—"}</td>
-                  <td className="whitespace-nowrap px-2 py-2.5">
-                    <span className="block text-ink-100">{s.chofer ?? "—"}</span>
-                    {s.aplicativo && <span className="block text-[12px] text-ink-400">{aplicativoTexto(s.aplicativo)}</span>}
-                  </td>
-                  <td className="max-w-[280px] px-2 py-2.5 text-ink-100">{s.destino}</td>
-                  <td className="px-2 py-2.5">
-                    <span className={clsx("whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium", ESTADO_PILL[s.estado] ?? "bg-line/15 text-ink-300")}>
-                      {estadoTexto(s, t, language)}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-2 py-2.5 text-ink-300">
-                    {s.llegoAt ? (
-                      <>
-                        {horaRoma(s.llegoAt)} <span className="text-ink-400">· {puntualidad(s.puntualidadMin, t)}</span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  {verFotos && (
-                    <td className="px-2 py-2.5 text-center">
-                      {s.fotos > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setFotosDe(s)}
-                          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-accent-400 hover:bg-line/10"
-                        >
-                          <CameraIcon className="h-4 w-4" />
-                          {s.fotos}
-                        </button>
-                      ) : (
-                        <span className="text-ink-400">—</span>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Celular: la tabla de siempre con todo. */}
+          <div className="lg:hidden">
+            <TablaServicios servicios={data.servicios} verFotos={verFotos} onFotos={setFotosDe} />
+          </div>
+          {/* Escritorio: DHL Milano en la hoja tipo Excel y, aparte, los demas servicios en la tabla de siempre. */}
+          <div className="hidden flex-col gap-5 lg:flex">
+            {filasMilano.length > 0 && (
+              <HojaServicios rows={filasMilano} verFotos={verFotos} loadDetalle={loadDetalle} vacio="Nessun servizio per questo mese." />
+            )}
+            {otros.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {filasMilano.length > 0 && <h2 className="text-[14px] font-semibold text-ink-100">Altri servizi</h2>}
+                <TablaServicios servicios={otros} verFotos={verFotos} onFotos={setFotosDe} />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {fotosDe && <FotosModal servicio={fotosDe} onClose={() => setFotosDe(null)} />}
