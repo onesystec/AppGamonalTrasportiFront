@@ -14,3 +14,7 @@ export const rechazarSolicitudRequest = (id, motivo) => api.post(`/solicitudes/$
 // Servicio desde un texto pegado (DHL Milano): el bot de reglas lo lee (no guarda nada) y despues se crea la solicitud pendiente.
 export const leerTextoRequest = (servicio, texto) => api.post("/solicitudes/leer-texto", { servicio, texto }).then((res) => res.data.data);
 export const crearDesdeTextoRequest = (payload) => api.post("/solicitudes/desde-texto", payload).then((res) => res.data.data);
+
+// Usuario cliente (Piazza): leer el texto de DHL para rellenar la solicitud y el detalle (chofer, targa, bolla) de una ya aceptada.
+export const leerTextoClienteRequest = (servicio, texto) => api.post("/cliente/solicitudes/leer-texto", { servicio, texto }).then((res) => res.data.data);
+export const getDetalleSolicitudRequest = (id) => api.get(`/cliente/solicitudes/${id}/detalle`).then((res) => res.data.data);

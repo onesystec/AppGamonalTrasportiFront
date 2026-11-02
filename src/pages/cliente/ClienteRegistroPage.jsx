@@ -6,6 +6,7 @@ import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { CloseIcon, PlusIcon } from "../../components/ui/icons";
+import { HojaDhlMilano } from "../../components/solicitudes/HojaDhlMilano";
 import { EstadoPill, SolicitudDetalle } from "../../components/solicitudes/SolicitudDetalle";
 import { SolicitudForm } from "../../components/solicitudes/SolicitudForm";
 import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudWhatsappButton";
@@ -236,7 +237,18 @@ export const ClienteRegistroPage = () => {
 
       <Alert>{error}</Alert>
       {!items && !error && <PageLoader />}
-      {items && <TablaRegistros items={porServicio[servicio]} servicio={servicio} onSelect={setSelectedId} />}
+      {items && servicio === "DHL_MILANO" && (
+        <>
+          {/* Escritorio: la hoja tipo Google Sheets. En el celular se mantiene la tabla de siempre. */}
+          <div className="hidden lg:block">
+            <HojaDhlMilano items={porServicio.DHL_MILANO} onOpen={setSelectedId} verFotos={Boolean(user?.clienteModulos?.includes("FOTOS"))} />
+          </div>
+          <div className="lg:hidden">
+            <TablaRegistros items={porServicio.DHL_MILANO} servicio={servicio} onSelect={setSelectedId} />
+          </div>
+        </>
+      )}
+      {items && servicio !== "DHL_MILANO" && <TablaRegistros items={porServicio[servicio]} servicio={servicio} onSelect={setSelectedId} />}
 
       {selected && !form && (
         <VistaRapida

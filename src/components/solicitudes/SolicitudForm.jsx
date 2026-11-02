@@ -2,13 +2,14 @@ import clsx from "clsx";
 import { useState } from "react";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
 import { TextField } from "../ui/TextField";
 import { Textarea } from "../ui/Textarea";
 import { useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { APLICATIVO_OPTIONS } from "../../lib/constants";
-import { kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
-import { createSolicitudRequest, updateSolicitudRequest } from "../../lib/solicitudes.api";
+import { APLICATIVO_OPTIONS, TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
+import { formatFechaHora, kmDeSolicitud, SOLICITUD_SERVICIOS, toRomeInput } from "../../lib/solicitudes";
+import { createSolicitudRequest, leerTextoClienteRequest, updateSolicitudRequest } from "../../lib/solicitudes.api";
 
 const EMPTY = {
   servicio: "DHL_MILANO",
@@ -24,6 +25,9 @@ const EMPTY = {
   varie2: "",
   descripcion: "",
   aplicativo: "",
+  shipment: "",
+  orderNumero: "",
+  tipoPedido: "",
 };
 
 const fromSolicitud = (s) => ({
@@ -40,6 +44,9 @@ const fromSolicitud = (s) => ({
   varie2: s.varie2 != null ? String(s.varie2) : "",
   descripcion: s.descripcion ?? "",
   aplicativo: s.aplicativo ?? "",
+  shipment: s.shipment ?? "",
+  orderNumero: s.orderNumero ?? "",
+  tipoPedido: s.tipoPedido ?? "",
 });
 
 const aplicativosDe = (servicio) =>
@@ -53,12 +60,42 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  // DHL Milano: el texto de DHL que se pega para rellenar la solicitud (todo este proceso va en italiano).
+  const [texto, setTexto] = useState("");
+  const [leyendo, setLeyendo] = useState(false);
+  const [lectura, setLectura] = useState(null); // { avisos, duplicados, tipoOrigen }
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const onChange = (field) => (e) => set(field, e.target.value);
   const aplicativos = aplicativosDe(form.servicio);
   const esAb = form.servicio === "AB_SERVICE";
   const esRoma = form.servicio === "DHL_ROMA";
+  const esMilano = form.servicio === "DHL_MILANO";
+
+  // Lee el texto pegado y rellena lo que encuentra (Shipment, Order, cliente, tipo, ciudad, ETA, km); el resto lo completa quien envia.
+  const leerTexto = async () => {
+    setLeyendo(true);
+    setFormError("");
+    try {
+      const d = await leerTextoClienteRequest("DHL_MILANO", texto);
+      setForm((prev) => ({
+        ...prev,
+        cliente: d.cliente ?? prev.cliente,
+        destinazione: d.ciudad ?? prev.destinazione,
+        fechaHora: d.eta ? toRomeInput(d.eta) : prev.fechaHora,
+        km: d.km != null ? String(d.km) : prev.km,
+        shipment: d.shipment ?? prev.shipment,
+        orderNumero: d.orderNumero ?? prev.orderNumero,
+        tipoPedido: d.tipoPedido ?? prev.tipoPedido,
+        descripcion: d.descripcion,
+      }));
+      setLectura({ avisos: d.avisos ?? [], duplicados: d.duplicados ?? [], tipoOrigen: d.tipoOrigen ?? null });
+    } catch (err) {
+      setFormError(parseApiError(err).message);
+    } finally {
+      setLeyendo(false);
+    }
+  };
 
   // AB Service es siempre del cliente AB: se rellena solo al elegirlo si todavia no se escribio uno.
   const setServicio = (servicio) =>
@@ -78,8 +115,12 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
     const payload = {
       ...form,
       autRitiro: esAb ? form.autRitiro : "",
-      descripcion: esAb ? form.descripcion : "",
+      // La descripcion de DHL Milano es el texto de DHL completo (si se pego); en AB Service, la del envio.
+      descripcion: esAb || esMilano ? form.descripcion : "",
       pagato50: esRoma ? form.pagato50 : false,
+      shipment: esMilano ? form.shipment : "",
+      orderNumero: esMilano ? form.orderNumero : "",
+      tipoPedido: esMilano ? form.tipoPedido : "",
     };
     try {
       const saved = solicitud ? await updateSolicitudRequest(solicitud.id, payload) : await createSolicitudRequest(payload);
@@ -117,7 +158,64 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         {fieldErrors.servicio?.[0] && <span className="mt-1.5 block text-[13px] text-danger-500">{fieldErrors.servicio[0]}</span>}
       </div>
 
+      {esMilano && (
+        <div className="rounded-2xl border border-line/15 p-4">
+          <Textarea
+            id="sol-texto"
+            label="Incolla il testo di DHL (facoltativo)"
+            placeholder="Shipments: Customer ... Shipment # ... ETA ... Ship To City ... Order # ..."
+            rows={5}
+            value={texto}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              if (lectura) setLectura(null);
+            }}
+          />
+          <div className="mt-3">
+            <Button variant="ghost" className="!w-auto px-5 py-2 text-[13px]" onClick={leerTexto} loading={leyendo} disabled={!texto.trim()}>
+              Leggi testo
+            </Button>
+          </div>
+          {lectura?.duplicados.length > 0 && (
+            <div className="mt-3 rounded-xl border border-danger-500/40 bg-danger-500/10 px-3 py-2 text-[12.5px] text-ink-100">
+              <span className="block font-semibold text-danger-500">Questo ordine sembra già inviato</span>
+              {lectura.duplicados.map((d) => (
+                <span key={d.id} className="block text-ink-200">{`${d.cliente} · ${formatFechaHora(d.fecha)}`}</span>
+              ))}
+            </div>
+          )}
+          {lectura?.avisos.length > 0 && (
+            <ul className="mt-3 list-disc rounded-xl border border-warning-500/40 bg-warning-500/10 py-2 pl-7 pr-3 text-[12.5px] text-warning-500">
+              {lectura.avisos.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {esMilano && (
+          <>
+            <TextField id="sol-shipment" label="Shipment" value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
+            <TextField id="sol-order" label="Order" value={form.orderNumero} onChange={onChange("orderNumero")} error={fieldErrors.orderNumero?.[0]} />
+            <div className="sm:col-span-2">
+              <Select
+                id="sol-tipo"
+                label="Tipo"
+                value={form.tipoPedido}
+                onChange={(e) => {
+                  set("tipoPedido", e.target.value);
+                  setLectura((prev) => (prev ? { ...prev, tipoOrigen: e.target.value ? "manual" : null } : prev));
+                }}
+                options={[{ value: "", label: "— Scegli il tipo —" }, ...TIPO_PEDIDO_OPTIONS.map((o) => ({ value: o.value, label: o.label }))]}
+                error={fieldErrors.tipoPedido?.[0]}
+              />
+              {lectura?.tipoOrigen === "eta" && <span className="mt-1.5 block text-[12px] text-ink-400">Suggerito in base all'ETA: cambialo se non è così.</span>}
+              {lectura?.tipoOrigen === "texto" && <span className="mt-1.5 block text-[12px] text-ink-400">Letto dal testo.</span>}
+            </div>
+          </>
+        )}
         <TextField id="sol-cliente" label={t("form.client")} value={form.cliente} onChange={onChange("cliente")} error={fieldErrors.cliente?.[0]} required />
         <TextField id="sol-fecha" label={t("form.dateTime")} type="datetime-local" value={form.fechaHora} onChange={onChange("fechaHora")} error={fieldErrors.fechaHora?.[0]} required />
         <TextField className="sm:col-span-2" id="sol-destino" label="Destinazione" value={form.destinazione} onChange={onChange("destinazione")} error={fieldErrors.destinazione?.[0]} required />
