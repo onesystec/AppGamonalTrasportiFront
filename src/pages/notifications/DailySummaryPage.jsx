@@ -32,6 +32,7 @@ import {
 import { RECORD_STATUS_LABELS } from "../../lib/constants";
 import { formatCurrency, formatDate, formatDateTime } from "../../lib/format";
 import { getKmRankingRequest } from "../../lib/finanzas.api";
+import { usePagoReal } from "../../hooks/usePagoReal";
 import { listRecordsRequest, searchRecordsRequest } from "../../lib/records.api";
 import { listUsersRequest, updateUserRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -487,9 +488,16 @@ export const DailySummaryPage = () => {
     () => (records ? computeExtrasPiazzaZonaBreakdown(records, "semana") : []),
     [records]
   );
+  // Pago real a choferes del mes en curso y el anterior (la semana puede cruzar el cambio de mes).
+  const hoyMes = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+  const mesAnterior = (() => {
+    const [y, m] = hoyMes.split("-").map(Number);
+    return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  })();
+  const pagoReal = usePagoReal(mesAnterior, hoyMes, isPrivileged);
   const economicStats = useMemo(
-    () => (semanalRecords ? computeEconomicStats(semanalRecords, "semana") : null),
-    [semanalRecords]
+    () => (semanalRecords ? computeEconomicStats(semanalRecords, "semana", new Date(), null, pagoReal) : null),
+    [semanalRecords, pagoReal]
   );
   const reperibilidad = useMemo(
     () => (records && drivers && vehicles ? computeReperibilidadPiazza(records, drivers, vehicles) : null),

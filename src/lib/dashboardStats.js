@@ -195,14 +195,20 @@ const recordDriverHours = (record) => {
   return (record.kilometros ?? 0) / ASSUMED_KM_PER_HOUR;
 };
 
-const recordDriverPay = (record) => recordDriverHours(record) * DRIVER_HOURLY_RATE;
+// Mes (AAAA-MM, hora de Roma) de un servicio.
+const monthOf = (record) => new Date(record.fechaServicio).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+
+// Pago al chofer de un servicio. Con el pago real (pagoReal, de usePagoReal) y su mes cargado, es el que de verdad se paga (cero si todavia no se paga: sin entregar,
+// anulado, dentro de un viaje). Sin el, la estimacion de siempre (horas x tarifa, con las horas estimadas por km).
+const recordDriverPay = (record, pagoReal = null) =>
+  pagoReal && pagoReal.meses.has(monthOf(record)) ? (pagoReal.servicios.get(record.id) ?? 0) : recordDriverHours(record) * DRIVER_HOURLY_RATE;
 
 // "Costos operativos": combustible/peajes/vignetta/hotel/traforo/area C/espera,
 // mas el pago al chofer - DHL/AB Service ahora carga estos mismos gastos a mano
 // igual que Extras Piazza (antes se le estimaba un monto fijo por KM porque no
 // se cargaban).
-const recordCost = (record) =>
-  recordDriverPay(record) + ECONOMIC_COST_FIELDS.reduce((sum, field) => sum + (record[field] ?? 0), 0);
+const recordCost = (record, pagoReal = null) =>
+  recordDriverPay(record, pagoReal) + ECONOMIC_COST_FIELDS.reduce((sum, field) => sum + (record[field] ?? 0), 0);
 
 // DHL/AB Service tampoco carga facturacion manualmente todavia: mientras no se
 // cargue un pagoRecibido real, se estima con la tarifa de referencia por KM. El dia
@@ -213,7 +219,7 @@ const recordRevenue = (record) => {
   return 0;
 };
 
-const recordProfit = (record) => recordRevenue(record) - recordCost(record);
+const recordProfit = (record, pagoReal = null) => recordRevenue(record) - recordCost(record, pagoReal);
 
 // Conteo de servicios del periodo elegido, a nivel compania (sin separar por
 // spedizzione) - para las mini-cards KPI de la pestana "General" de Resumen.
@@ -245,19 +251,21 @@ export const computeWeeklyServiceTrend = (records, now = new Date()) => {
 
 // selectedMonth ({year, month(1-indexed)}): solo aplica con period "mes", para poder
 // mirar un mes puntual en vez de siempre el actual - ver monthRange mas arriba.
-export const computeEconomicStats = (records, period, now = new Date(), selectedMonth = null) => {
+// pagoReal (opcional, ver usePagoReal): el pago real a choferes por servicio; con el, "Pago a choferes" es lo que de verdad se paga por los servicios (los trabajos adicionales
+// aprobados, unos pocos euros, no van aca: no son de un servicio ni de un area).
+export const computeEconomicStats = (records, period, now = new Date(), selectedMonth = null, pagoReal = null) => {
   const scoped = records.filter((r) => isWithinPeriod(r.fechaServicio, period, now, selectedMonth));
   const previousScoped = records.filter((r) =>
     isWithinPreviousPeriod(r.fechaServicio, period, now, selectedMonth)
   );
 
   const facturacion = scoped.reduce((sum, r) => sum + recordRevenue(r), 0);
-  const costos = scoped.reduce((sum, r) => sum + recordCost(r), 0);
+  const costos = scoped.reduce((sum, r) => sum + recordCost(r, pagoReal), 0);
   const ganancia = facturacion - costos;
 
   const facturacionAnterior = previousScoped.reduce((sum, r) => sum + recordRevenue(r), 0);
   const gananciaAnterior =
-    facturacionAnterior - previousScoped.reduce((sum, r) => sum + recordCost(r), 0);
+    facturacionAnterior - previousScoped.reduce((sum, r) => sum + recordCost(r, pagoReal), 0);
 
   const withProfit = scoped
     .map((r) => ({ record: r, profit: recordProfit(r) }))
@@ -297,8 +305,8 @@ export const computeEconomicStats = (records, period, now = new Date(), selected
   const costosBreakdown = [
     {
       label: "Pago a choferes",
-      monto: scoped.reduce((sum, r) => sum + recordDriverPay(r), 0),
-      count: scoped.length,
+      monto: scoped.reduce((sum, r) => sum + recordDriverPay(r, pagoReal), 0),
+      count: scoped.filter((r) => recordDriverPay(r, pagoReal) > 0).length,
     },
     {
       label: "Area C",
@@ -337,7 +345,7 @@ const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "S
 // el periodo elegido en el selector), esto siempre es el anio calendario completo.
 // ANNULLATO se excluye: un servicio anulado no se llego a hacer, no debe sumar
 // facturacion/km aunque haya quedado con esos campos cargados de antes de anularlo.
-export const computeMonthlyRevenueTrend = (records, now = new Date()) => {
+export const computeMonthlyRevenueTrend = (records, now = new Date(), pagoReal = null) => {
   const year = now.getFullYear();
   const buckets = MONTH_LABELS.map((month) => ({ month, facturacion: 0, ganancia: 0 }));
 
@@ -347,7 +355,7 @@ export const computeMonthlyRevenueTrend = (records, now = new Date()) => {
     if (date.getFullYear() !== year) return;
     const bucket = buckets[date.getMonth()];
     bucket.facturacion += recordRevenue(r);
-    bucket.ganancia += recordProfit(r);
+    bucket.ganancia += recordProfit(r, pagoReal);
   });
 
   return buckets;

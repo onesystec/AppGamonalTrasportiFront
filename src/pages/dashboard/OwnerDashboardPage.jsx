@@ -39,6 +39,7 @@ import { AREAS_BY_KEY, classifyRecord } from "../../lib/recordAreas";
 import { dashboardAreas } from "../../lib/roles";
 import { formatCurrency, formatCurrencyCompact } from "../../lib/format";
 import { listRecordsRequest } from "../../lib/records.api";
+import { usePagoReal } from "../../hooks/usePagoReal";
 
 // Lazy: los 4 graficos (y recharts, la libreria detras) se descargan y ejecutan en
 // paralelo en vez de bloquear el primer pintado de la pagina (titulo + anillos de
@@ -330,13 +331,21 @@ export const OwnerDashboardPage = () => {
     return mainRecords.filter((r) => classifyRecord(r) === misAreasVista);
   }, [mainRecords, misAreasVista]);
 
+  // Pago real a choferes (el de Pago a choferes) del mes que se mira y el anterior; con las tendencias del anio, desde enero. Mientras llega se usa la estimacion de siempre.
+  const monthKey = (year, month) => `${year}-${String(month).padStart(2, "0")}`;
+  const prevMonthKey = selectedMonth.month === 1 ? monthKey(selectedMonth.year - 1, 12) : monthKey(selectedMonth.year, selectedMonth.month - 1);
+  const selectedKey = monthKey(selectedMonth.year, selectedMonth.month);
+  const hoyMes = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" }).slice(0, 7);
+  const eneroDelAnio = `${hoyMes.slice(0, 4)}-01`;
+  const pagoReal = usePagoReal(wantYear && eneroDelAnio < prevMonthKey ? eneroDelAnio : prevMonthKey, hoyMes > selectedKey ? hoyMes : selectedKey);
+
   const economicStats = useMemo(
-    () => (loaded ? computeEconomicStats(scopedRecords, period, new Date(), selectedMonth) : null),
-    [loaded, scopedRecords, period, selectedMonth]
+    () => (loaded ? computeEconomicStats(scopedRecords, period, new Date(), selectedMonth, pagoReal) : null),
+    [loaded, scopedRecords, period, selectedMonth, pagoReal]
   );
   const monthlyTrend = useMemo(
-    () => (loaded ? computeMonthlyRevenueTrend(scopedRecords) : null),
-    [loaded, scopedRecords]
+    () => (loaded ? computeMonthlyRevenueTrend(scopedRecords, new Date(), pagoReal) : null),
+    [loaded, scopedRecords, pagoReal]
   );
   const monthlyKmTrend = useMemo(
     () => (loaded ? computeMonthlyKmTrend(scopedRecords) : null),

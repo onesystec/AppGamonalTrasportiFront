@@ -11,6 +11,10 @@ export const getFinanzasResumenRequest = (month) =>
 export const getPagosChoferesRequest = (params) =>
   api.get(`${BASE}/pagos`, { params }).then((res) => res.data.data.pagos);
 
+// Lo que se paga al chofer por cada servicio de un rango de meses ({ desde, hasta } como AAAA-MM): el pago real, el mismo de Pago a choferes. Solo la oficina.
+export const getPagoServiciosRequest = (params) =>
+  api.get(`${BASE}/pago-servicios`, { params }).then((res) => res.data.data.pagoServicios);
+
 // Ranking de km de choferes y vehiculos: los mismos km que se pagan. periodo: "mes" | "semana"; zona: "MILANO" | "ROMA" (opcional);
 // areas: claves de las areas a contar (por defecto las 5 principales, sin "Otros"). Solo OWNER/ADMIN.
 export const getKmRankingRequest = ({ periodo = "mes", zona, areas } = {}) =>
