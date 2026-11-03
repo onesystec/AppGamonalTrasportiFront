@@ -796,6 +796,10 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   const totalKm = availableAreas.reduce((n, a) => n + areaStats[a.key].km, 0);
 
   const summaryDays = summary ? groupSummaryByDay(summary.filter(matchesArea)) : null;
+  // Con filtros activos manda "Resultados de busqueda": ahi tambien rige "Solo sin cobrar" (sin DHL ni AB Service).
+  const searchShown = searchResults?.filter(
+    (r) => matchesArea(r) && (!showUnpaidOnly || (!AREAS_PAGO_AUTOMATICO.has(classifyRecord(r)) && r.pagoRecibido == null))
+  );
   const unpaidVisibleRecords = unpaidRecords
     ?.filter((r) => matchesArea(r) && !AREAS_PAGO_AUTOMATICO.has(classifyRecord(r)) && r.pagoRecibido == null)
     .sort((a, b) => new Date(a.fechaServicio) - new Date(b.fechaServicio));
@@ -939,9 +943,11 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                     Resultados de busqueda{searching && " - buscando..."}
                     {!searching && (
                       <span className="ml-2 text-[12px] font-normal text-ink-400">
-                        {searchTotal > searchResults.length
-                          ? `mostrando los ${searchResults.length} mas recientes de ${searchTotal}: afina los filtros`
-                          : `${searchTotal} servicio${searchTotal === 1 ? "" : "s"}`}
+                        {showUnpaidOnly
+                          ? `${searchShown.length} sin cobrar${searchTotal > searchResults.length ? " (entre los 300 mas recientes: afina los filtros)" : ""}`
+                          : searchTotal > searchResults.length
+                            ? `mostrando los ${searchResults.length} mas recientes de ${searchTotal}: afina los filtros`
+                            : `${searchTotal} servicio${searchTotal === 1 ? "" : "s"}`}
                       </span>
                     )}
                   </h2>
@@ -970,7 +976,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
 
             {searchResults !== null ? (
               <div className="border-t border-line/10 px-2 pb-4 pt-3">
-                {searchResults.filter(matchesArea).length === 0 ? (
+                {searchShown.length === 0 ? (
                   <p className="py-4 text-center text-[14px] text-ink-300">
                     Sin resultados
                     {searchQuery.trim() && ` para "${searchQuery.trim()}"`}
@@ -981,7 +987,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                   <div className="overflow-x-auto">
                     <CompactRowHeader />
                     <div className="flex min-w-[780px] flex-col gap-0.5 px-2">
-                      {searchResults.filter(matchesArea).map((record) => (
+                      {searchShown.map((record) => (
                         <RecordRow key={record.id} record={record} />
                       ))}
                     </div>
