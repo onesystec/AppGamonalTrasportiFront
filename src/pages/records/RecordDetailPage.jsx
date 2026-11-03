@@ -1597,7 +1597,7 @@ const RecordEditForm = ({
           <TextField
             id="kilometrosReales"
             label={
-              isDhlAb(record)
+              isDhlAb
                 ? `Kilometros reales, ida y vuelta${record.kmFacturables ? ` (planificado: ${record.kilometros} x2 = ${record.kmFacturables} km)` : ""}`
                 : `Kilometros reales${record.kilometros != null ? ` (planificado: ${record.kilometros} km)` : ""}`
             }
