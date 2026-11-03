@@ -367,12 +367,22 @@ export const OwnerDashboardPage = () => {
   const performanceData = useMemo(
     () =>
       monthlyKmTrend && monthlyTrend
-        ? monthlyKmTrend.map((m, i) => ({
-            month: m.month,
-            km: m.km,
-            facturacion: monthlyTrend[i].facturacion,
-            facturacionPotencial: monthlyTrend[i].facturacionPotencial,
-          }))
+        ? monthlyKmTrend.map((m, i) => {
+            const { facturacion, facturacionPotencial } = monthlyTrend[i];
+            // "Si se cobra todo" solo en los meses donde falta cobrar algo; si lo cobrado ya alcanza la estimacion, no hay linea.
+            const faltaCobrar = (idx) => (monthlyTrend[idx] ? monthlyTrend[idx].facturacionPotencial - monthlyTrend[idx].facturacion >= 1 : false);
+            const hay = faltaCobrar(i);
+            return {
+              month: m.month,
+              km: m.km,
+              facturacion,
+              // Valor real del potencial (solo con diferencia): lo usa el tooltip.
+              facturacionPotencial: hay ? facturacionPotencial : null,
+              // Para dibujar: en los meses vecinos la linea nace y vuelve a la azul, asi un mes suelto tambien se ve.
+              potencialLinea: hay ? facturacionPotencial : faltaCobrar(i - 1) || faltaCobrar(i + 1) ? facturacion : null,
+              hayPotencial: hay,
+            };
+          })
         : null,
     [monthlyKmTrend, monthlyTrend]
   );

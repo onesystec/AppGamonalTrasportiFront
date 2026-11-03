@@ -12,12 +12,14 @@ const PerformanceTooltip = ({ active, payload, label }) => {
   return (
     <div className="glass-surface-sm rounded-lg px-3 py-2 text-[13px]">
       <div className="mb-1 font-semibold text-ink-50">{label}</div>
-      {payload.map((item) => (
+      {payload
+        .filter((item) => item.dataKey !== "potencialLinea" || item.payload?.hayPotencial)
+        .map((item) => (
         <div key={item.dataKey} className="flex items-center gap-2 text-ink-300">
           <span className="h-2 w-2 rounded-full" style={{ background: item.color }} />
           {item.name}:{" "}
           <span className="font-medium text-ink-50">
-            {item.dataKey === "facturacion" || item.dataKey === "facturacionPotencial"
+            {item.dataKey === "facturacion" || item.dataKey === "potencialLinea"
               ? formatCurrency(item.value)
               : `${Math.round(item.value).toLocaleString("es-AR")} km`}
           </span>
@@ -95,12 +97,22 @@ export const PerformanceTrendChart = ({ data }) => {
           isAnimationActive={false}
           yAxisId="eur"
           type="monotone"
-          dataKey="facturacionPotencial"
+          dataKey="potencialLinea"
           name="Si se cobra todo"
           stroke={PERFORMANCE_COLORS.potencial}
           strokeWidth={2}
           strokeDasharray="6 4"
-          dot={false}
+          connectNulls={false}
+          dot={(props) =>
+            props.payload?.hayPotencial ? (
+              <circle key={props.key} cx={props.cx} cy={props.cy} r={3.5} fill={PERFORMANCE_COLORS.potencial} stroke="none" />
+            ) : null
+          }
+          activeDot={(props) =>
+            props.payload?.hayPotencial ? (
+              <circle key={props.key} cx={props.cx} cy={props.cy} r={5} fill={PERFORMANCE_COLORS.potencial} stroke="none" />
+            ) : null
+          }
         />
       </ComposedChart>
     </ResponsiveContainer>
