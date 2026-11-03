@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { isEmbedded } from "../../lib/embedded";
+import { OneSystecMark } from "../ui/OneSystecMark";
 import { SettingsIcon } from "../ui/icons";
 
 const SunIcon = (props) => (
@@ -150,6 +151,11 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
               Cerrar sesión
             </button>
           )}
+
+          {/* Firma: separada del menu por una linea fina, siempre abajo. */}
+          <div className="mt-1 border-t border-sidebar-border px-3 pt-3">
+            <OneSystecMark variant="madeBy" tone="sidebar" className="flex" />
+          </div>
         </div>
       </div>
     </div>

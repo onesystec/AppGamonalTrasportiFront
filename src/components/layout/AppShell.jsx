@@ -18,6 +18,7 @@ import { MemorandumsPendientesBanner, usePendingMemorandums } from "../memorandu
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { DriverModeSwitch } from "./DriverModeSwitch";
 import { NotificationsBell } from "./NotificationsBell";
+import { OneSystecMark } from "../ui/OneSystecMark";
 import { UpdateBanner } from "./UpdateBanner";
 
 const UserIcon = (props) => (
@@ -389,7 +390,7 @@ const AppShellContent = () => {
           campanita, es donde va cualquier otro boton global que se agregue a futuro. */}
       {isPrivileged && (
         <header className={clsx("fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-between gap-4 border-b border-line/10 bg-background px-6 sm:flex", sidebarPinned ? "sm:left-60" : "sm:left-16")}>
-          <form onSubmit={handleSearch} role="search" className="relative w-full max-w-md">
+          <form onSubmit={handleSearch} role="search" className="relative w-full min-w-0 max-w-md">
             <SearchIcon className="pointer-events-none absolute left-4 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-ink-400" />
             <input
               type="search"
@@ -401,7 +402,10 @@ const AppShellContent = () => {
             />
           </form>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
+            {/* En anchos medios, con el buscador, el texto no entra: solo el logo. */}
+            <OneSystecMark variant="by" logoOnly className="flex lg:hidden" />
+            <OneSystecMark variant="by" className="hidden lg:flex" />
             <DriverModeSwitch />
             <NotificationsBell />
             <Link
@@ -424,6 +428,7 @@ const AppShellContent = () => {
 
       {showDriverBar && (
         <header className={clsx("fixed left-0 right-0 top-0 z-40 hidden h-16 items-center justify-end gap-3 border-b border-line/10 bg-background px-6 sm:flex", sidebarPinned ? "sm:left-60" : "sm:left-16")}>
+          <OneSystecMark variant="by" className="flex" />
           <DriverModeSwitch />
         </header>
       )}
@@ -585,6 +590,11 @@ const AppShellContent = () => {
               </button>
             )}
           </div>
+
+          {/* Firma: separada del menu por una linea fina, siempre abajo. */}
+          <div className={clsx("shrink-0 border-t border-sidebar-border pt-3", compact ? "flex justify-center" : "px-3")}>
+            <OneSystecMark variant="madeBy" tone="sidebar" logoOnly={compact} className="flex" />
+          </div>
         </aside>
 
       <div className="relative z-10 sm:flex">
@@ -609,11 +619,14 @@ const AppShellContent = () => {
                 alt="ONE DRIVER Express"
                 className={clsx("h-10 w-10 shrink-0", isPrivileged ? "rounded-xl" : "rounded-full")}
               />
-              {!isPrivileged && (
-                <span className="text-[20px] font-semibold text-ink-50">
-                  ONE DRIVER <span className="text-brand">Express</span>
-                </span>
-              )}
+              <span className="flex flex-col items-start gap-0.5 text-left">
+                {!isPrivileged && (
+                  <span className="text-[20px] font-semibold leading-tight text-ink-50">
+                    ONE DRIVER <span className="text-brand">Express</span>
+                  </span>
+                )}
+                <OneSystecMark variant="by" className="flex" />
+              </span>
             </button>
 
             <div className="flex items-center gap-2">

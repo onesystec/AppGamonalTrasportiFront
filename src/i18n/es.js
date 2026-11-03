@@ -248,5 +248,6 @@ export const es = {
   "hist.circuit": "Milano/Roma",
   "hist.driverCircuit": "Chofer / Milano o Roma",
   "disp.client.search": "Buscar chofer o vehículo",
+  "firma.madeBy": "Hecho por",
   // @@END
 };

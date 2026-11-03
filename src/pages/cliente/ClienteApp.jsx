@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useT } from "../../i18n/index.jsx";
 import { isEmbedded } from "../../lib/embedded";
+import { OneSystecMark } from "../../components/ui/OneSystecMark";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { haEntrado, marcarEntrado } from "../../lib/entrada";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
@@ -115,7 +116,7 @@ const ClienteShell = () => {
 
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
 
-  const marca = (soloLogo = false) => (
+  const marca = (soloLogo = false, conFirma = false) => (
     <div className={clsx("flex items-center gap-3", soloLogo && "justify-center")}>
       {user?.imagenUrl ? (
         <img src={user.imagenUrl} alt={titulo} className="h-11 w-11 shrink-0 rounded-xl bg-white object-contain p-1" />
@@ -126,6 +127,7 @@ const ClienteShell = () => {
         <div className="min-w-0 flex-1">
           <span className="block truncate text-[16px] font-semibold text-ink-50">{titulo || "ONE DRIVER Express"}</span>
           {subtitulo && <span className="block truncate text-[12px] text-ink-400">{subtitulo}</span>}
+          {conFirma && <OneSystecMark variant="by" className="mt-0.5 flex" />}
         </div>
       )}
     </div>
@@ -205,6 +207,9 @@ const ClienteShell = () => {
             {compacta ? <ChevronRightIcon className="h-[18px] w-[18px]" /> : <ChevronLeftIcon className="h-[18px] w-[18px]" />}
           </button>
         </div>
+        <div className={clsx("border-t border-line/10 pt-3", compacta ? "flex justify-center" : "px-1")}>
+          <OneSystecMark variant="madeBy" logoOnly={compacta} className="flex" />
+        </div>
       </aside>
 
       {/* Celular: el menu de vistas se despliega de izquierda a derecha sobre la pagina. */}
@@ -231,6 +236,9 @@ const ClienteShell = () => {
           <nav aria-label={t("nav.views")} className="flex flex-1 flex-col gap-4 overflow-y-auto">
             {grupos(false)}
           </nav>
+          <div className="border-t border-line/10 px-1 pt-3">
+            <OneSystecMark variant="madeBy" className="flex" />
+          </div>
         </aside>
       </div>
 
@@ -245,7 +253,7 @@ const ClienteShell = () => {
               aria-label={t("nav.views")}
               className="flex min-w-0 flex-1 items-center gap-2 rounded-xl text-left"
             >
-              <span className="min-w-0 flex-1">{marca()}</span>
+              <span className="min-w-0 flex-1">{marca(false, true)}</span>
               <ChevronRightIcon className="h-5 w-5 shrink-0 text-ink-300" />
             </button>
             {acciones()}
