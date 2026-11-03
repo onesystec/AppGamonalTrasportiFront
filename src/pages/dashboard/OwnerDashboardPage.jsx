@@ -367,7 +367,12 @@ export const OwnerDashboardPage = () => {
   const performanceData = useMemo(
     () =>
       monthlyKmTrend && monthlyTrend
-        ? monthlyKmTrend.map((m, i) => ({ month: m.month, km: m.km, facturacion: monthlyTrend[i].facturacion }))
+        ? monthlyKmTrend.map((m, i) => ({
+            month: m.month,
+            km: m.km,
+            facturacion: monthlyTrend[i].facturacion,
+            facturacionPotencial: monthlyTrend[i].facturacionPotencial,
+          }))
         : null,
     [monthlyKmTrend, monthlyTrend]
   );
@@ -633,6 +638,10 @@ export const OwnerDashboardPage = () => {
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#2f8dff]" />
               Facturación
+            </span>
+            <span className="flex items-center gap-1.5" title="Lo que se facturaría si se cobraran todos los servicios (a los de Extras Piazza sin pago cargado se les estima km x precio por km)">
+              <span className="h-0 w-3 border-t-2 border-dashed border-[#f59e0b]" />
+              Si se cobra todo
             </span>
           </div>
         }

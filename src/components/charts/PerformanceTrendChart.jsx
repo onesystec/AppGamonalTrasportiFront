@@ -1,9 +1,9 @@
-import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTheme } from "../../context/ThemeContext";
 import { formatCurrency } from "../../lib/format";
 import { useChartAxisColors } from "./useChartAxisColors";
 
-export const PERFORMANCE_COLORS = { km: "#22d3ee", facturacion: "#2f8dff" };
+export const PERFORMANCE_COLORS = { km: "#22d3ee", facturacion: "#2f8dff", potencial: "#f59e0b" };
 
 const compact = (value) => (Math.abs(value) >= 1000 ? `${Math.round(value / 1000)}k` : `${value}`);
 
@@ -17,7 +17,7 @@ const PerformanceTooltip = ({ active, payload, label }) => {
           <span className="h-2 w-2 rounded-full" style={{ background: item.color }} />
           {item.name}:{" "}
           <span className="font-medium text-ink-50">
-            {item.dataKey === "facturacion"
+            {item.dataKey === "facturacion" || item.dataKey === "facturacionPotencial"
               ? formatCurrency(item.value)
               : `${Math.round(item.value).toLocaleString("es-AR")} km`}
           </span>
@@ -90,6 +90,17 @@ export const PerformanceTrendChart = ({ data }) => {
           stroke={PERFORMANCE_COLORS.facturacion}
           strokeWidth={2.5}
           fill="url(#perfRevenueFill)"
+        />
+        <Line
+          isAnimationActive={false}
+          yAxisId="eur"
+          type="monotone"
+          dataKey="facturacionPotencial"
+          name="Si se cobra todo"
+          stroke={PERFORMANCE_COLORS.potencial}
+          strokeWidth={2}
+          strokeDasharray="6 4"
+          dot={false}
         />
       </ComposedChart>
     </ResponsiveContainer>

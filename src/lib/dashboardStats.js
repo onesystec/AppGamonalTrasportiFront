@@ -219,6 +219,14 @@ const recordRevenue = (record) => {
   return 0;
 };
 
+// Lo que se facturaria si se cobraran todos los servicios: igual que recordRevenue, pero a los que todavia no tienen el pago recibido cargado (Extras Piazza y
+// otros) se les estima km x precio por km (+ area C y espera). Con el pago ya cargado, es ese pago.
+const recordPotentialRevenue = (record) => {
+  const real = recordRevenue(record);
+  if (record.pagoRecibido != null || isDhlAbRecord(record)) return real;
+  return (record.kilometros ?? 0) * (record.precioKm ?? 0) + dhlExtras(record);
+};
+
 const recordProfit = (record, pagoReal = null) => recordRevenue(record) - recordCost(record, pagoReal);
 
 // Conteo de servicios del periodo elegido, a nivel compania (sin separar por
@@ -347,7 +355,7 @@ const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "S
 // facturacion/km aunque haya quedado con esos campos cargados de antes de anularlo.
 export const computeMonthlyRevenueTrend = (records, now = new Date(), pagoReal = null) => {
   const year = now.getFullYear();
-  const buckets = MONTH_LABELS.map((month) => ({ month, facturacion: 0, ganancia: 0 }));
+  const buckets = MONTH_LABELS.map((month) => ({ month, facturacion: 0, facturacionPotencial: 0, ganancia: 0 }));
 
   records.forEach((r) => {
     if (r.estado === "ANNULLATO") return;
@@ -355,6 +363,7 @@ export const computeMonthlyRevenueTrend = (records, now = new Date(), pagoReal =
     if (date.getFullYear() !== year) return;
     const bucket = buckets[date.getMonth()];
     bucket.facturacion += recordRevenue(r);
+    bucket.facturacionPotencial += recordPotentialRevenue(r);
     bucket.ganancia += recordProfit(r, pagoReal);
   });
 
