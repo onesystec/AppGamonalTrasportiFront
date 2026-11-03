@@ -143,6 +143,172 @@ const KmRevisarList = ({ items }) => (
   </ul>
 );
 
+// Desglose exacto de lo que se paga a un chofer en el mes: cada concepto con su cantidad, como se calcula y su pago, y los datos que se validan. La suma de los pagos es el
+// total a pagar. Todo sale del mismo calculo que el pago de cada servicio (ver el detalle al abrir la fila).
+const DesglosePago = ({ driver }) => {
+  const d = driver.desglose;
+  if (!d) return null;
+  const t = d.tarifas;
+  const filas = [];
+  for (const [franja, titulo] of [["dia", "dia"], ["noche", "noche"]]) {
+    const tarifaKm = franja === "dia" ? t.kmBloqueDiaEur : t.kmBloqueNocheEur;
+    const tarifaHora = franja === "dia" ? t.horaDiaEur : t.horaNocheEur;
+    const km = d[franja].porKm;
+    if (km.servicios > 0)
+      filas.push({
+        clave: `${franja}-km`,
+        concepto: `Servicios de ${titulo} - por km`,
+        cantidad: `${km.servicios} ${km.servicios === 1 ? "servicio" : "servicios"} - ${formatKm(km.km)}`,
+        calculo: `${nf(km.km)} km ÷ ${t.kmh} km/h = ${formatHours(km.horas)} x ${formatCurrency(tarifaKm)}/h`,
+        pago: km.pago,
+      });
+    const ruta = d[franja].porRuta;
+    if (ruta.servicios > 0)
+      filas.push({
+        clave: `${franja}-ruta`,
+        concepto: `Servicios de ${titulo} - cortos (tiempo de ruta)`,
+        cantidad: `${ruta.servicios} ${ruta.servicios === 1 ? "servicio" : "servicios"} - ${formatKm(ruta.km)}`,
+        calculo: `${formatHours(ruta.horas)} de ruta (ida y vuelta) x ${formatCurrency(tarifaHora)}/h${t.tiempoRutaHastaKm ? ` - menos de ${t.tiempoRutaHastaKm} km se paga por tiempo` : ""}`,
+        pago: ruta.pago,
+      });
+    const horas = d[franja].porHoras;
+    if (horas.servicios > 0)
+      filas.push({
+        clave: `${franja}-horas`,
+        concepto: `Horas de ${titulo} (jornada)`,
+        cantidad: formatHours(horas.horas),
+        calculo: `${formatHours(horas.horas)} x ${formatCurrency(tarifaHora)}/h`,
+        pago: horas.pago,
+      });
+  }
+  if (d.espera.horas > 0)
+    filas.push({
+      clave: "espera",
+      concepto: "Espera aprobada",
+      cantidad: formatHours(d.espera.horas),
+      calculo: `${formatHours(d.espera.horas)} x ${formatCurrency(t.esperaHoraEur)}/h`,
+      pago: d.espera.pago,
+    });
+  if (d.reperibilidad.salidas > 0)
+    filas.push({
+      clave: "reperibilidad",
+      concepto: "Reperibilidad (fuera del horario laboral)",
+      cantidad: `${d.reperibilidad.salidas} ${d.reperibilidad.salidas === 1 ? "salida" : "salidas"}`,
+      calculo: `${[
+        d.reperibilidad.noche > 0 && `${d.reperibilidad.noche} de noche`,
+        d.reperibilidad.finDeSemana > 0 && `${d.reperibilidad.finDeSemana} de fin de semana`,
+        d.reperibilidad.festivo > 0 && `${d.reperibilidad.festivo} en festivo`,
+      ]
+        .filter(Boolean)
+        .join(", ")} - ${d.reperibilidad.salidas} x ${formatCurrency(t.reperibilidadEur)}`,
+      pago: d.reperibilidad.pago,
+    });
+  if (d.adicionales.count > 0)
+    filas.push({
+      clave: "adicionales",
+      concepto: "Trabajos adicionales aprobados",
+      cantidad: `${d.adicionales.count} - ${formatHours(d.adicionales.horas)}`,
+      calculo: `horas a tarifa de dia (${formatCurrency(t.horaDiaEur)}/h) o de noche (${formatCurrency(t.horaNocheEur)}/h)`,
+      pago: d.adicionales.pago,
+    });
+
+  // Totales de un vistazo: km de dia, km de noche, horas de espera y reperibilidad, cada uno con lo que se paga por ello.
+  const franjaTotal = (f) => {
+    const buckets = [d[f].porKm, d[f].porRuta, d[f].porHoras];
+    return {
+      servicios: buckets.reduce((s, b) => s + b.servicios, 0),
+      km: buckets.reduce((s, b) => s + b.km, 0),
+      horas: buckets.reduce((s, b) => s + b.horas, 0),
+      pago: buckets.reduce((s, b) => s + b.pago, 0),
+      porHoras: d[f].porHoras.servicios > 0,
+    };
+  };
+  const dia = franjaTotal("dia");
+  const noche = franjaTotal("noche");
+  const resumen = [
+    { clave: "dia", titulo: "Dia", grande: dia.porHoras && dia.km === 0 ? formatHours(dia.horas) : formatKm(dia.km), detalle: `${dia.servicios} ${dia.servicios === 1 ? "servicio" : "servicios"}${dia.horas > 0 && !(dia.porHoras && dia.km === 0) ? ` - ${formatHours(dia.horas)}` : ""}`, pago: dia.pago },
+    { clave: "noche", titulo: "Noche", grande: noche.porHoras && noche.km === 0 ? formatHours(noche.horas) : formatKm(noche.km), detalle: `${noche.servicios} ${noche.servicios === 1 ? "servicio" : "servicios"}${noche.horas > 0 && !(noche.porHoras && noche.km === 0) ? ` - ${formatHours(noche.horas)}` : ""}`, pago: noche.pago },
+    { clave: "espera", titulo: "Espera", grande: formatHours(d.espera.horas), detalle: d.espera.pendienteHoras > 0 ? `+ ${formatHours(d.espera.pendienteHoras)} por aprobar (no suma)` : "aprobada", pago: d.espera.pago },
+    { clave: "rep", titulo: "Reperibilidad", grande: `${d.reperibilidad.salidas} ${d.reperibilidad.salidas === 1 ? "salida" : "salidas"}`, detalle: `${formatCurrency(t.reperibilidadEur)} por salida`, pago: d.reperibilidad.pago },
+  ];
+
+  const v = d.validaciones;
+  const avisos = [
+    d.espera.pendienteHoras > 0 && {
+      tono: "warn",
+      texto: `Espera por aprobar: ${formatHours(d.espera.pendienteHoras)} (serian ${formatCurrency(d.espera.pendientePago)}). No suma al pago hasta que un responsable la apruebe.`,
+    },
+    v.serviciosSinKm > 0 && { tono: "warn", texto: `${v.serviciosSinKm} ${v.serviciosSinKm === 1 ? "servicio sin km ni circuito" : "servicios sin km ni circuito"}: se pagan 0 hasta que tengan datos.` },
+    v.kmARevisar > 0 && { tono: "warn", texto: `${v.kmARevisar} ${v.kmARevisar === 1 ? "servicio con km a revisar" : "servicios con km a revisar"} (el circuito tiene muchos mas km que los planificados).` },
+    v.viajesIncluidos > 0 && { tono: "info", texto: `${v.viajesIncluidos} ${v.viajesIncluidos === 1 ? "servicio va incluido" : "servicios van incluidos"} en un viaje compactado: el viaje se paga una sola vez, en su servicio principal.` },
+    v.horasPorAprobar > 0 && { tono: "info", texto: `${v.horasPorAprobar} ${v.horasPorAprobar === 1 ? "servicio con horas por aprobar" : "servicios con horas por aprobar"}.` },
+    t.pagoPorKm && { tono: "info", texto: `Velocidad de pago: ${t.kmh} km/h (los km se pasan a horas de manejo con esa velocidad).` },
+  ].filter(Boolean);
+
+  return (
+    <div className="border-t border-line/10 px-5 py-4">
+      <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Cuanto se paga y por que</h3>
+      <div className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {resumen.map((r) => (
+          <div key={r.clave} className="rounded-xl bg-line/[0.06] px-3.5 py-2.5">
+            <span className="block text-[11px] uppercase tracking-wide text-ink-400">{r.titulo}</span>
+            <span className="block text-[15px] font-semibold text-ink-50">{r.grande}</span>
+            <span className="block text-[11.5px] text-ink-400">{r.detalle}</span>
+            <span className="mt-1 block text-[14px] font-semibold text-accent-300">= {formatCurrency(r.pago)}</span>
+          </div>
+        ))}
+      </div>
+      {filas.length === 0 ? (
+        <p className="text-[13px] text-ink-400">Este chofer no tiene pagos por servicios este mes.</p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-line/10">
+          <div className="hidden bg-line/[0.05] px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400 md:grid md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,2fr)_96px] md:gap-3">
+            <span>Concepto</span>
+            <span>Cantidad</span>
+            <span>Como se calcula</span>
+            <span className="text-right">Pago</span>
+          </div>
+          {filas.map((fila) => (
+            <div key={fila.clave} className="grid grid-cols-1 gap-0.5 border-t border-line/10 px-3 py-2.5 first:border-t-0 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,2fr)_96px] md:items-center md:gap-3">
+              <span className="text-[13px] font-medium text-ink-50">{fila.concepto}</span>
+              <span className="text-[12.5px] text-ink-200">{fila.cantidad}</span>
+              <span className="text-[12px] text-ink-300">{fila.calculo}</span>
+              <span className="text-[13.5px] font-semibold text-ink-50 md:text-right">{formatCurrency(fila.pago)}</span>
+            </div>
+          ))}
+          <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line/20 bg-line/[0.06] px-3 py-2.5">
+            <span className="text-[13px] font-semibold text-ink-50">Total a pagar</span>
+            <span className="text-[15px] font-bold text-ink-50">{formatCurrency(driver.total)}</span>
+          </div>
+          {driver.aDescontar?.total > 0 && (
+            <>
+              <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line/10 px-3 py-2">
+                <span className="text-[12.5px] text-ink-300">
+                  A descontar: {driver.aDescontar.count} {driver.aDescontar.count === 1 ? "multa pendiente" : "multas pendientes"}
+                </span>
+                <span className="text-[13px] font-semibold text-danger-500">- {formatCurrency(driver.aDescontar.total)}</span>
+              </div>
+              <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line/10 bg-line/[0.06] px-3 py-2.5">
+                <span className="text-[13px] font-semibold text-ink-50">Neto</span>
+                <span className="text-[15px] font-bold text-ink-50">{formatCurrency(driver.neto)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      {avisos.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {avisos.map((aviso) => (
+            <li key={aviso.texto} className={clsx("rounded-lg px-3 py-1.5 text-[12px]", aviso.tono === "warn" ? "bg-warning-500/10 text-warning-500" : "bg-line/[0.06] text-ink-300")}>
+              {aviso.texto}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // Fila de un chofer (OWNER/ADMIN): resumen del mes y, al abrirla, sus servicios.
 const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad, canEditAparte, onPagoAparte, savingAparte }) => {
   const [open, setOpen] = useState(false);
@@ -221,6 +387,8 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
           className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")}
         />
       </button>
+
+      <DesglosePago driver={driver} />
 
       {driver.kmRevisar?.length > 0 && (
         <div className="border-t border-line/10 bg-warning-500/10 px-5 py-2.5">
