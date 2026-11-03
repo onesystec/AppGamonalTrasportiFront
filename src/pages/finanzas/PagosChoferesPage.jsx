@@ -280,20 +280,6 @@ const DesglosePago = ({ driver }) => {
             <span className="text-[13px] font-semibold text-ink-50">Total a pagar</span>
             <span className="text-[15px] font-bold text-ink-50">{formatCurrency(driver.total)}</span>
           </div>
-          {driver.aDescontar?.total > 0 && (
-            <>
-              <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line/10 px-3 py-2">
-                <span className="text-[12.5px] text-ink-300">
-                  A descontar: {driver.aDescontar.count} {driver.aDescontar.count === 1 ? "multa pendiente" : "multas pendientes"}
-                </span>
-                <span className="text-[13px] font-semibold text-danger-500">- {formatCurrency(driver.aDescontar.total)}</span>
-              </div>
-              <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line/10 bg-line/[0.06] px-3 py-2.5">
-                <span className="text-[13px] font-semibold text-ink-50">Neto</span>
-                <span className="text-[15px] font-bold text-ink-50">{formatCurrency(driver.neto)}</span>
-              </div>
-            </>
-          )}
         </div>
       )}
       {avisos.length > 0 && (
