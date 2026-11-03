@@ -1094,7 +1094,7 @@ const RecordSummaryView = ({
           label="Chofer"
           value={`${record.driver?.nombre ?? ""} ${record.driver?.apellido ?? ""}`}
         />
-        {record.ruta?.duracionMin != null && (
+        {!isChofer && record.ruta?.duracionMin != null && (
           <InfoRow
             label="Ruta estimada"
             value={`${record.ruta.distanciaKm.toFixed(1)} km - ${Math.round(record.ruta.duracionMin)} min`}
@@ -1116,21 +1116,26 @@ const RecordSummaryView = ({
             label={isDhlAb(record) ? "Km del cliente (ida) / facturables" : "Km planificados"}
             value={
               (isDhlAb(record) ? `${record.kilometros ?? "-"} → x2 = ${record.kmFacturables ?? "-"}` : (record.kilometros ?? "-")) +
-              (record.compactado?.km
-                ? ` (viaje: ${record.compactado.km.planificado})`
-                : !isChofer && record.circuito?.km
-                  ? ` (circuito: ${record.circuito.km})`
-                  : "")
+              // El chofer ve solo los km planificados y su resultado; el viaje y el circuito son de la oficina.
+              (isChofer
+                ? ""
+                : record.compactado?.km
+                  ? ` (viaje: ${record.compactado.km.planificado})`
+                  : record.circuito?.km
+                    ? ` (circuito: ${record.circuito.km})`
+                    : "")
             }
           />
-          <InfoRow
-            label={record.compactado?.km ? "Km reales (de este servicio)" : "Km reales"}
-            value={
-              record.compactado?.km?.real != null
-                ? `${record.kilometrosReales ?? "-"} (viaje: ${record.compactado.km.real})`
-                : (record.kilometrosReales ?? "-")
-            }
-          />
+          {!isChofer && (
+            <InfoRow
+              label={(record.compactado?.km ? "Km reales (de este servicio)" : "Km reales") + (isDhlAb(record) ? " (ida y vuelta)" : "")}
+              value={
+                record.compactado?.km?.real != null
+                  ? `${record.kilometrosReales ?? "-"} (viaje: ${record.compactado.km.real})`
+                  : (record.kilometrosReales ?? "-")
+              }
+            />
+          )}
           {!isChofer && (
             <InfoRow
               label="Diferencia"
@@ -1582,18 +1587,20 @@ const RecordEditForm = ({
           </>
         )}
 
-        {record.compactado ? (
+        {!isChofer && (record.compactado ? (
           <div className="rounded-xl bg-accent-500/10 px-4 py-3 text-[13px] text-ink-200">
             <b className="text-accent-300">Km reales del viaje compacto.</b>{" "}
             {record.kilometrosReales != null ? `Este servicio: ${record.kilometrosReales} km (viaje: ${record.compactado.km?.real ?? "-"} km). ` : ""}
-            {isChofer
-              ? `Los km se cargan para todo el viaje, junto con tus horas (en ${record.compactado.principalCodigo}): el sistema los reparte entre los servicios.`
-              : "Los km se reparten entre los servicios del viaje: usa «Ajustar reparto de km» en la tarjeta del viaje."}
+            Los km se reparten entre los servicios del viaje: usa «Ajustar reparto de km» en la tarjeta del viaje.
           </div>
         ) : (
           <TextField
             id="kilometrosReales"
-            label={`Kilometros reales${record.kilometros != null ? ` (planificado: ${record.kilometros} km)` : ""}`}
+            label={
+              isDhlAb(record)
+                ? `Kilometros reales, ida y vuelta${record.kmFacturables ? ` (planificado: ${record.kilometros} x2 = ${record.kmFacturables} km)` : ""}`
+                : `Kilometros reales${record.kilometros != null ? ` (planificado: ${record.kilometros} km)` : ""}`
+            }
             type="number"
             step="0.1"
             min="0"
@@ -1601,7 +1608,7 @@ const RecordEditForm = ({
             value={form.kilometrosReales}
             onChange={handleChange("kilometrosReales")}
           />
-        )}
+        ))}
 
         {!isChofer && (
         <div>

@@ -135,7 +135,7 @@ export const ViajeCompactoCard = ({ record, isChofer, onChanged }) => {
         })}
       </ol>
 
-      <KmViajeResumen km={viaje.km} servicios={viaje.servicios} className="mt-3 rounded-xl bg-line/[0.05] px-3 py-2.5" />
+      {!isChofer && <KmViajeResumen km={viaje.km} servicios={viaje.servicios} className="mt-3 rounded-xl bg-line/[0.05] px-3 py-2.5" />}
 
       {!isChofer && editingKm && (
         <KmRepartoEditor
