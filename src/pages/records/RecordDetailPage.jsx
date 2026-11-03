@@ -1118,7 +1118,7 @@ const RecordSummaryView = ({
               (isDhlAb(record) ? `${record.kilometros ?? "-"} → x2 = ${record.kmFacturables ?? "-"}` : (record.kilometros ?? "-")) +
               (record.compactado?.km
                 ? ` (viaje: ${record.compactado.km.planificado})`
-                : record.circuito?.km
+                : !isChofer && record.circuito?.km
                   ? ` (circuito: ${record.circuito.km})`
                   : "")
             }
@@ -1147,7 +1147,8 @@ const RecordSummaryView = ({
         </div>
       </div>
 
-      <CircuitoDetalle circuito={record.circuito} recordId={record.id} recorridoEstado={record.recorridoEstado} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />
+      {/* El circuito (km con vuelta al lugar de espera) lo ve la oficina; el chofer ve los km planificados contados. */}
+      {!isChofer && <CircuitoDetalle circuito={record.circuito} recordId={record.id} recorridoEstado={record.recorridoEstado} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />}
 
       <ViajeCompactoCard record={record} isChofer={isChofer} onChanged={onReload} />
 
