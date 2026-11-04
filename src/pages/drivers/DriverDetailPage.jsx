@@ -2,6 +2,7 @@ import { BackLink } from "../../components/ui/BackLink";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { AsistenciaCard } from "../../components/calendario/AsistenciaCard";
+import { FusionChoferModal } from "../../components/drivers/FusionChoferModal";
 import { Alert } from "../../components/ui/Alert";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
@@ -202,6 +203,7 @@ export const DriverDetailPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const [showFusion, setShowFusion] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -409,6 +411,11 @@ export const DriverDetailPage = () => {
               >
                 <TrashIcon className="h-[17px] w-[17px]" />
               </button>
+            )}
+            {user.cargo === "OWNER" && driver.cargo === "CHOFER" && (
+              <Button variant="ghost" className="sm:w-auto sm:px-6" onClick={() => setShowFusion(true)}>
+                Fusionar duplicado
+              </Button>
             )}
             <Button variant="ghost" className="sm:w-auto sm:px-8" onClick={startEditing}>
               Editar chofer
@@ -714,6 +721,11 @@ export const DriverDetailPage = () => {
         </GlassCard>
       )}
     </div>
+
+    <FusionChoferModal open={showFusion} driver={driver} onClose={() => setShowFusion(false)} onDone={() => {
+        refreshDrivers();
+        load();
+      }} />
 
     <ConfirmModal
       open={showDeleteConfirm}

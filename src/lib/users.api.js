@@ -15,6 +15,11 @@ export const updateUserRequest = (id, payload) =>
 
 export const deleteUserRequest = (id) => api.delete(`/users/${id}`);
 
+// Fusion de un chofer duplicado (origenId) dentro de la ficha id (solo Owner): primero la vista previa, despues la fusion.
+export const fusionPreviewRequest = (id, origenId) =>
+  api.get(`/users/${id}/fusion/preview`, { params: { origenId } }).then((res) => res.data.data);
+export const fusionChoferRequest = (id, origenId) => api.post(`/users/${id}/fusion`, { origenId }).then((res) => res.data.data);
+
 // logo: true = logo de una empresa cliente (se muestra entero, sin recortar a cuadrado).
 export const uploadUserAvatarRequest = (id, file, { logo = false } = {}) => {
   const formData = new FormData();
