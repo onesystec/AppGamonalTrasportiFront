@@ -7,8 +7,6 @@ import { RecepcionPaqueteCard } from "../../components/horas/RecepcionPaqueteCar
 import { Alert } from "../../components/ui/Alert";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { PageLoader } from "../../components/ui/PageLoader";
-import { Switch } from "../../components/ui/Switch";
-import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { useCerrarServicio } from "../../hooks/useCerrarServicio";
 import { parseApiError } from "../../lib/api";
@@ -17,44 +15,13 @@ import { desdeCorte } from "../../lib/fechasCorte";
 import { isPending, sortPending } from "../../lib/pendientes";
 import { getSinSustentarRequest, listRecordsRequest } from "../../lib/records.api";
 import { getMyDrivingStyleRequest, getMyProgressRequest } from "../../lib/metas.api";
-import { updateMyReperibilidadRequest } from "../../lib/users.api";
-
-// Mismo criterio de "es de hoy" que dashboardStats.js (comparacion en hora local del
-// navegador) - si reperibilidadActualizada no es de hoy, el flag quedo de un dia
-// anterior y se trata como si no estuviera marcado.
-const isToday = (value) => {
-  if (!value) return false;
-  const d = new Date(value);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
-  );
-};
 
 export const ChoferDashboardPage = () => {
-  const { user, setUser } = useAuth();
   const [records, setRecords] = useState(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(null);
   const [estilo, setEstilo] = useState(null);
   const [sinSustentar, setSinSustentar] = useState(null);
-
-  const [savingReperibilidad, setSavingReperibilidad] = useState(false);
-  const [reperibilidadError, setReperibilidadError] = useState("");
-
-  const handleToggleReperibilidad = async (checked) => {
-    setSavingReperibilidad(true);
-    setReperibilidadError("");
-    try {
-      // El switch muestra "no disponible" activado; el backend guarda ese mismo booleano.
-      const updated = await updateMyReperibilidadRequest(checked);
-      setUser(updated);
-    } catch (err) {
-      setReperibilidadError(parseApiError(err).message);
-    } finally {
-      setSavingReperibilidad(false);
-    }
-  };
 
   const load = useCallback(() => {
     setError("");
@@ -123,20 +90,6 @@ export const ChoferDashboardPage = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      {user?.area === "EXTRAS_PIAZZA" && (
-        <GlassCard>
-          <Alert>{reperibilidadError}</Alert>
-          <Switch
-            id="reperibilidad-no-disponible"
-            label="No estoy disponible esta noche"
-            description="Activalo si no queres aparecer en el listado de reperibilita por si sale un pedido de Extras Piazza. Se resetea solo al dia siguiente."
-            checked={Boolean(user?.reperibilidadNoDisponible) && isToday(user?.reperibilidadActualizada)}
-            disabled={savingReperibilidad}
-            onChange={handleToggleReperibilidad}
-          />
-        </GlassCard>
-      )}
-
       {awaitingReception.length > 0 && (
         <GlassCard className="border border-warning-500/30">
           <div className="flex flex-col divide-y divide-line/10">
