@@ -262,7 +262,7 @@ export const DriverDetailPage = () => {
     setSaveSuccess(false);
 
     const ROLE_FIELDS = ["responsableTipo", "areasPermitidas", "nivelChofer"];
-    const RRHH_FIELDS = ["nombre", "apellido", "correoElectronico", "numeroCelular", "fechaNacimiento", "estado", "vehiculoAsignadoId"];
+    const RRHH_FIELDS = ["nombre", "apellido", "numeroCelular", "fechaNacimiento", "estado", "vehiculoAsignadoId"];
     const payload = Object.fromEntries(
       Object.entries(form).filter(
         ([key, value]) => value !== "" && !ROLE_FIELDS.includes(key) && (!isRrhh || RRHH_FIELDS.includes(key))
@@ -514,11 +514,13 @@ export const DriverDetailPage = () => {
               />
               <TextField
                 id="correoElectronico"
-                label="Correo electronico"
+                label={isRrhh ? "Correo electronico (solo la oficina lo cambia)" : "Correo electronico"}
                 type="email"
                 value={form.correoElectronico}
                 onChange={handleChange("correoElectronico")}
                 error={fieldErrors.correoElectronico?.[0]}
+                disabled={isRrhh}
+                title={isRrhh ? "Solo la oficina puede cambiar el correo: es con lo que se accede a la cuenta" : undefined}
                 required
               />
               <TextField

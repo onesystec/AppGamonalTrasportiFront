@@ -8,6 +8,10 @@ export const loginRequest = (payload) =>
 export const ssoLoginRequest = (ticket) =>
   api.post("/auth/sso", { ticket }).then((res) => res.data.data);
 
+// Cambio de contraseña propio: pide la actual y devuelve un token nuevo (las demás sesiones se cierran en el servidor).
+export const changePasswordRequest = (payload) =>
+  api.post("/auth/change-password", payload).then((res) => res.data.data);
+
 export const meRequest = () => api.get("/auth/me").then((res) => res.data.data.user);
 
 export const forgotPasswordRequest = (correoElectronico) =>

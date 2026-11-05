@@ -38,6 +38,7 @@ import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { AREA_OPTIONS, GRUPO_LABELS, TIPO_DOCUMENTO_LABELS } from "../../lib/constants";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
+import { changePasswordRequest } from "../../lib/auth.api";
 import { listDocumentsRequest } from "../../lib/documents.api";
 import { formatDate, formatDateOnly, formatKm } from "../../lib/format";
 import { AREA_LABEL_BY_KEY, roleText, userAreaKeys } from "../../lib/roles";
@@ -49,6 +50,7 @@ import {
   uploadUserAvatarRequest,
 } from "../../lib/users.api";
 import { kmRecorrido } from "../../lib/km";
+import { setToken } from "../../lib/token";
 
 const areaLabel = (value) => AREA_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
 
@@ -261,7 +263,8 @@ const EmergencyFields = [
   { name: "contactoEmergenciaTelefono", label: "Telefono", type: "tel", maxLength: 30 },
 ];
 
-const ChangePasswordModal = ({ userId, onClose, onDone }) => {
+const ChangePasswordModal = ({ onClose, onDone }) => {
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -276,6 +279,10 @@ const ChangePasswordModal = ({ userId, onClose, onDone }) => {
   }, [saving, onClose]);
 
   const handleSave = async () => {
+    if (!currentPassword) {
+      setError("Escribe tu contrasena actual");
+      return;
+    }
     if (password.length < 8) {
       setError("La contrasena debe tener al menos 8 caracteres");
       return;
@@ -287,7 +294,9 @@ const ChangePasswordModal = ({ userId, onClose, onDone }) => {
     setSaving(true);
     setError("");
     try {
-      await updateUserRequest(userId, { password });
+      const { token } = await changePasswordRequest({ currentPassword, newPassword: password });
+      // El servidor cerro las demas sesiones y emitio una nueva para esta: sin guardarla, la app quedaria deslogueada.
+      setToken(token);
       onDone();
     } catch (err) {
       setError(parseApiError(err).message);
@@ -309,6 +318,14 @@ const ChangePasswordModal = ({ userId, onClose, onDone }) => {
 
         <div className="mt-4 flex flex-col gap-3">
           <Alert>{error}</Alert>
+          <PasswordField
+            id="current-password"
+            label="Contrasena actual"
+            icon={KeyIcon}
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
           <PasswordField
             id="new-password"
             label="Nueva contrasena"
@@ -930,7 +947,6 @@ export const ProfilePage = () => {
 
       {passwordOpen && (
         <ChangePasswordModal
-          userId={user.id}
           onClose={() => setPasswordOpen(false)}
           onDone={() => {
             setPasswordOpen(false);
