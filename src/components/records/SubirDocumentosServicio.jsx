@@ -40,23 +40,24 @@ const useRegisterSubmit = (submitsRef, submit) => {
 };
 
 // Un div y no un form: estos formularios tambien van dentro del formulario de "Terminar servicio" (no se pueden anidar).
-const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, children }) => (
-  <div className="mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-3 sm:p-4">
+// compact: dentro de la tarjeta de los switches (ya tiene su borde): sin caja propia, aprovecha todo el ancho y botones chicos.
+const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, compact = false, children }) => (
+  <div className={compact ? "mt-1 flex flex-col gap-3 border-t border-line/10 pt-3" : "mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-3 sm:p-4"}>
     <h4 className="text-[14px] font-semibold text-ink-50">{title}</h4>
     <Alert>{error}</Alert>
-    <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-4">{children}</div>
-    <div className="flex gap-2 sm:justify-end">
-      <Button type="button" variant="ghost" className="flex-1 sm:w-auto sm:flex-none sm:px-5" disabled={saving} onClick={onCancel}>
+    <div className={compact ? "grid grid-cols-2 gap-x-3 gap-y-3 sm:gap-4" : "grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-4"}>{children}</div>
+    <div className={compact ? "flex justify-end gap-2" : "flex gap-2 sm:justify-end"}>
+      <Button type="button" variant="ghost" className={compact ? "!w-auto !px-4 !py-2 !text-[13px]" : "flex-1 sm:w-auto sm:flex-none sm:px-5"} disabled={saving} onClick={onCancel}>
         Cancelar
       </Button>
-      <Button type="button" className="flex-[2] sm:w-auto sm:flex-none sm:px-6" loading={saving} onClick={onSubmit}>
+      <Button type="button" className={compact ? "!w-auto !px-5 !py-2 !text-[13px]" : "flex-[2] sm:w-auto sm:flex-none sm:px-6"} loading={saving} onClick={onSubmit}>
         {submitLabel}
       </Button>
     </div>
   </div>
 );
 
-export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef, onSaved, onCancel }) => {
+export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, compact = false, submitsRef, onSaved, onCancel }) => {
   const [form, setForm] = useState({ tramo: tramoInicial, numero: "", costo: "", fecha: romeToday(), hora: "", sitioWeb: "" });
   const [foto, setFoto] = useState(null);
   const [errors, setErrors] = useState({});
@@ -97,7 +98,7 @@ export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef,
   useRegisterSubmit(submitsRef, submit);
 
   return (
-    <FormShell title={tramoFijo ? `Mancato pagamento de ${form.tramo === "VUELTA" ? "vuelta" : "ida"}` : "Agregar peaje (mancato pagamento)"} error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar peaje">
+    <FormShell title={tramoFijo ? `Mancato pagamento de ${form.tramo === "VUELTA" ? "vuelta" : "ida"}` : "Agregar peaje (mancato pagamento)"} error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar peaje" compact={compact}>
       {!tramoFijo && (
         <div className="col-span-2">
           <Select
@@ -127,7 +128,7 @@ export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef,
   );
 };
 
-export const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
+export const CombustibleForm = ({ record, compact = false, submitsRef, onSaved, onCancel }) => {
   const last = readLastUsed();
   const areaInicial = areaOfRecord(record) || last.area;
   const [form, setForm] = useState({ monto: "", metodo: last.metodo, area: areaInicial, fecha: romeToday(), hora: romeNowHHMM() });
@@ -172,7 +173,7 @@ export const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
   useRegisterSubmit(submitsRef, submit);
 
   return (
-    <FormShell title="Agregar comprobante de carburante" error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar carburante">
+    <FormShell title="Agregar comprobante de carburante" error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar carburante" compact={compact}>
       <TextField className="col-span-2 sm:col-span-1" id="comb-monto" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.monto} onChange={(e) => set("monto", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.monto} />
       <TextField className="col-span-2 sm:col-span-1" id="comb-metodo" label="Gasolinera" placeholder="Ej. Eni, Q8, Tamoil" maxLength={80} value={form.metodo} onChange={(e) => set("metodo", e.target.value)} error={errors.metodo} />
       {preguntarArea && (

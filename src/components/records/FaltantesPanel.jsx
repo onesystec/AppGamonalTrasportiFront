@@ -136,7 +136,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, u
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de ida",
         form: ({ close }) => (
-          <PeajeForm record={record} tramoInicial="IDA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+          <PeajeForm compact record={record} tramoInicial="IDA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
         ),
       })}
       {row({
@@ -149,7 +149,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, u
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de vuelta",
         form: ({ close }) => (
-          <PeajeForm record={record} tramoInicial="VUELTA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+          <PeajeForm compact record={record} tramoInicial="VUELTA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
         ),
       })}
       {row({
@@ -162,7 +162,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, u
         uploadTo: "/finanzas/combustible/new",
         uploadLabel: "Cargar comprobante de combustible",
         form: ({ close }) => (
-          <CombustibleForm record={record} submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+          <CombustibleForm compact record={record} submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
         ),
       })}
       {onAll && unresolved.length > 1 && (

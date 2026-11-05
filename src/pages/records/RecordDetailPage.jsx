@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EsperaServicio } from "../../components/records/EsperaServicio";
 import { FaltantesCard } from "../../components/records/FaltantesPanel";
 import { SubirDocumentosServicio } from "../../components/records/SubirDocumentosServicio";
 import { ViajeCompactoCard } from "../../components/records/ViajeCompactoCard";
@@ -67,7 +68,7 @@ import { listVehiclesRequest } from "../../lib/vehicles.api";
 // Jornada declarada por el chofer (inicio/fin, espera, pausa) y su estado de aprobacion. El chofer
 // puede cargarla o corregirla mientras no este aprobada; la oficina las revisa en Finanzas > Horas.
 // "isChofer" aqui es quien declara las horas: el chofer, o un Admin/Responsable que manejo este servicio.
-const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
+const JornadaOfService = ({ record, isChofer, onOpenHours, submitsRef, onReload }) => {
   const location = useLocation();
   const viaje = record.compactado;
   // Servicio que no es el principal de un viaje compacto: las horas son las del viaje, se cargan en el principal.
@@ -106,10 +107,12 @@ const JornadaOfService = ({ record, isChofer, onOpenHours }) => {
     return (
       <div className="mt-6 border-t border-line/10 pt-6">
         <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-400">Cierre del servicio</h3>
-        {finished && <p className="mt-2 text-[13px] text-ink-300">Espera declarada: {j.esperaMin ?? 0} min.</p>}
-        {canClose && (
+        {/* Terminado: la espera se ve y se edita aqui mismo (la bolla y los demas archivos ya estan mas abajo). */}
+        {finished && canClose && <EsperaServicio record={record} submitsRef={submitsRef} onSaved={onReload} />}
+        {finished && !canClose && <p className="mt-2 text-[13px] text-ink-300">Espera declarada: {j.esperaMin ?? 0} min.</p>}
+        {!finished && canClose && (
           <Button className="mt-3 sm:w-auto sm:px-5 sm:py-2 sm:text-[13px]" onClick={onOpenHours}>
-            {finished ? "Espera y bolla de trabajo" : "Terminar servicio"}
+            Terminar servicio
           </Button>
         )}
       </div>
@@ -1194,7 +1197,7 @@ const RecordSummaryView = ({
 
       <ViajeCompactoCard record={record} isChofer={isChofer} onChanged={onReload} />
 
-      <JornadaOfService record={record} isChofer={isChofer || isMine} onOpenHours={onOpenHours} />
+      <JornadaOfService record={record} isChofer={isChofer || isMine} onOpenHours={onOpenHours} submitsRef={puedeSubir ? submitsRef : undefined} onReload={onReload} />
 
       <FaltantesCard record={record} onReload={onReload} submitsRef={puedeSubir ? submitsRef : undefined} />
 
