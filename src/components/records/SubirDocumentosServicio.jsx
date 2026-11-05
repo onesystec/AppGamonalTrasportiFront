@@ -57,14 +57,14 @@ const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, chil
 );
 
 export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef, onSaved, onCancel }) => {
-  const [form, setForm] = useState({ tramo: tramoInicial, numero: "", costo: "", fecha: romeToday(), hora: "" });
+  const [form, setForm] = useState({ tramo: tramoInicial, numero: "", costo: "", fecha: romeToday(), hora: "", sitioWeb: "" });
   const [foto, setFoto] = useState(null);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const targa = record.vehicle?.targa ?? "";
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
-  const dirty = Boolean(form.numero || form.costo || form.hora || foto);
+  const dirty = Boolean(form.numero || form.costo || form.hora || form.sitioWeb.trim() || foto);
 
   const submit = async () => {
     if (!dirty) return true;
@@ -80,7 +80,7 @@ export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef,
     setError("");
     try {
       await createMancatoRequest(
-        { numero: form.numero.trim(), targa: normalizeTarga(targa), fecha: form.fecha, hora: form.hora, costo: String(parseCosto(form.costo)), recordId: record.id, tramo: form.tramo },
+        { numero: form.numero.trim(), targa: normalizeTarga(targa), fecha: form.fecha, hora: form.hora, costo: String(parseCosto(form.costo)), recordId: record.id, tramo: form.tramo, ...(form.sitioWeb.trim() ? { sitioWeb: form.sitioWeb.trim() } : {}) },
         { foto }
       );
       onSaved("Peaje guardado en este servicio");
@@ -112,6 +112,10 @@ export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef,
       <TextField id="peaje-costo" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.costo} onChange={(e) => set("costo", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.costo} />
       <TextField id="peaje-hora" label="Hora del transito" type="time" value={form.hora} onChange={(e) => set("hora", e.target.value)} error={errors.hora} />
       <TextField id="peaje-fecha" label="Fecha del transito" type="date" max={romeToday()} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} error={errors.fecha} />
+      <div className="sm:col-span-2">
+        <TextField id="peaje-sitio" label="Sitio web de pago (opcional)" placeholder="Direccion web o donde se paga" value={form.sitioWeb} onChange={(e) => set("sitioWeb", e.target.value)} error={errors.sitioWeb} />
+        <span className="mt-1.5 block text-[12px] text-ink-400">Donde dice el aviso que se paga (direccion web u otra indicacion). Escribelo como figura.</span>
+      </div>
       <div className="sm:col-span-2">
         <FileField id="peaje-foto" label="Foto del mancato pagamento" hint="Foto del aviso o PDF, hasta 15 MB" camera required file={foto} onChange={setFoto} error={errors.foto} />
       </div>

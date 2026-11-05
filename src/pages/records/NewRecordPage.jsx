@@ -342,7 +342,7 @@ export const NewRecordPage = () => {
         <GlassCard>
           <h2 className="text-[17px] font-medium text-ink-50">Datos economicos</h2>
           <p className="mt-1 text-[13px] text-ink-300">
-            Opcional. El chofer despues carga los kilometros reales para comparar.
+            Los kilometros planificados son obligatorios; el resto es opcional. El chofer despues carga los kilometros reales para comparar.
           </p>
 
           <p className="mt-3 text-[12px] text-ink-300">
@@ -355,12 +355,14 @@ export const NewRecordPage = () => {
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
             <TextField
               id="kilometros"
-              label="Kilometros planificados"
+              label="Kilometros planificados *"
               type="number"
               step="0.1"
-              min="0"
+              min="0.1"
+              required
               value={form.kilometros}
               onChange={handleChange("kilometros")}
+              error={fieldErrors.kilometros?.[0]}
             />
             <div>
               <TextField
