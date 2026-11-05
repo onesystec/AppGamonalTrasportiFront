@@ -154,7 +154,7 @@ export const CerrarServicioModal = ({ record: recordProp, onClose, onDone }) => 
         className="absolute inset-0 bg-backdrop backdrop-blur-sm"
       />
 
-      <div className="glass-surface relative z-10 max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-background p-5 sm:rounded-3xl sm:p-6">
+      <div className="glass-surface relative z-10 max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-background p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-3xl sm:p-6">
         {sent ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <CheckCircleIcon className="h-12 w-12 text-success-500" />

@@ -597,7 +597,8 @@ const AppShellContent = () => {
           </div>
         </aside>
 
-      <div className="relative z-10 sm:flex">
+      {/* Sin z-index a proposito: un z-10 aqui encierra a todos los modales de las paginas (z-40) en un nivel por debajo de la barra inferior del celular (z-20) y esta les tapaba los botones de abajo. */}
+      <div className="relative sm:flex">
         {/* Sidebar fija a la izquierda en desktop; en celular se reemplaza por el
             header + nav inferior de abajo. Navy fijo (no cambia con el tema),
             igual que el sidebar del style pack. */}
