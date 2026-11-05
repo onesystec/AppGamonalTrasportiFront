@@ -12,14 +12,14 @@
       main { width: 100%; max-width: 380px; padding: 28px 24px; border-radius: 20px; background: var(--card); text-align: center; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
       h1 { margin: 0 0 8px; font-size: 20px; }
       p { margin: 0 0 20px; font-size: 15px; line-height: 1.45; color: var(--muted); }
-      button { width: 100%; padding: 14px 16px; border: 0; border-radius: 12px; background: var(--brand); color: #fff; font-size: 16px; font-weight: 600; }
+      a.retry { display: block; width: 100%; padding: 14px 16px; border-radius: 12px; background: var(--brand); color: #fff; font-size: 16px; font-weight: 600; text-decoration: none; }
     </style>
   </head>
   <body>
     <main>
       <h1>Sin conexión</h1>
       <p>ONE DRIVER Express necesita internet para abrirse. Revisa tu conexión y vuelve a intentarlo.</p>
-      <button type="button" onclick="location.href = 'https://app-gamonal-trasporti-front.vercel.app/'">Reintentar</button>
+      <a class="retry" href="https://app-gamonal-trasporti-front.vercel.app/">Reintentar</a>
     </main>
   </body>
 </html>
