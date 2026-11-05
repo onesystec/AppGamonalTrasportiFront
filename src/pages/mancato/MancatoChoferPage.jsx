@@ -4,7 +4,7 @@ import { Alert } from "../../components/ui/Alert";
 import { CopyButton } from "../../components/ui/CopyButton";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
-import { ChevronRightIcon, PlusIcon, ReceiptIcon } from "../../components/ui/icons";
+import { ChevronRightIcon, PlusIcon, ReceiptIcon, SearchIcon } from "../../components/ui/icons";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
@@ -33,8 +33,15 @@ export const MancatoChoferPage = () => {
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  // Busqueda por numero, importe, targa o comentario: se manda al servidor (la lista viene de a 15) un instante despues de escribir.
+  const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(busqueda.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [busqueda]);
 
-  const load = useCallback((page) => listMancatosRequest({ page, pageSize: PAGE_SIZE, orden: "recientes" }), []);
+  const load = useCallback((page) => listMancatosRequest({ page, pageSize: PAGE_SIZE, orden: "recientes", ...(q ? { q } : {}) }), [q]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,12 +93,24 @@ export const MancatoChoferPage = () => {
         </div>
       </section>
 
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-4 top-1/2 z-10 h-[18px] w-[18px] -translate-y-1/2 text-ink-400" />
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por numero, importe, targa o comentario"
+          aria-label="Buscar mis avisos de mancato pagamento"
+          className="glass-input w-full rounded-xl py-3 pl-11 pr-4 text-[14px] text-ink-50"
+        />
+      </div>
+
       <Alert>{error}</Alert>
       {!items && !error && <PageLoader />}
 
       {items && items.length === 0 && (
         <div className="glass-surface-sm rounded-2xl px-4 py-8 text-center text-[14px] text-ink-300">
-          Todavia no subiste ningun aviso.
+          {q ? `Ningun aviso coincide con "${q}".` : "Todavia no subiste ningun aviso."}
         </div>
       )}
 
@@ -129,6 +148,7 @@ export const MancatoChoferPage = () => {
                       </span>
                       <CopyButton value={m.numero} label="Copiar numero" />
                     </span>
+                    {m.comentarios && <span className="block truncate text-[12px] italic text-ink-400">{m.comentarios}</span>}
                   </span>
                   <span className="shrink-0 rounded-full bg-success-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-success-500">
                     Enviado
