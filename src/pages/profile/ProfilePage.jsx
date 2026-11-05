@@ -225,14 +225,23 @@ const DocumentItem = ({ document }) => {
 };
 
 // Documentos personales que cada persona sube por su cuenta (los mismos que acepta el servidor, ver SELF_DOCUMENT_TYPES en document.service.js).
-// "vence": lleva fecha de vencimiento (con ella la oficina recibe el aviso antes de que caduque).
+//  - vence: tiene fecha de vencimiento (la impresa en el documento). Con ella la oficina recibe el aviso antes de que caduque.
+//  - nota: aclaracion corta para quien sube el documento.
+// Que documentos vencen, segun las fuentes oficiales italianas: carta d'identita, patente, passaporto y permesso di soggiorno traen su fecha;
+// el codice fiscale como numero no caduca (la tessera sanitaria que lo lleva si, pero vencida sigue valiendo como prueba del codice fiscale); y la
+// traduccion de la patente no tiene fecha propia: la patente extranjera vale en Italia hasta 1 anio despues de la residencia (art. 135 del Codice della Strada).
 const MIS_DOCUMENTOS = [
   { tipo: "CARTA_IDENTITA", vence: true },
   { tipo: "PATENTE", vence: true },
-  { tipo: "TRADUZIONE_PATENTE", vence: false },
-  { tipo: "CODICE_FISCALE", vence: false },
+  {
+    tipo: "TRADUZIONE_PATENTE",
+    vence: true,
+    fechaLabel: "Valida hasta (opcional)",
+    nota: "La traduccion no vence sola: la patente extranjera vale en Italia hasta 1 año despues de tu residencia. Si sabes esa fecha, ponla.",
+  },
+  { tipo: "CODICE_FISCALE", vence: false, nota: "El codice fiscale no vence." },
   { tipo: "PASSAPORTO", vence: true },
-  { tipo: "SOGGIORNO", vence: true },
+  { tipo: "SOGGIORNO", vence: true, nota: "Renuevalo con tiempo: el permiso se pide antes de que caduque." },
 ];
 const DOC_MAX_MB = 15;
 // Lista explicita (no "image/*"): asi el celular convierte las fotos HEIC de iPhone a JPG antes de subirlas.
@@ -240,10 +249,12 @@ const DOC_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 const DOC_BUTTON_CLASS =
   "inline-flex cursor-pointer items-center gap-1.5 rounded-full glass-input px-3 py-1.5 text-[12px] font-medium text-ink-50 hover:bg-line/10";
 
-// Una tarjeta por documento: subir o reemplazar (foto o PDF), ver el archivo y poner el vencimiento.
-const MisDocumentos = ({ userId, documents, onChange }) => {
+// Una tarjeta por documento: subir o reemplazar (foto o PDF), ver el archivo, poner el vencimiento y marcar "no lo tengo".
+const MisDocumentos = ({ userId, documents, noTiene, onChange, onNoTieneChange }) => {
   const [busy, setBusy] = useState({});
   const [errors, setErrors] = useState({});
+  // Fecha escrita antes de subir el archivo (todavia no hay documento donde guardarla): se manda junto con el archivo.
+  const [fechas, setFechas] = useState({});
 
   const byType = useMemo(() => {
     const map = {};
@@ -257,7 +268,7 @@ const MisDocumentos = ({ userId, documents, onChange }) => {
     flag(setBusy, tipo, true);
     flag(setErrors, tipo, "");
     try {
-      onChange(await job());
+      await job();
     } catch (err) {
       flag(setErrors, tipo, parseApiError(err).message);
     } finally {
@@ -278,29 +289,48 @@ const MisDocumentos = ({ userId, documents, onChange }) => {
       return;
     }
     const existing = byType[tipo];
-    run(tipo, () => (existing ? updateDocumentRequest(existing.id, { file }) : createDocumentRequest(userId, tipo, file)));
+    const fecha = fechas[tipo] || undefined;
+    run(tipo, async () => {
+      const doc = existing
+        ? await updateDocumentRequest(existing.id, { file, fechaScadenza: fecha })
+        : await createDocumentRequest(userId, tipo, file, fecha);
+      flag(setFechas, tipo, undefined);
+      onChange(doc);
+    });
   };
 
   const handleDate = (tipo) => (e) => {
     const value = e.target.value;
+    flag(setFechas, tipo, value);
     const existing = byType[tipo];
     if (!value || !existing) return;
-    run(tipo, () => updateDocumentRequest(existing.id, { fechaScadenza: value }));
+    run(tipo, async () => {
+      const doc = await updateDocumentRequest(existing.id, { fechaScadenza: value });
+      flag(setFechas, tipo, undefined);
+      onChange(doc);
+    });
   };
+
+  const handleNoTiene = (tipo) => (checked) =>
+    run(tipo, () => onNoTieneChange(checked ? [...new Set([...noTiene, tipo])] : noTiene.filter((t) => t !== tipo)));
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[13px] text-ink-300">
-        Sube una foto o un PDF de cada documento. Solo los ve la oficina.
+        Sube una foto o un PDF de cada documento. Solo los ve la oficina. Si no tienes alguno, marca «No lo tengo».
       </p>
-      {MIS_DOCUMENTOS.map(({ tipo, vence }) => {
+      {MIS_DOCUMENTOS.map(({ tipo, vence, fechaLabel, nota }) => {
         const doc = byType[tipo];
         const working = Boolean(busy[tipo]);
+        const sinDocumento = !doc && noTiene.includes(tipo);
         const status = doc
           ? vence
             ? documentStatus(doc)
             : { label: "Subido", tone: "success" }
-          : { label: "Falta", tone: "warning" };
+          : sinDocumento
+            ? { label: "No lo tiene", tone: "neutral" }
+            : { label: "Falta", tone: "warning" };
+        const fecha = fechas[tipo] ?? toDateInputValue(doc?.fechaScadenza);
         return (
           <div key={tipo} className="rounded-xl border border-line/10 px-3 py-3">
             <div className="flex items-center gap-3">
@@ -308,45 +338,68 @@ const MisDocumentos = ({ userId, documents, onChange }) => {
                 <FileTextIcon className="h-4.5 w-4.5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-medium text-ink-50">{TIPO_DOCUMENTO_LABELS[tipo]}</span>
+                <span className="block text-[14px] font-medium leading-tight text-ink-50">{TIPO_DOCUMENTO_LABELS[tipo]}</span>
                 <span className="block text-[12px] text-ink-400">
-                  {!doc
-                    ? "Todavia no lo subiste"
-                    : vence && doc.fechaScadenza
+                  {doc
+                    ? vence && doc.fechaScadenza
                       ? `Valido hasta ${formatDateOnly(doc.fechaScadenza)}`
                       : vence
                         ? "Agrega la fecha de vencimiento"
-                        : `Subido el ${formatDateOnly(doc.updatedAt ?? doc.createdAt)}`}
+                        : `Subido el ${formatDateOnly(doc.updatedAt ?? doc.createdAt)}`
+                    : sinDocumento
+                      ? "Marcado como que no lo tienes"
+                      : "Todavia no lo subiste"}
                 </span>
               </span>
               <Badge tone={status.tone}>{status.label}</Badge>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {doc && (
-                <a href={doc.archivoUrl} target="_blank" rel="noreferrer" className={DOC_BUTTON_CLASS}>
-                  Ver
-                </a>
-              )}
-              <label className={DOC_BUTTON_CLASS}>
-                {working ? <Spinner className="h-3.5 w-3.5" /> : doc ? "Reemplazar" : "Subir archivo"}
-                <input type="file" accept={DOC_ACCEPT} className="hidden" onChange={handleFile(tipo)} disabled={working} />
-              </label>
-              <CameraPickButton onChange={handleFile(tipo)} disabled={working} className={DOC_BUTTON_CLASS} />
-            </div>
+            {!sinDocumento && (
+              <>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {doc && (
+                    <a href={doc.archivoUrl} target="_blank" rel="noreferrer" className={DOC_BUTTON_CLASS}>
+                      Ver
+                    </a>
+                  )}
+                  <label className={DOC_BUTTON_CLASS}>
+                    {working ? <Spinner className="h-3.5 w-3.5" /> : doc ? "Reemplazar" : "Subir archivo"}
+                    <input type="file" accept={DOC_ACCEPT} className="hidden" onChange={handleFile(tipo)} disabled={working} />
+                  </label>
+                  <CameraPickButton onChange={handleFile(tipo)} disabled={working} className={DOC_BUTTON_CLASS} />
+                </div>
 
-            {doc && vence && (
-              <label className="mt-3 flex items-center gap-2">
-                <span className="shrink-0 text-[11px] uppercase tracking-wide text-ink-400">Vence</span>
-                <input
-                  type="date"
-                  defaultValue={toDateInputValue(doc.fechaScadenza)}
-                  key={doc.id + (doc.fechaScadenza ?? "")}
-                  onChange={handleDate(tipo)}
+                {vence && (
+                  <label className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="shrink-0 text-[11px] uppercase tracking-wide text-ink-400">{fechaLabel ?? "Vence"}</span>
+                    <input
+                      type="date"
+                      value={fecha}
+                      onChange={handleDate(tipo)}
+                      disabled={working}
+                      className="glass-input min-w-[9rem] flex-1 rounded-lg px-2 py-1 text-[13px] text-ink-50"
+                    />
+                  </label>
+                )}
+                {doc && vence && (
+                  <p className="mt-1 text-[11px] text-ink-400">Si renovaste el documento, cambia la fecha de vencimiento.</p>
+                )}
+              </>
+            )}
+
+            {nota && <p className="mt-2 text-[11px] leading-snug text-ink-400">{nota}</p>}
+
+            {!doc && (
+              <div className="mt-3 border-t border-line/10 pt-3">
+                <Switch
+                  small
+                  id={`no-tiene-${tipo}`}
+                  label="No lo tengo"
+                  checked={sinDocumento}
+                  onChange={handleNoTiene(tipo)}
                   disabled={working}
-                  className="glass-input w-full rounded-lg px-2 py-1 text-[13px] text-ink-50"
                 />
-              </label>
+              </div>
             )}
             {errors[tipo] && <p className="mt-2 text-[12px] text-danger-500">{errors[tipo]}</p>}
           </div>
@@ -1024,7 +1077,20 @@ export const ProfilePage = () => {
                 <MisDocumentos
                   userId={user.id}
                   documents={documents}
-                  onChange={(doc) => setDocuments((prev) => [doc, ...(prev ?? []).filter((d) => d.id !== doc.id)])}
+                  noTiene={user.documentosNoTiene ?? []}
+                  onChange={(doc) => {
+                    setDocuments((prev) => [doc, ...(prev ?? []).filter((d) => d.id !== doc.id)]);
+                    // Subir un documento lo saca de "no lo tengo" (lo hace el servidor): se refleja aqui.
+                    setUser((prev) =>
+                      prev?.documentosNoTiene?.includes(doc.tipoDocumento)
+                        ? { ...prev, documentosNoTiene: prev.documentosNoTiene.filter((t) => t !== doc.tipoDocumento) }
+                        : prev
+                    );
+                  }}
+                  onNoTieneChange={async (lista) => {
+                    const updated = await updateUserRequest(user.id, { documentosNoTiene: lista });
+                    setUser(updated);
+                  }}
                 />
                 {companyDocuments.length > 0 && (
                   <div className="mt-4 border-t border-line/10 pt-3">

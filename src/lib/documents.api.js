@@ -3,11 +3,12 @@ import { api } from "./api";
 export const listDocumentsRequest = (usuarioId) =>
   api.get("/documents", { params: { usuarioId } }).then((res) => res.data.data.documents);
 
-export const createDocumentRequest = (usuarioId, tipoDocumento, file) => {
+export const createDocumentRequest = (usuarioId, tipoDocumento, file, fechaScadenza) => {
   const formData = new FormData();
   formData.append("archivo", file);
   formData.append("tipoDocumento", tipoDocumento);
   formData.append("usuarioId", usuarioId);
+  if (fechaScadenza) formData.append("fechaScadenza", fechaScadenza);
   return api.post("/documents", formData).then((res) => res.data.data.document);
 };
 

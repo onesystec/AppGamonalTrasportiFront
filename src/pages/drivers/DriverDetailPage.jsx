@@ -115,6 +115,7 @@ const DocumentRow = ({
   onUpload,
   onDateChange,
   savingDate,
+  noTiene = false,
 }) => {
   const hasDoc = Boolean(document);
   return (
@@ -134,7 +135,7 @@ const DocumentRow = ({
               Ver documento
             </a>
           ) : (
-            <span className="text-[14px] text-ink-50">Sin subir</span>
+            <span className="text-[14px] text-ink-50">{noTiene ? "El chofer indico que no lo tiene" : "Sin subir"}</span>
           )}
           {error && <span className="mt-1 block text-[12px] text-danger-500">{error}</span>}
         </div>
@@ -703,6 +704,7 @@ export const DriverDetailPage = () => {
               onUpload={handleDocumentUpload(option.value)}
               onDateChange={handleDocumentDateChange(option.value)}
               savingDate={Boolean(documentDateSaving[option.value])}
+              noTiene={Boolean(driver.documentosNoTiene?.includes(option.value))}
             />
           ))}
         </div>
