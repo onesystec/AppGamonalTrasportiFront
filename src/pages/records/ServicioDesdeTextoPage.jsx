@@ -113,6 +113,7 @@ export const ServicioDesdeTextoPage = () => {
         lugares: d.lugares ?? [],
         eta: d.eta ? toRomeInput(d.eta) : "",
         avisos: d.avisos ?? [],
+        verificacion: d.verificacion ?? null,
         duplicados: d.duplicados ?? [],
       });
     } catch (err) {
@@ -326,6 +327,18 @@ export const ServicioDesdeTextoPage = () => {
                     onChange={(e) => setCampo("eta", e.target.value)}
                   />
                 </div>
+
+                {/* Paese e CAP si confermano a vicenda: Google trova l'indirizzo e si confrontano paese e CAP del testo con quelli trovati. */}
+                {!esExtra && lectura.verificacion?.encontrada && (
+                  <p className={`mt-4 rounded-xl px-3.5 py-2.5 text-[13px] ${lectura.verificacion.estado === "ok" ? "bg-success-500/10 text-ink-200" : "bg-warning-500/10 text-ink-200"}`}>
+                    {lectura.verificacion.estado === "ok" ? (
+                      <b className="text-success-500">✓ Paese e CAP coincidono.</b>
+                    ) : (
+                      <b className="text-warning-500">Controlla paese e CAP.</b>
+                    )}{" "}
+                    Google trova: {lectura.verificacion.encontrada}
+                  </p>
+                )}
 
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   <Button className="w-auto" onClick={guardar} loading={guardando} disabled={faltan.length > 0}>
