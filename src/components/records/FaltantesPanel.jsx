@@ -34,7 +34,8 @@ const fmtL = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 1
 // Los tres switches del chofer. "values" = lo declarado; "onToggle(campo, valor)" lo cambia. Si ya hay un peaje
 // o un comprobante que lo cubre, ese punto esta resuelto y no pide switch. "Todo en orden" activa de una vez los
 // que siguen sin resolver.
-export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled }) => {
+// Con onAdd (el chofer, dentro del servicio) los avisos abren el formulario ahi mismo en vez de llevar a otra pantalla.
+export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, onAdd }) => {
   const location = useLocation();
   const mancatos = record.mancatos ?? [];
   const f = record.faltantes ?? {};
@@ -73,7 +74,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled })
   ];
   const unresolved = rows.filter((r) => !r.done && !values[r.field]).map((r) => r.field);
 
-  const row = ({ done, doneText, id, label, field, hint, uploadTo, uploadLabel }) =>
+  const row = ({ done, doneText, id, label, field, hint, uploadTo, uploadLabel, add }) =>
     done ? (
       <div className="flex items-center gap-2 text-[13px] text-success-500">
         <span aria-hidden="true">✓</span>
@@ -82,15 +83,20 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled })
     ) : (
       <div className="flex flex-col gap-1.5">
         <Switch id={id} label={label} description={hint} checked={Boolean(values[field])} disabled={disabled} onChange={(v) => onToggle(field, v)} />
-        {!values[field] && (
-          <Link
-            to={uploadTo}
-            state={{ backgroundLocation: location }}
-            className="w-fit text-[12.5px] font-medium text-accent-400 hover:text-accent-300"
-          >
-            {uploadLabel} &rarr;
-          </Link>
-        )}
+        {!values[field] &&
+          (onAdd ? (
+            <button type="button" onClick={() => onAdd(add)} className="w-fit text-[12.5px] font-medium text-accent-400 hover:text-accent-300">
+              {uploadLabel} &darr;
+            </button>
+          ) : (
+            <Link
+              to={uploadTo}
+              state={{ backgroundLocation: location }}
+              className="w-fit text-[12.5px] font-medium text-accent-400 hover:text-accent-300"
+            >
+              {uploadLabel} &rarr;
+            </Link>
+          ))}
       </div>
     );
 
@@ -105,6 +111,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled })
         hint: "Actívalo si en la ida no usaste peaje o ya lo pagaste en la barrera: no te llegará ningún aviso.",
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de ida",
+        add: { tipo: "peaje", tramo: "IDA" },
       })}
       {row({
         done: hasVuelta,
@@ -115,6 +122,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled })
         hint: "Actívalo si al retornar no usaste peaje o ya lo pagaste en la barrera.",
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de vuelta",
+        add: { tipo: "peaje", tramo: "VUELTA" },
       })}
       {row({
         done: fuelDone,
@@ -125,6 +133,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled })
         hint: fuelHint,
         uploadTo: "/finanzas/combustible/new",
         uploadLabel: "Cargar comprobante de combustible",
+        add: { tipo: "combustible" },
       })}
       {onAll && unresolved.length > 1 && (
         <Button variant="ghost" className="sm:w-auto sm:self-start sm:px-5" disabled={disabled} onClick={() => onAll(unresolved)}>
@@ -212,7 +221,7 @@ const ExcepcionBlock = ({ record, onReload }) => {
 };
 
 // Tarjeta del detalle de un servicio terminado: cada cambio se guarda al instante.
-export const FaltantesCard = ({ record, onReload }) => {
+export const FaltantesCard = ({ record, onReload, onAdd }) => {
   const { user } = useAuth();
   const isOffice = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const f = record.faltantes;
@@ -262,6 +271,7 @@ export const FaltantesCard = ({ record, onReload }) => {
           onToggle={(field, value) => save({ [field]: value })}
           onAll={(fields) => save(Object.fromEntries(fields.map((field) => [field, true])))}
           disabled={saving}
+          onAdd={onAdd}
         />
       )}
       {isOffice && <ExcepcionBlock record={record} onReload={onReload} />}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MancatoBanner } from "../../components/chofer/MancatoBanner";
 import { RendimientoCard } from "../../components/chofer/RendimientoCard";
 import { ResumenServiciosCard } from "../../components/chofer/ResumenServiciosCard";
@@ -9,6 +9,7 @@ import { GlassCard } from "../../components/ui/GlassCard";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { Switch } from "../../components/ui/Switch";
 import { useAuth } from "../../context/AuthContext";
+import { useDataRefresh } from "../../context/DataRefreshContext";
 import { useCerrarServicio } from "../../hooks/useCerrarServicio";
 import { parseApiError } from "../../lib/api";
 import { computeMyServiceCounts } from "../../lib/dashboardStats";
@@ -77,6 +78,17 @@ export const ChoferDashboardPage = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Al cerrar un servicio con "Guardar y salir" se recarga solo la lista de servicios (Mis servicios pendientes), no todo el dashboard.
+  const { version: recordsVersion } = useDataRefresh("records");
+  const seenRecordsVersion = useRef(recordsVersion);
+  useEffect(() => {
+    if (seenRecordsVersion.current === recordsVersion) return;
+    seenRecordsVersion.current = recordsVersion;
+    listRecordsRequest()
+      .then(setRecords)
+      .catch(() => {});
+  }, [recordsVersion]);
 
   // Los servicios que aun no tienen su estilo de manejo se piden de a uno al GPS en segundo plano: mientras se calcula, se vuelve a consultar
   // cada tanto (hasta unos 5 minutos) para que el porcentaje aparezca solo.

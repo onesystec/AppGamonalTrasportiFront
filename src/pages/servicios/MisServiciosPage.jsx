@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ServicioPendienteRow } from "../../components/chofer/ServiciosPendientesCard";
 import { StatusPill } from "../../components/chofer/StatusPill";
@@ -11,6 +11,7 @@ import { useCerrarServicio } from "../../hooks/useCerrarServicio";
 import { parseApiError } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { isPending, sortPending } from "../../lib/pendientes";
+import { useDataRefresh } from "../../context/DataRefreshContext";
 import { listRecordsRequest } from "../../lib/records.api";
 
 const ROME = { timeZone: "Europe/Rome" };
@@ -147,6 +148,15 @@ export const MisServiciosPage = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Al cerrar un servicio con "Guardar y salir" la lista se actualiza sola.
+  const { version: recordsVersion } = useDataRefresh("records");
+  const seenRecordsVersion = useRef(recordsVersion);
+  useEffect(() => {
+    if (seenRecordsVersion.current === recordsVersion) return;
+    seenRecordsVersion.current = recordsVersion;
+    load();
+  }, [recordsVersion, load]);
 
   const actions = useCerrarServicio(load);
 

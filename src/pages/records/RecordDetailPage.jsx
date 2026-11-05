@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaltantesCard } from "../../components/records/FaltantesPanel";
+import { SubirDocumentosServicio } from "../../components/records/SubirDocumentosServicio";
 import { ViajeCompactoCard } from "../../components/records/ViajeCompactoCard";
 import { BackLink } from "../../components/ui/BackLink";
 import { useCloseOverlay } from "../../hooks/useCloseOverlay";
@@ -607,6 +608,10 @@ export const RecordDetailPage = () => {
 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  // Formularios de peaje / carburante abiertos dentro del servicio: "Guardar y salir" guarda los que hayan quedado a medias.
+  const submitsRef = useRef(new Map());
+  const [exiting, setExiting] = useState(false);
+  const [exitError, setExitError] = useState("");
   const [showHours, setShowHours] = useState(false);
   const [showReprog, setShowReprog] = useState(false);
   const [reprogSaving, setReprogSaving] = useState(false);
@@ -669,6 +674,21 @@ export const RecordDetailPage = () => {
       })
       .catch((err) => setLoadError(parseApiError(err).message));
   }, [isChofer]);
+
+  // Lo subido ya esta guardado en el servicio; esto guarda lo que quedo a medias, cierra el servicio y le avisa a "Mis servicios pendientes" (solo a esa lista).
+  const handleSaveAndExit = async () => {
+    setExiting(true);
+    setExitError("");
+    for (const submit of submitsRef.current.values()) {
+      if (!(await submit())) {
+        setExiting(false);
+        setExitError("Hay un formulario abierto con datos sin guardar: completalo o cancelalo para salir.");
+        return;
+      }
+    }
+    refreshRecords();
+    closeDetail();
+  };
 
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -940,6 +960,10 @@ export const RecordDetailPage = () => {
           onUpload={handleUpload}
           onOpenHours={() => setShowHours(true)}
           onReload={load}
+          submitsRef={submitsRef}
+          exiting={exiting}
+          exitError={exitError}
+          onSaveAndExit={handleSaveAndExit}
         />
       )}
     </div>
@@ -1003,8 +1027,15 @@ const RecordSummaryView = ({
   onOpenHours,
   onReload,
   saveSuccess,
+  submitsRef,
+  exiting,
+  exitError,
+  onSaveAndExit,
 }) => {
   const [copyCostsFeedback, setCopyCostsFeedback] = useState("");
+  // El chofer sube peajes y carburante dentro del servicio: los avisos de "Peajes y carburante" abren el formulario que corresponde.
+  const [addRequest, setAddRequest] = useState(null);
+  const puedeSubir = isChofer && !["ANNULLATO", "RISCHEDULATO"].includes(record.estado);
   const onCopyCosts = () => {
     navigator.clipboard
       .writeText(buildCostText(record))
@@ -1159,7 +1190,7 @@ const RecordSummaryView = ({
 
       <JornadaOfService record={record} isChofer={isChofer || isMine} onOpenHours={onOpenHours} />
 
-      <FaltantesCard record={record} onReload={onReload} />
+      <FaltantesCard record={record} onReload={onReload} onAdd={puedeSubir ? (request) => setAddRequest({ ...request, nonce: Date.now() }) : undefined} />
 
       {!isChofer && (
         <div className="mt-6 border-t border-line/10 pt-6">
@@ -1213,7 +1244,13 @@ const RecordSummaryView = ({
       )}
     </GlassCard>
 
-    <GlassCard>
+    {puedeSubir && (
+      <div className="mt-4">
+        <SubirDocumentosServicio record={record} submitsRef={submitsRef} request={addRequest} onSaved={onReload} />
+      </div>
+    )}
+
+    <GlassCard className={puedeSubir ? "mt-4" : undefined}>
       <h2 className="text-[17px] font-medium text-ink-50">Archivos</h2>
       <p className="mt-1 text-[13px] text-ink-300">
         {isChofer
@@ -1277,6 +1314,16 @@ const RecordSummaryView = ({
         ))}
       </ul>
     </GlassCard>
+
+    {puedeSubir && (
+      <div className="mt-4 flex flex-col gap-2">
+        <Alert>{exitError}</Alert>
+        <Button className="w-full" loading={exiting} onClick={onSaveAndExit}>
+          Guardar y salir
+        </Button>
+        <p className="text-center text-[12px] text-ink-400">Todo lo que subiste queda guardado en este servicio.</p>
+      </div>
+    )}
   </>
   );
 };
