@@ -57,6 +57,7 @@ export const it = {
   "track.estimatedArrival": "Arrivo stimato {time}",
   "track.remaining": "mancano {time}",
   "track.plannedTime": "Orario previsto {time}",
+  "track.driver": "Autista: {name}",
   "track.noSignal": "Nessun segnale dal veicolo per ora",
   "track.calculating": "Calcolo del percorso...",
   "track.straightLine": "A circa {km} km in linea d'aria",

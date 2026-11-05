@@ -58,6 +58,7 @@ export const es = {
   "track.estimatedArrival": "Llegada estimada {time}",
   "track.remaining": "faltan {time}",
   "track.plannedTime": "Hora prevista {time}",
+  "track.driver": "Chofer: {name}",
   "track.noSignal": "Sin senal del vehiculo por ahora",
   "track.calculating": "Calculando el recorrido...",
   "track.straightLine": "A unos {km} km en linea recta",

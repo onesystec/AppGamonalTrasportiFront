@@ -62,6 +62,7 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando
       <span className="line-clamp-1 text-[13px] font-medium text-ink-50" title={s.destino}>
         {s.destino}
       </span>
+      {s.chofer && <span className="text-[12px] text-ink-300">{t("track.driver", { name: s.chofer })}</span>}
       {verLista && (
         <span className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
           {s.estado === "LLEGO" ? (
@@ -252,6 +253,7 @@ export const ClienteSeguimientoPage = () => {
                       <div key={p.id} className={clsx("flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5", index > 0 && "border-t border-line/10")}>
                         {p.targa && <Targa>{p.targa}</Targa>}
                         <span className="min-w-0 flex-1 basis-40 truncate text-[13px] text-ink-100">{p.destino}</span>
+                        {p.chofer && <span className="text-[12px] text-ink-300">{t("track.driver", { name: p.chofer })}</span>}
                         <span className="text-[12px] text-ink-300">{t("track.plannedTime", { time: horaRoma(p.etaPlan) })}</span>
                       </div>
                     ))}
