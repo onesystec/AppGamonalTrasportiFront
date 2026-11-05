@@ -5,8 +5,13 @@
 // una celda numerica de Excel el simbolo € rompe que se pueda sumar/graficar directo.
 const CSV_DELIMITER = ";";
 
+// Inyeccion de formulas: una celda que empieza por = + - @ (o tab/enter) la ejecuta Excel al abrir el CSV, y en estos exports entra texto que
+// escriben choferes y clientes (comentarios, direcciones, nombres). Se antepone una comilla simple, salvo en los numeros ("-12,5", "+39").
+const NUMERIC = /^[+-]?\d+([.,]\d+)?$/;
+const neutralizeFormula = (str) => (/^[=+\-@\t\r]/.test(str) && !NUMERIC.test(str) ? `'${str}` : str);
+
 const escapeCsvField = (value) => {
-  const str = String(value ?? "");
+  const str = neutralizeFormula(String(value ?? ""));
   return /[";\r\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
