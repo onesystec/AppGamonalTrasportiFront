@@ -9,6 +9,10 @@
 #   APP_PUBLISH_TOKEN        la clave del servidor para publicar (misma que la variable APP_PUBLISH_TOKEN de Render).
 name: APK de Android
 
+# El flujo solo lee el codigo (sube el APK con su propia clave APP_PUBLISH_TOKEN): sin esto el GITHUB_TOKEN podria tener permisos de escritura.
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, Maudev]
