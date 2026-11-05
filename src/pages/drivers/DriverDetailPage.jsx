@@ -46,7 +46,6 @@ import {
   nivelLabel,
   responsableTipoLabel,
 } from "../../lib/roles";
-import { listVehiclesRequest } from "../../lib/vehicles.api";
 
 const TrashIcon = (props) => (
   <svg
@@ -86,10 +85,8 @@ const toFormState = (driver) => ({
   nivelChofer: driver.nivelChofer ?? "",
   estado: driver.estado ?? "",
   fechaNacimiento: toDateInputValue(driver.fechaNacimiento),
-  vehiculoAsignadoId: driver.vehiculoAsignadoId ?? "",
 });
 
-const vehicleLabel = (v) => `${v.targa}${v.modelo ? ` - ${v.modelo}` : ""}`;
 
 // Muestra el valor si esta cargado, o un placeholder atenuado si falta completarlo.
 const DriverStat = ({ label, value, tone }) => {
@@ -195,7 +192,6 @@ export const DriverDetailPage = () => {
 
   const [driver, setDriver] = useState(null);
   const [form, setForm] = useState(null);
-  const [vehicles, setVehicles] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState(false);
 
@@ -220,12 +216,11 @@ export const DriverDetailPage = () => {
   const load = useCallback(() => {
     if (!canView) return;
     setLoadError("");
-    Promise.all([getUserRequest(id), listDocumentsRequest(id), listVehiclesRequest()])
-      .then(([driverData, docs, vehiclesData]) => {
+    Promise.all([getUserRequest(id), listDocumentsRequest(id)])
+      .then(([driverData, docs]) => {
         setDriver(driverData);
         setForm(toFormState(driverData));
         setDocuments(docs);
-        setVehicles(vehiclesData);
       })
       .catch((err) => setLoadError(parseApiError(err).message));
   }, [id, canView]);
@@ -263,7 +258,7 @@ export const DriverDetailPage = () => {
     setSaveSuccess(false);
 
     const ROLE_FIELDS = ["responsableTipo", "areasPermitidas", "nivelChofer"];
-    const RRHH_FIELDS = ["nombre", "apellido", "numeroCelular", "fechaNacimiento", "estado", "vehiculoAsignadoId"];
+    const RRHH_FIELDS = ["nombre", "apellido", "numeroCelular", "fechaNacimiento", "estado"];
     const payload = Object.fromEntries(
       Object.entries(form).filter(
         ([key, value]) => value !== "" && !ROLE_FIELDS.includes(key) && (!isRrhh || RRHH_FIELDS.includes(key))
@@ -375,7 +370,7 @@ export const DriverDetailPage = () => {
     );
   }
 
-  if (!driver || !form || !documents || !vehicles) {
+  if (!driver || !form || !documents) {
     return (
       <SlideOverPanel closeTo="/choferes">
         <PageLoader />
@@ -388,7 +383,6 @@ export const DriverDetailPage = () => {
     return acc;
   }, {});
 
-  const vehicleOptions = vehicles.map((v) => ({ value: v.id, label: vehicleLabel(v) }));
 
   return (
     <SlideOverPanel closeTo="/choferes">
@@ -479,10 +473,6 @@ export const DriverDetailPage = () => {
             <DriverStat label="Numero de celular" value={driver.numeroCelular} />
             <DriverStat label="Fecha de nacimiento" value={formatDate(driver.fechaNacimiento)} />
             <DriverStat label="Miembro desde" value={formatDate(driver.createdAt)} />
-            <DriverStat
-              label="Vehiculo asignado"
-              value={driver.vehiculoAsignado ? vehicleLabel(driver.vehiculoAsignado) : null}
-            />
             {driver.cargo === "ADMIN" && (
               <div className="sm:col-span-2">
                 <DriverStat
@@ -584,15 +574,6 @@ export const DriverDetailPage = () => {
                   error={fieldErrors.nivelChofer?.[0]}
                 />
               )}
-              <SearchableSelect
-                id="vehiculoAsignadoId"
-                label="Vehiculo asignado"
-                placeholder="Escribe para buscar un vehiculo"
-                options={vehicleOptions}
-                value={form.vehiculoAsignadoId}
-                onChange={(v) => setField("vehiculoAsignadoId", v)}
-                error={fieldErrors.vehiculoAsignadoId?.[0]}
-              />
             </div>
 
             {driver.id !== user.id && user.cargo === "OWNER" && (

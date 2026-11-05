@@ -248,7 +248,7 @@ const ChoferView = () => {
           <h2 className="mb-4 text-[18px] font-semibold text-ink-50">{editing === "new" ? "Nuevo gasto" : "Corregir gasto"}</h2>
           <GastoForm
             gasto={editing === "new" ? null : editing}
-            defaultTarga={user?.vehiculoAsignado?.targa ?? ""}
+            defaultTarga=""
             onSubmit={handleSubmit}
             onCancel={() => setEditing(null)}
             submitting={saving}

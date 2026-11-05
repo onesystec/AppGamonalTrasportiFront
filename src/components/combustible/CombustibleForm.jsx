@@ -40,7 +40,7 @@ export const CombustibleForm = ({
     const last = isEdit ? { area: "", metodo: "" } : readLastUsed();
     return {
       driverId: registro?.driver?.id ?? (isPrivileged ? "" : user?.id),
-      targa: registro?.targa ?? (isPrivileged ? "" : (user?.vehiculoAsignado?.targa ?? "")),
+      targa: registro?.targa ?? "",
       monto: registro ? String(registro.monto).replace(".", ",") : "",
       metodo: registro?.metodo ?? last.metodo,
       area: registro?.area ?? last.area,

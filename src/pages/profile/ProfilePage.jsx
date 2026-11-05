@@ -543,8 +543,8 @@ const ChangePasswordModal = ({ onClose, onDone }) => {
   );
 };
 
-// Alertas del equipo (solo OWNER/ADMIN): documentos de choferes vencidos o por vencer y
-// choferes activos sin vehiculo asignado. Es lo que un Admin necesita al entrar a su perfil.
+// Alertas del equipo (solo OWNER/ADMIN): documentos de choferes vencidos o por vencer.
+// Es lo que un Admin necesita al entrar a su perfil.
 const TeamAlerts = () => {
   const [state, setState] = useState({ loading: true, error: "", users: [], documents: [] });
 
@@ -562,7 +562,7 @@ const TeamAlerts = () => {
     };
   }, []);
 
-  const { docAlerts, sinVehiculo } = useMemo(() => {
+  const docAlerts = useMemo(() => {
     const activeDrivers = state.users.filter((u) => u.cargo === "CHOFER" && u.estado === "ACTIVO");
     const driversById = new Map(activeDrivers.map((u) => [u.id, u]));
     const alerts = state.documents
@@ -570,10 +570,7 @@ const TeamAlerts = () => {
       .map((d) => ({ document: d, driver: driversById.get(d.usuarioId), status: documentStatus(d) }))
       .filter((a) => a.status.key === "vencido" || a.status.key === "por-vencer")
       .sort((a, b) => a.status.days - b.status.days);
-    return {
-      docAlerts: alerts,
-      sinVehiculo: activeDrivers.filter((u) => !u.vehiculoAsignadoId),
-    };
+    return alerts;
   }, [state]);
 
   if (state.loading) {
@@ -585,11 +582,11 @@ const TeamAlerts = () => {
   }
   if (state.error) return <Alert>{state.error}</Alert>;
 
-  if (docAlerts.length === 0 && sinVehiculo.length === 0) {
+  if (docAlerts.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-xl bg-success-500/10 px-4 py-3 text-[14px] text-success-500">
         <CheckCircleIcon className="h-5 w-5 shrink-0" />
-        Todo en orden: sin documentos por vencer ni choferes sin vehiculo.
+        Todo en orden: sin documentos por vencer.
       </div>
     );
   }
@@ -620,20 +617,6 @@ const TeamAlerts = () => {
       {docAlerts.length > shown.length && (
         <Link to="/choferes" className="px-2 py-1 text-[12px] font-medium text-accent-400 hover:text-accent-300">
           Ver los {docAlerts.length - shown.length} restantes en Choferes
-        </Link>
-      )}
-
-      {sinVehiculo.length > 0 && (
-        <Link
-          to="/choferes"
-          className="mt-2 flex items-center gap-3 rounded-xl bg-warning-500/10 px-3 py-2.5 text-[13px] text-warning-500 transition-colors hover:bg-warning-500/15"
-        >
-          <AlertTriangleIcon className="h-5 w-5 shrink-0" />
-          <span className="min-w-0 flex-1">
-            {sinVehiculo.length === 1
-              ? "1 chofer activo sin vehiculo asignado"
-              : `${sinVehiculo.length} choferes activos sin vehiculo asignado`}
-          </span>
         </Link>
       )}
     </div>
@@ -816,8 +799,6 @@ export const ProfilePage = () => {
   const age = ageFromBirthdate(user?.fechaNacimiento);
   const hasEmergency = Boolean(user?.contactoEmergenciaNombre || user?.contactoEmergenciaTelefono);
   const areaKeys = userAreaKeys(user);
-  const vehicle = user?.vehiculoAsignado;
-  const hasNextService = Boolean(user?.proximoServicioFecha || user?.proximoServicioNota);
 
   return (
     <div className="flex flex-col gap-5">
@@ -941,27 +922,6 @@ export const ProfilePage = () => {
         <div className="flex flex-col gap-5">
           {isChofer ? (
             <>
-              <Section icon={TruckIcon} title="Mi vehiculo y proximo servicio">
-                <div className="divide-y divide-line/10">
-                  <InfoRow
-                    icon={TruckIcon}
-                    label="Vehiculo habitual"
-                    value={vehicle ? `${vehicle.targa}${vehicle.modelo ? ` - ${vehicle.modelo}` : ""}` : null}
-                  />
-                  <InfoRow
-                    icon={CalendarIcon}
-                    label="Proximo servicio"
-                    value={
-                      hasNextService
-                        ? [user.proximoServicioFecha && formatDate(user.proximoServicioFecha), user.proximoServicioNota]
-                            .filter(Boolean)
-                            .join(" - ")
-                        : null
-                    }
-                  />
-                </div>
-              </Section>
-
               <Section icon={ClipboardListIcon} title="Mi mes">
                 <MyMonth />
               </Section>

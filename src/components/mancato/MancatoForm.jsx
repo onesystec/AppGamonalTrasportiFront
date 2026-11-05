@@ -36,7 +36,7 @@ export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, err
   const [drivers, setDrivers] = useState([]);
   const [form, setForm] = useState(() => ({
     numero: mancato?.numero ?? "",
-    targa: mancato?.targa ?? (isPrivileged ? "" : (user?.vehiculoAsignado?.targa ?? "")),
+    targa: mancato?.targa ?? "",
     driverId: mancato?.driver?.id ?? (isPrivileged ? "" : user?.id),
     fecha: mancato ? new Date(mancato.fecha).toISOString().slice(0, 10) : romeToday(),
     // Sin valor por defecto a proposito: tiene que ser la hora que dice el aviso.

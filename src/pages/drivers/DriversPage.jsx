@@ -12,7 +12,6 @@ import {
   CheckCircleIcon,
   MapPinIcon,
   SearchIcon,
-  TruckIcon,
   UserCheckIcon,
   UsersIcon,
 } from "../../components/ui/icons";
@@ -208,7 +207,6 @@ const DriverTable = ({ drivers, kmByDriver, progressByDriver, onServiceIds }) =>
           <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-ink-400">
             <th className="py-3.5 pl-4 pr-2 font-medium">Chofer</th>
             <th className="px-2 py-3.5 font-medium">Centro</th>
-            <th className="px-2 py-3.5 font-medium">Vehículo</th>
             <th className="px-2 py-3.5 font-medium">Teléfono</th>
             <th className="px-2 py-3.5 font-medium">Nivel</th>
             <th className="px-2 py-3.5 text-right font-medium">Km mes / meta</th>
@@ -246,16 +244,6 @@ const DriverTable = ({ drivers, kmByDriver, progressByDriver, onServiceIds }) =>
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-2 py-3 text-ink-200">{centroLabel(driver.grupo)}</td>
-                <td className="whitespace-nowrap px-2 py-3 text-ink-100">
-                  {driver.vehiculoAsignado ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <TruckIcon className="h-3.5 w-3.5 text-ink-400" />
-                      {driver.vehiculoAsignado.targa}
-                    </span>
-                  ) : (
-                    <span className="text-ink-400">—</span>
-                  )}
-                </td>
                 <td className="px-2 py-3">
                   <PhoneLink driver={driver} />
                 </td>
@@ -612,7 +600,6 @@ export const DriversPage = () => {
         d.numeroCelular,
         centroLabel(d.grupo),
         areaLabel(d.area),
-        d.vehiculoAsignado?.targa,
       ]
         .join(" ")
         .toLowerCase();

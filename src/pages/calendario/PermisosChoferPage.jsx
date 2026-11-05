@@ -172,11 +172,6 @@ export const PermisosChoferPage = () => {
                     {areaLabel}
                   </span>
                 )}
-                {driver.vehiculoAsignado && (
-                  <span className="rounded-full bg-line/10 px-3 py-1 text-[12px] font-medium text-ink-200">
-                    {driver.vehiculoAsignado.modelo || driver.vehiculoAsignado.targa}
-                  </span>
-                )}
                 <Link to={`/choferes/${driver.id}`} className="text-[12px] font-medium text-accent-400 hover:text-accent-300">
                   Ver perfil completo &rarr;
                 </Link>

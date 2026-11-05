@@ -146,12 +146,7 @@ const buildZoneBlock = (label, servicios, choferesDisp, vehiculosDisp) => {
   if (choferesDisp.length === 0) {
     lines.push("No hay choferes disponibles esta noche.");
   } else {
-    const nombres = choferesDisp.map((u) => {
-      const vehiculo = u.vehiculoAsignado
-        ? `con la ${u.vehiculoAsignado.targa}${u.vehiculoAsignado.modelo ? ` (${u.vehiculoAsignado.modelo})` : ""}`
-        : "sin vehiculo asignado todavia";
-      return `${u.nombre} ${u.apellido} (${vehiculo})`;
-    });
+    const nombres = choferesDisp.map((u) => `${u.nombre} ${u.apellido}`);
     const plural = choferesDisp.length === 1;
     lines.push(
       `Esta noche ${plural ? "esta disponible" : "estan disponibles"} ${choferesDisp.length} chofer${plural ? "" : "es"}: ${nombres.join(", ")}.`
@@ -261,12 +256,10 @@ const AvailableDriversCard = ({
   subtitle,
   drivers,
   emptyLabel,
-  vehicleOptions,
   savingDriverField,
   driverFieldErrors,
   servicioActualPorChofer,
   onChangeDisponible,
-  onChangeVehiculo,
 }) => (
   <GlassCard>
     <h2 className="text-[15px] font-semibold text-ink-50">{title}</h2>
@@ -279,7 +272,6 @@ const AvailableDriversCard = ({
         <div className="flex items-center gap-3 px-3 text-[11px] uppercase tracking-wide text-ink-500">
           <span className="min-w-0 flex-1">Chofer</span>
           <span className="w-20 shrink-0">Disponible</span>
-          <span className="w-52 shrink-0">Vehiculo</span>
         </div>
         {drivers.map((u) => {
           const disponible = !isReperibilidadNoDisponibleHoy(u);
@@ -297,14 +289,6 @@ const AvailableDriversCard = ({
                   value={disponible ? "SI" : "NO"}
                   disabled={Boolean(savingDriverField[`${u.id}:reperibilidadNoDisponible`])}
                   onChange={(e) => onChangeDisponible(u.id)(e.target.value)}
-                />
-                <Select
-                  id={`vehiculo-${u.id}`}
-                  className="w-52 px-2.5 py-1.5 pr-7 text-[12px]"
-                  options={vehicleOptions}
-                  value={u.vehiculoAsignadoId ?? ""}
-                  disabled={Boolean(savingDriverField[`${u.id}:vehiculoAsignadoId`])}
-                  onChange={(e) => onChangeVehiculo(u.id)(e.target.value)}
                 />
               </div>
               {servicioActual && (
@@ -538,8 +522,8 @@ export const DailySummaryPage = () => {
     });
     return groups;
   }, [reperibilidad]);
-  // Edicion en linea de la tabla de choferes (Si/No + vehiculo asignado): guarda por
-  // chofer, no bloquea el resto de la fila mientras una de las dos guarda. drivers
+  // Edicion en linea de la tabla de choferes (Si/No): guarda por
+  // chofer, no bloquea el resto de la fila mientras guarda. drivers
   // se actualiza en el propio array cargado (no se vuelve a pedir la lista completa),
   // asi el resto de la pagina (ranking, etc.) tambien ve el dato fresco al toque.
   const [savingDriverField, setSavingDriverField] = useState({});
@@ -561,9 +545,6 @@ export const DailySummaryPage = () => {
   const handleChangeDisponible = (driverId) => (value) =>
     applyDriverUpdate(driverId, "reperibilidadNoDisponible")(value === "NO");
 
-  const handleChangeVehiculo = (driverId) => (value) =>
-    applyDriverUpdate(driverId, "vehiculoAsignadoId")(value || null);
-
   // "Agregar chofer" (cualquier area): un solo PATCH con los 4 campos juntos, no uno
   // por uno como en la tabla de arriba. Si la fecha elegida no es hoy, no se manda
   // reperibilidadNoDisponible - una nota sobre un servicio dentro de unos dias no debe
@@ -572,7 +553,7 @@ export const DailySummaryPage = () => {
   const [agregarChoferSubmitting, setAgregarChoferSubmitting] = useState(false);
   const [agregarChoferError, setAgregarChoferError] = useState("");
 
-  const handleAgregarChofer = async ({ driverId, vehiculoAsignadoId, disponible, fecha, nota }) => {
+  const handleAgregarChofer = async ({ driverId, disponible, fecha, nota }) => {
     setAgregarChoferSubmitting(true);
     setAgregarChoferError("");
     // Comparacion de strings "yyyy-mm-dd" (el value crudo del <input type="date">), no
@@ -580,7 +561,6 @@ export const DailySummaryPage = () => {
     // medianoche UTC.
     const esHoy = fecha === todayDateInputValue();
     const payload = {
-      vehiculoAsignadoId,
       proximoServicioFecha: fecha,
       proximoServicioNota: nota,
       ...(esHoy ? { reperibilidadNoDisponible: !disponible } : {}),
@@ -607,17 +587,6 @@ export const DailySummaryPage = () => {
       setSavingDriverField((prev) => ({ ...prev, [`${driverId}:proximoServicio`]: false }));
     }
   };
-
-  const vehicleOptions = useMemo(
-    () => [
-      { value: "", label: "Sin asignar" },
-      ...(vehicles ?? []).map((v) => ({
-        value: v.id,
-        label: `${v.targa}${v.modelo ? ` - ${v.modelo}` : ""}`,
-      })),
-    ],
-    [vehicles]
-  );
 
   const [copyFeedback, setCopyFeedback] = useState("");
   const handleCopyReperibilidad = () => {
@@ -666,10 +635,7 @@ export const DailySummaryPage = () => {
           : `Ya hay ${proximos.length} proximos servicios asignados:`
     );
     proximos.forEach((u) => {
-      const vehiculo = u.vehiculoAsignado
-        ? `con la ${u.vehiculoAsignado.targa}${u.vehiculoAsignado.modelo ? ` (${u.vehiculoAsignado.modelo})` : ""}`
-        : "sin vehiculo asignado todavia";
-      let frase = `- ${u.nombre} ${u.apellido} tiene un servicio el ${formatDate(u.proximoServicioFecha)}, ${vehiculo}.`;
+      let frase = `- ${u.nombre} ${u.apellido} tiene un servicio el ${formatDate(u.proximoServicioFecha)}.`;
       if (u.proximoServicioNota) frase += ` Nota: ${u.proximoServicioNota}`;
       lines.push(frase);
     });
@@ -1093,28 +1059,24 @@ export const DailySummaryPage = () => {
 
               <AvailableDriversCard
                 title="Choferes disponibles esta noche · Milano"
-                subtitle="Grupo Milano Nord/Sud. Marca si esta disponible y con que vehiculo sale."
+                subtitle="Grupo Milano Nord/Sud. Marca si esta disponible."
                 drivers={choferesPiazzaPorZona.MILANO}
                 emptyLabel="Sin choferes de Extras Piazza Milano activos."
-                vehicleOptions={vehicleOptions}
                 savingDriverField={savingDriverField}
                 driverFieldErrors={driverFieldErrors}
                 servicioActualPorChofer={reperibilidad.servicioActualPorChofer}
                 onChangeDisponible={handleChangeDisponible}
-                onChangeVehiculo={handleChangeVehiculo}
               />
 
               <AvailableDriversCard
                 title="Choferes disponibles esta noche · Roma"
-                subtitle="Grupo Roma (Extras Piazza + DHL). Marca si esta disponible y con que vehiculo sale."
+                subtitle="Grupo Roma (Extras Piazza + DHL). Marca si esta disponible."
                 drivers={choferesPiazzaPorZona.ROMA}
                 emptyLabel="Sin choferes de Extras Piazza Roma activos."
-                vehicleOptions={vehicleOptions}
                 savingDriverField={savingDriverField}
                 driverFieldErrors={driverFieldErrors}
                 servicioActualPorChofer={reperibilidad.servicioActualPorChofer}
                 onChangeDisponible={handleChangeDisponible}
-                onChangeVehiculo={handleChangeVehiculo}
               />
 
               {choferesPiazzaPorZona.SIN_GRUPO.length > 0 && (
@@ -1123,12 +1085,10 @@ export const DailySummaryPage = () => {
                   subtitle="Sin Milano Nord/Sud ni Roma cargado (ver ficha del chofer)."
                   drivers={choferesPiazzaPorZona.SIN_GRUPO}
                   emptyLabel=""
-                  vehicleOptions={vehicleOptions}
                   savingDriverField={savingDriverField}
                   driverFieldErrors={driverFieldErrors}
                   servicioActualPorChofer={reperibilidad.servicioActualPorChofer}
                   onChangeDisponible={handleChangeDisponible}
-                  onChangeVehiculo={handleChangeVehiculo}
                 />
               )}
 
@@ -1154,11 +1114,6 @@ export const DailySummaryPage = () => {
                           </span>
                           <span className="min-w-0 flex-1 truncate text-[12px] text-ink-400">
                             {u.proximoServicioNota || "Sin nota"}
-                          </span>
-                          <span className="shrink-0 text-[12px] text-ink-400">
-                            {u.vehiculoAsignado
-                              ? `${u.vehiculoAsignado.targa}${u.vehiculoAsignado.modelo ? ` - ${u.vehiculoAsignado.modelo}` : ""}`
-                              : "Sin vehiculo"}
                           </span>
                           <Button
                             variant="ghost"
@@ -1205,11 +1160,10 @@ export const DailySummaryPage = () => {
         </>
       )}
 
-      {isPrivileged && drivers && vehicles && (
+      {isPrivileged && drivers && (
         <AsignarServicioFuturoModal
           open={showAgregarChofer}
           drivers={drivers}
-          vehicles={vehicles}
           loading={agregarChoferSubmitting}
           error={agregarChoferError}
           onSubmit={handleAgregarChofer}
