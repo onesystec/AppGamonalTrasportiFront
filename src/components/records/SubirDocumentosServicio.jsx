@@ -41,15 +41,15 @@ const useRegisterSubmit = (submitsRef, submit) => {
 
 // Un div y no un form: estos formularios tambien van dentro del formulario de "Terminar servicio" (no se pueden anidar).
 const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, children }) => (
-  <div className="mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-4">
+  <div className="mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-3 sm:p-4">
     <h4 className="text-[14px] font-semibold text-ink-50">{title}</h4>
     <Alert>{error}</Alert>
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
-    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-      <Button type="button" variant="ghost" className="sm:w-auto sm:px-5" disabled={saving} onClick={onCancel}>
+    <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-4">{children}</div>
+    <div className="flex gap-2 sm:justify-end">
+      <Button type="button" variant="ghost" className="flex-1 sm:w-auto sm:flex-none sm:px-5" disabled={saving} onClick={onCancel}>
         Cancelar
       </Button>
-      <Button type="button" className="sm:w-auto sm:px-6" loading={saving} onClick={onSubmit}>
+      <Button type="button" className="flex-[2] sm:w-auto sm:flex-none sm:px-6" loading={saving} onClick={onSubmit}>
         {submitLabel}
       </Button>
     </div>
@@ -98,25 +98,29 @@ export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef,
 
   return (
     <FormShell title={tramoFijo ? `Mancato pagamento de ${form.tramo === "VUELTA" ? "vuelta" : "ida"}` : "Agregar peaje (mancato pagamento)"} error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar peaje">
-      {!tramoFijo && <Select
-        id="peaje-tramo"
-        label="Tramo"
-        options={[
-          { value: "IDA", label: "Ida (hasta la entrega)" },
-          { value: "VUELTA", label: "Vuelta (despues de la entrega)" },
-        ]}
-        value={form.tramo}
-        onChange={(e) => set("tramo", e.target.value)}
-      />}
-      <TextField id="peaje-numero" label="Numero del aviso" placeholder="Ej. 1234567890" value={form.numero} onChange={(e) => set("numero", e.target.value)} error={errors.numero} />
+      {!tramoFijo && (
+        <div className="col-span-2">
+          <Select
+            id="peaje-tramo"
+            label="Tramo"
+            options={[
+              { value: "IDA", label: "Ida (hasta la entrega)" },
+              { value: "VUELTA", label: "Vuelta (despues de la entrega)" },
+            ]}
+            value={form.tramo}
+            onChange={(e) => set("tramo", e.target.value)}
+          />
+        </div>
+      )}
+      <TextField className="col-span-2 sm:col-span-1" id="peaje-numero" label="Numero del aviso" placeholder="Ej. 1234567890" value={form.numero} onChange={(e) => set("numero", e.target.value)} error={errors.numero} />
       <TextField id="peaje-costo" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.costo} onChange={(e) => set("costo", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.costo} />
       <TextField id="peaje-hora" label="Hora del transito" type="time" value={form.hora} onChange={(e) => set("hora", e.target.value)} error={errors.hora} />
-      <TextField id="peaje-fecha" label="Fecha del transito" type="date" max={romeToday()} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} error={errors.fecha} />
-      <div className="sm:col-span-2">
+      <TextField className="col-span-2 sm:col-span-1" id="peaje-fecha" label="Fecha del transito" type="date" max={romeToday()} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} error={errors.fecha} />
+      <div className="col-span-2">
         <TextField id="peaje-sitio" label="Sitio web de pago (opcional)" placeholder="Direccion web o donde se paga" value={form.sitioWeb} onChange={(e) => set("sitioWeb", e.target.value)} error={errors.sitioWeb} />
         <span className="mt-1.5 block text-[12px] text-ink-400">Donde dice el aviso que se paga (direccion web u otra indicacion). Escribelo como figura.</span>
       </div>
-      <div className="sm:col-span-2">
+      <div className="col-span-2">
         <FileField id="peaje-foto" label="Foto del mancato pagamento" hint="Foto del aviso o PDF, hasta 15 MB" camera required file={foto} onChange={setFoto} error={errors.foto} />
       </div>
     </FormShell>
@@ -169,12 +173,16 @@ export const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
 
   return (
     <FormShell title="Agregar comprobante de carburante" error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar carburante">
-      <TextField id="comb-monto" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.monto} onChange={(e) => set("monto", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.monto} />
-      <TextField id="comb-metodo" label="Gasolinera" placeholder="Ej. Eni, Q8, Tamoil" maxLength={80} value={form.metodo} onChange={(e) => set("metodo", e.target.value)} error={errors.metodo} />
-      {preguntarArea && <Select id="comb-area" label="Area" placeholder="Elige el area" options={AREA_OPTIONS} value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} />}
+      <TextField className="col-span-2 sm:col-span-1" id="comb-monto" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.monto} onChange={(e) => set("monto", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.monto} />
+      <TextField className="col-span-2 sm:col-span-1" id="comb-metodo" label="Gasolinera" placeholder="Ej. Eni, Q8, Tamoil" maxLength={80} value={form.metodo} onChange={(e) => set("metodo", e.target.value)} error={errors.metodo} />
+      {preguntarArea && (
+        <div className="col-span-2 sm:col-span-1">
+          <Select id="comb-area" label="Area" placeholder="Elige el area" options={AREA_OPTIONS} value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} />
+        </div>
+      )}
       <TextField id="comb-hora" label="Hora de la carga" type="time" value={form.hora} onChange={(e) => set("hora", e.target.value)} error={errors.hora} />
       <TextField id="comb-fecha" label="Fecha" type="date" max={romeToday()} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} error={errors.fecha} />
-      <div className="sm:col-span-2">
+      <div className="col-span-2">
         <FileField id="comb-comprobante" label="Comprobante de pago" hint="Foto del ticket o PDF, hasta 15 MB" camera required file={comprobante} onChange={setComprobante} error={errors.comprobante} />
       </div>
     </FormShell>

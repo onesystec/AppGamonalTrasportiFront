@@ -283,7 +283,7 @@ export const FaltantesCard = ({ record, onReload, submitsRef }) => {
 
   return (
     <div
-      className={`mt-6 rounded-2xl border p-4 ${f.pendientes > 0 ? "border-danger-500/40 bg-danger-500/[0.07]" : "border-line/10 bg-line/[0.03]"}`}
+      className={`mt-6 rounded-2xl border p-3 sm:p-4 ${f.pendientes > 0 ? "border-danger-500/40 bg-danger-500/[0.07]" : "border-line/10 bg-line/[0.03]"}`}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[15px] font-semibold text-ink-50">Peajes y carburante</h3>
