@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Alert } from "../ui/Alert";
+import { CameraIcon } from "../ui/icons";
+import { CombustibleForm, PeajeForm } from "./SubirDocumentosServicio";
 import { Button } from "../ui/Button";
 import { Switch } from "../ui/Switch";
 import { Textarea } from "../ui/Textarea";
@@ -34,8 +36,11 @@ const fmtL = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 1
 // Los tres switches del chofer. "values" = lo declarado; "onToggle(campo, valor)" lo cambia. Si ya hay un peaje
 // o un comprobante que lo cubre, ese punto esta resuelto y no pide switch. "Todo en orden" activa de una vez los
 // que siguen sin resolver.
-// Con onAdd (el chofer, dentro del servicio) los avisos abren el formulario ahi mismo en vez de llevar a otra pantalla.
-export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, onAdd }) => {
+// Con upload ({ submitsRef, onSaved }) el boton de cada aviso despliega ahi mismo el formulario del peaje (segun el tramo) o del carburante, y lo sube
+// asignado a este servicio; sin upload lleva a la pantalla de siempre. Al activar el switch ("no tuve") el boton y el formulario se ocultan.
+export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, upload }) => {
+  const [openForm, setOpenForm] = useState({});
+  const closeForm = (field) => setOpenForm((prev) => ({ ...prev, [field]: false }));
   const location = useLocation();
   const mancatos = record.mancatos ?? [];
   const f = record.faltantes ?? {};
@@ -74,7 +79,7 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, o
   ];
   const unresolved = rows.filter((r) => !r.done && !values[r.field]).map((r) => r.field);
 
-  const row = ({ done, doneText, id, label, field, hint, uploadTo, uploadLabel, add }) =>
+  const row = ({ done, doneText, id, label, field, hint, uploadTo, uploadLabel, form }) =>
     done ? (
       <div className="flex items-center gap-2 text-[13px] text-success-500">
         <span aria-hidden="true">✓</span>
@@ -82,12 +87,31 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, o
       </div>
     ) : (
       <div className="flex flex-col gap-1.5">
-        <Switch id={id} label={label} description={hint} checked={Boolean(values[field])} disabled={disabled} onChange={(v) => onToggle(field, v)} />
+        <Switch
+          id={id}
+          label={label}
+          description={hint}
+          checked={Boolean(values[field])}
+          disabled={disabled}
+          onChange={(v) => {
+            if (v) closeForm(field);
+            onToggle(field, v);
+          }}
+        />
         {!values[field] &&
-          (onAdd ? (
-            <button type="button" onClick={() => onAdd(add)} className="w-fit text-[12.5px] font-medium text-accent-400 hover:text-accent-300">
-              {uploadLabel} &darr;
-            </button>
+          (upload ? (
+            <>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setOpenForm((prev) => ({ ...prev, [field]: !prev[field] }))}
+                className="inline-flex w-fit items-center gap-2 rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10 disabled:opacity-50"
+              >
+                <CameraIcon className="h-4 w-4" />
+                {uploadLabel}
+              </button>
+              {openForm[field] && form({ close: () => closeForm(field) })}
+            </>
           ) : (
             <Link
               to={uploadTo}
@@ -111,7 +135,9 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, o
         hint: "Actívalo si en la ida no usaste peaje o ya lo pagaste en la barrera: no te llegará ningún aviso.",
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de ida",
-        add: { tipo: "peaje", tramo: "IDA" },
+        form: ({ close }) => (
+          <PeajeForm record={record} tramoInicial="IDA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+        ),
       })}
       {row({
         done: hasVuelta,
@@ -122,7 +148,9 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, o
         hint: "Actívalo si al retornar no usaste peaje o ya lo pagaste en la barrera.",
         uploadTo: "/finanzas/mancato/new",
         uploadLabel: "Subir mancato pagamento de vuelta",
-        add: { tipo: "peaje", tramo: "VUELTA" },
+        form: ({ close }) => (
+          <PeajeForm record={record} tramoInicial="VUELTA" tramoFijo submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+        ),
       })}
       {row({
         done: fuelDone,
@@ -133,7 +161,9 @@ export const FaltantesSwitches = ({ record, values, onToggle, onAll, disabled, o
         hint: fuelHint,
         uploadTo: "/finanzas/combustible/new",
         uploadLabel: "Cargar comprobante de combustible",
-        add: { tipo: "combustible" },
+        form: ({ close }) => (
+          <CombustibleForm record={record} submitsRef={upload.submitsRef} onSaved={(m) => { close(); upload.onSaved(m); }} onCancel={close} />
+        ),
       })}
       {onAll && unresolved.length > 1 && (
         <Button variant="ghost" className="sm:w-auto sm:self-start sm:px-5" disabled={disabled} onClick={() => onAll(unresolved)}>
@@ -221,7 +251,7 @@ const ExcepcionBlock = ({ record, onReload }) => {
 };
 
 // Tarjeta del detalle de un servicio terminado: cada cambio se guarda al instante.
-export const FaltantesCard = ({ record, onReload, onAdd }) => {
+export const FaltantesCard = ({ record, onReload, submitsRef }) => {
   const { user } = useAuth();
   const isOffice = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   const f = record.faltantes;
@@ -271,7 +301,7 @@ export const FaltantesCard = ({ record, onReload, onAdd }) => {
           onToggle={(field, value) => save({ [field]: value })}
           onAll={(fields) => save(Object.fromEntries(fields.map((field) => [field, true])))}
           disabled={saving}
-          onAdd={onAdd}
+          upload={submitsRef ? { submitsRef, onSaved: () => onReload?.() } : undefined}
         />
       )}
       {isOffice && <ExcepcionBlock record={record} onReload={onReload} />}

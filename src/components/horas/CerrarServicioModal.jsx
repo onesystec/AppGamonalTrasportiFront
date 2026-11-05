@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
@@ -8,7 +8,7 @@ import { TextField } from "../ui/TextField";
 import { Textarea } from "../ui/Textarea";
 import { parseApiError } from "../../lib/api";
 import { cierreServicioRequest } from "../../lib/horas.api";
-import { listRecordFilesRequest, updateDeclaracionesRequest, uploadRecordFileRequest } from "../../lib/records.api";
+import { getRecordRequest, listRecordFilesRequest, updateDeclaracionesRequest, uploadRecordFileRequest } from "../../lib/records.api";
 import { ViajeStops } from "../chofer/ViajeStops";
 import { FaltantesSwitches } from "../records/FaltantesPanel";
 
@@ -49,7 +49,11 @@ const MinutesField = ({ id, label, hint, value, onChange }) => (
 // Cierre de un servicio por el chofer. Ya no declara horas: las horas de manejo salen de los km del sistema (km / 85). Solo:
 // la espera del servicio, la foto de la bolla de trabajo (opcional por ahora; puede ser mas de una) y las declaraciones de
 // peajes y carburante (con sus fotos de mancato pagamento y de carburante). Al enviar, el servicio queda entregado.
-export const CerrarServicioModal = ({ record, onClose, onDone }) => {
+export const CerrarServicioModal = ({ record: recordProp, onClose, onDone }) => {
+  // El servicio se vuelve a pedir cada vez que se sube un peaje o un comprobante, para que su aviso pase a "subido".
+  const [record, setRecord] = useState(recordProp);
+  // Formularios de peaje / carburante abiertos: "Terminar servicio" guarda primero los que hayan quedado a medias.
+  const submitsRef = useRef(new Map());
   const [esperaMin, setEsperaMin] = useState(String(record.jornada?.esperaMin ?? 0));
   const [comentarios, setComentarios] = useState(record.comentarios ?? "");
   const [bollas, setBollas] = useState([]);
@@ -97,11 +101,23 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
     if (picked.length) setBollas((prev) => [...prev, ...picked]);
   };
 
+  const recargarServicio = () =>
+    getRecordRequest(record.id)
+      .then(setRecord)
+      .catch(() => {});
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError("");
     try {
+      for (const submit of submitsRef.current.values()) {
+        if (!(await submit())) {
+          setError("Hay un formulario de peaje o carburante abierto con datos sin guardar: guardalo o cancelalo para terminar.");
+          setSaving(false);
+          return;
+        }
+      }
       const cierre = await cierreServicioRequest(record.id, {
         esperaMin: Number(esperaMin) || 0,
         ...(comentarios.trim() ? { comentarios: comentarios.trim() } : {}),
@@ -243,6 +259,7 @@ export const CerrarServicioModal = ({ record, onClose, onDone }) => {
                 onToggle={(field, value) => setDeclared((prev) => ({ ...prev, [field]: value }))}
                 onAll={(fields) => setDeclared((prev) => ({ ...prev, ...Object.fromEntries(fields.map((f) => [f, true])) }))}
                 disabled={saving}
+                upload={{ submitsRef, onSaved: recargarServicio }}
               />
             </div>
 

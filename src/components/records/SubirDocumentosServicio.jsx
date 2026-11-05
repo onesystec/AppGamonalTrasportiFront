@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { FileField } from "../ui/FileField";
@@ -29,7 +29,8 @@ const areaOfRecord = (record) => {
 };
 
 // Registra la funcion que guarda lo escrito en este formulario (devuelve true si no habia nada o se guardo, false si falta algo).
-const useRegisterSubmit = (submitsRef, key, submit) => {
+const useRegisterSubmit = (submitsRef, submit) => {
+  const key = useId();
   const ref = useRef(submit);
   ref.current = submit;
   useEffect(() => {
@@ -38,15 +39,9 @@ const useRegisterSubmit = (submitsRef, key, submit) => {
   }, [submitsRef, key]);
 };
 
+// Un div y no un form: estos formularios tambien van dentro del formulario de "Terminar servicio" (no se pueden anidar).
 const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, children }) => (
-  <form
-    onSubmit={(e) => {
-      e.preventDefault();
-      onSubmit();
-    }}
-    className="mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-4"
-    noValidate
-  >
+  <div className="mt-3 flex flex-col gap-4 rounded-2xl border border-line/10 bg-line/[0.03] p-4">
     <h4 className="text-[14px] font-semibold text-ink-50">{title}</h4>
     <Alert>{error}</Alert>
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
@@ -54,14 +49,14 @@ const FormShell = ({ title, error, saving, onSubmit, onCancel, submitLabel, chil
       <Button type="button" variant="ghost" className="sm:w-auto sm:px-5" disabled={saving} onClick={onCancel}>
         Cancelar
       </Button>
-      <Button type="submit" className="sm:w-auto sm:px-6" loading={saving}>
+      <Button type="button" className="sm:w-auto sm:px-6" loading={saving} onClick={onSubmit}>
         {submitLabel}
       </Button>
     </div>
-  </form>
+  </div>
 );
 
-const PeajeForm = ({ record, tramoInicial, submitsRef, onSaved, onCancel }) => {
+export const PeajeForm = ({ record, tramoInicial, tramoFijo = false, submitsRef, onSaved, onCancel }) => {
   const [form, setForm] = useState({ tramo: tramoInicial, numero: "", costo: "", fecha: romeToday(), hora: "" });
   const [foto, setFoto] = useState(null);
   const [errors, setErrors] = useState({});
@@ -99,11 +94,11 @@ const PeajeForm = ({ record, tramoInicial, submitsRef, onSaved, onCancel }) => {
       setSaving(false);
     }
   };
-  useRegisterSubmit(submitsRef, "peaje", submit);
+  useRegisterSubmit(submitsRef, submit);
 
   return (
-    <FormShell title="Agregar peaje (mancato pagamento)" error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar peaje">
-      <Select
+    <FormShell title={tramoFijo ? `Mancato pagamento de ${form.tramo === "VUELTA" ? "vuelta" : "ida"}` : "Agregar peaje (mancato pagamento)"} error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar peaje">
+      {!tramoFijo && <Select
         id="peaje-tramo"
         label="Tramo"
         options={[
@@ -112,7 +107,7 @@ const PeajeForm = ({ record, tramoInicial, submitsRef, onSaved, onCancel }) => {
         ]}
         value={form.tramo}
         onChange={(e) => set("tramo", e.target.value)}
-      />
+      />}
       <TextField id="peaje-numero" label="Numero del aviso" placeholder="Ej. 1234567890" value={form.numero} onChange={(e) => set("numero", e.target.value)} error={errors.numero} />
       <TextField id="peaje-costo" label="Importe" icon={EuroIcon} inputMode="decimal" placeholder="0,00" value={form.costo} onChange={(e) => set("costo", e.target.value.replace(/[^\d.,]/g, ""))} error={errors.costo} />
       <TextField id="peaje-hora" label="Hora del transito" type="time" value={form.hora} onChange={(e) => set("hora", e.target.value)} error={errors.hora} />
@@ -124,7 +119,7 @@ const PeajeForm = ({ record, tramoInicial, submitsRef, onSaved, onCancel }) => {
   );
 };
 
-const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
+export const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
   const last = readLastUsed();
   const areaInicial = areaOfRecord(record) || last.area;
   const [form, setForm] = useState({ monto: "", metodo: last.metodo, area: areaInicial, fecha: romeToday(), hora: romeNowHHMM() });
@@ -166,7 +161,7 @@ const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
       setSaving(false);
     }
   };
-  useRegisterSubmit(submitsRef, "combustible", submit);
+  useRegisterSubmit(submitsRef, submit);
 
   return (
     <FormShell title="Agregar comprobante de carburante" error={error || errors.general} saving={saving} onSubmit={submit} onCancel={onCancel} submitLabel="Guardar carburante">
@@ -184,22 +179,12 @@ const CombustibleForm = ({ record, submitsRef, onSaved, onCancel }) => {
 
 const addButton = "rounded-full border border-line/20 px-4 py-2 text-[13px] font-medium text-ink-50 transition hover:bg-line/10";
 
-// Tarjeta del servicio (solo el chofer): lo ya subido y los botones "Agregar". `request` ({ tipo, tramo, nonce }) abre un formulario desde fuera
-// (los avisos "Falta el peaje de ida..." del servicio).
-export const SubirDocumentosServicio = ({ record, submitsRef, request, onSaved }) => {
+// Tarjeta del servicio (solo el chofer): lo ya subido y los botones "Agregar".
+export const SubirDocumentosServicio = ({ record, submitsRef, onSaved }) => {
   // Cada formulario se abre y se cierra por su cuenta: abrir uno no descarta lo escrito en el otro.
   const [peaje, setPeaje] = useState(null); // { tramo } mientras esta abierto
   const [carburante, setCarburante] = useState(false);
   const [ok, setOk] = useState("");
-  const cardRef = useRef(null);
-
-  useEffect(() => {
-    if (!request) return;
-    if (request.tipo === "peaje") setPeaje({ tramo: request.tramo ?? "IDA" });
-    else setCarburante(true);
-    setOk("");
-    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [request]);
 
   const mancatos = record.mancatos ?? [];
   const fuel = record.combustible?.comprobantes;
@@ -210,7 +195,7 @@ export const SubirDocumentosServicio = ({ record, submitsRef, request, onSaved }
   };
 
   return (
-    <div ref={cardRef}>
+    <div>
       <GlassCard>
         <h2 className="text-[17px] font-medium text-ink-50">Peajes y carburante de este servicio</h2>
         <p className="mt-1 text-[13px] text-ink-300">Lo que subas aqui queda guardado dentro de este servicio.</p>

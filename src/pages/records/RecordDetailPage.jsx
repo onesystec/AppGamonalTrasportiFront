@@ -1033,8 +1033,6 @@ const RecordSummaryView = ({
   onSaveAndExit,
 }) => {
   const [copyCostsFeedback, setCopyCostsFeedback] = useState("");
-  // El chofer sube peajes y carburante dentro del servicio: los avisos de "Peajes y carburante" abren el formulario que corresponde.
-  const [addRequest, setAddRequest] = useState(null);
   const puedeSubir = isChofer && !["ANNULLATO", "RISCHEDULATO"].includes(record.estado);
   const onCopyCosts = () => {
     navigator.clipboard
@@ -1190,7 +1188,7 @@ const RecordSummaryView = ({
 
       <JornadaOfService record={record} isChofer={isChofer || isMine} onOpenHours={onOpenHours} />
 
-      <FaltantesCard record={record} onReload={onReload} onAdd={puedeSubir ? (request) => setAddRequest({ ...request, nonce: Date.now() }) : undefined} />
+      <FaltantesCard record={record} onReload={onReload} submitsRef={puedeSubir ? submitsRef : undefined} />
 
       {!isChofer && (
         <div className="mt-6 border-t border-line/10 pt-6">
@@ -1246,7 +1244,7 @@ const RecordSummaryView = ({
 
     {puedeSubir && (
       <div className="mt-4">
-        <SubirDocumentosServicio record={record} submitsRef={submitsRef} request={addRequest} onSaved={onReload} />
+        <SubirDocumentosServicio record={record} submitsRef={submitsRef} onSaved={onReload} />
       </div>
     )}
 
