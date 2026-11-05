@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { listClientsRequest } from "../../lib/clients.api";
 import { APLICATIVO_OPTIONS, TIPO_PEDIDO_OPTIONS } from "../../lib/constants";
+import { paisOptions } from "../../lib/paises";
 import { userAreaKeys } from "../../lib/roles";
 import { AREAS_BY_KEY } from "../../lib/recordAreas";
 import { crearDesdeTextoRequest, leerTextoRequest } from "../../lib/solicitudes.api";
@@ -105,6 +106,7 @@ export const ServicioDesdeTextoPage = () => {
         ciudad: d.ciudad ?? "",
         calle: d.calle ?? "",
         cap: d.cap ?? "",
+        pais: d.pais ?? "",
         aplicativo: d.aplicativo ?? "",
         ritiro: d.ritiro ?? "",
         km: d.km != null ? String(d.km) : "",
@@ -131,7 +133,7 @@ export const ServicioDesdeTextoPage = () => {
         ...(zona.zonaExtra ? { zona: zona.zonaExtra } : {}),
         cliente: clienteNombre,
         destinazione: lectura.ciudad.trim(),
-        ...(esExtra ? {} : { calle: lectura.calle.trim(), cap: lectura.cap.trim() }),
+        ...(esExtra ? {} : { calle: lectura.calle.trim(), cap: lectura.cap.trim(), pais: lectura.pais }),
         fechaHora: lectura.eta,
         descripcion: lectura.descripcion,
         shipment: lectura.shipment,
@@ -314,6 +316,7 @@ export const ServicioDesdeTextoPage = () => {
                   {!esExtra && <TextField id="lec-calle" label="Destinazione (indirizzo)" className="sm:col-span-2" value={lectura.calle} onChange={(e) => setCampo("calle", e.target.value)} />}
                   {!esExtra && <TextField id="lec-cap" label="CAP" value={lectura.cap} onChange={(e) => setCampo("cap", e.target.value)} />}
                   <TextField id="lec-ciudad" label={esExtra ? "Consegna" : "Città"} value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+                  {!esExtra && <Select id="lec-pais" label="Paese (se non è l'Italia)" value={lectura.pais} onChange={(e) => setCampo("pais", e.target.value)} options={paisOptions("it", "predefinito")} />}
                   {!esExtra && <TextField id="lec-km" label="KM (facoltativo)" value={lectura.km} onChange={(e) => setCampo("km", e.target.value)} />}
                   <TextField
                     id="lec-eta"

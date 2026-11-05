@@ -8,6 +8,7 @@ import { ClientAutocomplete } from "../../components/ui/ClientAutocomplete";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { PageLoader } from "../../components/ui/PageLoader";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
 import { Textarea } from "../../components/ui/Textarea";
 import { useAuth } from "../../context/AuthContext";
@@ -25,6 +26,7 @@ import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField"
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { PasosFronteraCheckboxes } from "../../components/records/BrenneroCheckbox";
 import { buildSalidaPayload, EMPTY_SALIDA, SalidaField } from "../../components/records/SalidaField";
+import { nombrePais, paisOptions } from "../../lib/paises";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
@@ -48,6 +50,8 @@ const INITIAL_FORM = {
   descripcion: "",
   comentarios: "",
   ciudad: "",
+  // Pais de la entrega (codigo ISO; vacio = Italia).
+  pais: "",
   calle: "",
   cap: "",
   kilometros: "",
@@ -67,10 +71,12 @@ const INITIAL_FORM = {
 
 // Arma la direccion de la parada final a partir de calle/CAP/ciudad, en el mismo
 // formato que ya geocodifica el backend (ej: "Via Roma 5, 20100 Milano").
-const buildAddress = ({ calle, cap, ciudad }) => {
+// Con un pais distinto de Italia se agrega al final (en ingles), para que la busqueda en el mapa no lo busque en Italia.
+const buildAddress = ({ calle, cap, ciudad, pais }) => {
   const parts = [calle.trim()];
   const capCiudad = [cap.trim(), ciudad.trim()].filter(Boolean).join(" ");
   if (capCiudad) parts.push(capCiudad);
+  if (pais && pais !== "IT") parts.push(nombrePais(pais, "en"));
   return parts.filter(Boolean).join(", ");
 };
 
@@ -104,7 +110,7 @@ export const NewDhlAbServiceRecordPage = () => {
       orderNumero: d.orderNumero,
       tipoPedido: d.tipoPedido,
       // Una solicitud leida de un texto trae solo la ciudad; una de un cliente trae el destino escrito (va a la calle).
-      ...(esSolicitudDeTexto(solicitud) ? { ciudad: solicitud.destinazione, calle: d.calle, cap: d.cap } : { calle: solicitud.destinazione }),
+      ...(esSolicitudDeTexto(solicitud) ? { ciudad: solicitud.destinazione, calle: d.calle, cap: d.cap, pais: d.pais } : { calle: solicitud.destinazione }),
       aplicativo: d.aplicativo.startsWith(`${base.extrasPiazzaZona}_`) ? d.aplicativo : "",
     };
   });
@@ -160,12 +166,12 @@ export const NewDhlAbServiceRecordPage = () => {
     setFormError("");
     setFieldErrors({});
 
-    const { calle, cap, ciudad, salida, ...rest } = form;
+    const { calle, cap, ciudad, salida, ...rest } = form; // rest incluye el pais (vacio = Italia: no se manda)
     const salidaPayload = buildSalidaPayload(salida);
     // Con una sugerencia (ubicacion exacta) la parada es solo el nombre del destino y sus coordenadas.
     const direccion = exactoVigente
       ? { direccion: calle.trim(), lat: exactoVigente.lat, lng: exactoVigente.lng }
-      : buildAddress({ calle, cap, ciudad });
+      : buildAddress({ calle, cap, ciudad, pais: form.pais });
     // DHL/AB Service no piden un codigo: se genera uno interno para la columna unica de la base. En DHL, con Shipment, el servidor lo
     // reemplaza por el propio Shipment (ese es el codigo del servicio).
     const codigo = `${form.spedizzione}-${Date.now()}`;
@@ -497,6 +503,15 @@ export const NewDhlAbServiceRecordPage = () => {
               onChange={handleChange("ciudad")}
               error={fieldErrors.ciudad?.[0]}
               required={!exactoVigente}
+            />
+            <Select
+              id="pais"
+              label="Pais (si no es Italia)"
+              className="sm:col-span-3"
+              options={paisOptions("es")}
+              value={form.pais}
+              onChange={handleChange("pais")}
+              error={fieldErrors.pais?.[0]}
             />
           </div>
         </GlassCard>

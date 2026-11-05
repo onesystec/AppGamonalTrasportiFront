@@ -131,6 +131,7 @@ export const solicitudToFormDefaults = (s) => ({
   aplicativo: s.aplicativo ?? "",
   calle: s.calle ?? "",
   cap: s.cap ?? "",
+  pais: s.pais ?? "",
 });
 
 // Chofer (ficha) al que corresponde el nombre que escribio el cliente: todas las palabras del nombre dentro de "nombre apellido" y un solo candidato.

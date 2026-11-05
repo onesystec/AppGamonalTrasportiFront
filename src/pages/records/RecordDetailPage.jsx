@@ -17,6 +17,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { CameraPickButton } from "../../components/ui/CameraPickButton";
 import { Spinner } from "../../components/ui/Spinner";
 import { StatusBadge } from "../../components/ui/StatusBadge";
+import { Select } from "../../components/ui/Select";
 import { TextField } from "../../components/ui/TextField";
 import { Textarea } from "../../components/ui/Textarea";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
@@ -59,6 +60,7 @@ import {
 } from "../../lib/records.api";
 import { formatHours, pagaPorKm } from "../../lib/horas";
 import { CambiosDelServicio } from "../../components/solicitudes/CambiosButton";
+import { nombrePais, paisOptions } from "../../lib/paises";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
@@ -398,6 +400,7 @@ const OWNER_FIELDS = [
   "stops",
   "descripcion",
   "ciudad",
+  "pais",
   "kilometros",
   "precioKm",
   "areaC",
@@ -448,6 +451,7 @@ const toFormState = (record) => ({
     : [{ direccion: "", cap: "", lat: null, lng: null }],
   descripcion: record.descripcion ?? "",
   ciudad: record.ciudad ?? "",
+  pais: record.pais ?? "",
   // Las tres fechas van en hora de pared de Roma (el backend las interpreta asi): lo que escribe la
   // oficina es lo que se guarda. No entran en OWNER_FIELDS: se mandan solo si cambiaron (y "" en
   // fechaRetiro significa "borrar"), ver handleSave.
@@ -713,6 +717,9 @@ export const RecordDetailPage = () => {
         ])
         .filter(([, value]) => value !== "" && value !== undefined)
     );
+
+    // Volver a Italia (pais vacio) tiene que mandarse: el filtro de arriba descarta los campos vacios.
+    if (!isChofer && form.pais === "" && record.pais) payload.pais = "";
 
     // Servicio de un viaje compacto: los km son los del viaje (no se mandan) y el estado solo si cambio.
     if (record.compactado) {
@@ -1113,6 +1120,7 @@ const RecordSummaryView = ({
         )}
         <InfoRow label="Cliente" value={record.client?.nombre} />
         {record.ciudad && <InfoRow label="Ciudad" value={record.ciudad} />}
+        {record.pais && record.pais !== "IT" && <InfoRow label="Pais" value={nombrePais(record.pais)} />}
         {record.extrasPiazzaZona && (
           <InfoRow label="Zona" value={ZONA_LABELS[record.extrasPiazzaZona]} />
         )}
@@ -1573,6 +1581,9 @@ const RecordEditForm = ({
                 value={form.ciudad}
                 onChange={handleChange("ciudad")}
               />
+              {!isChofer && (
+                <Select id="pais" label="Pais (si no es Italia)" options={paisOptions("es")} value={form.pais} onChange={handleChange("pais")} />
+              )}
               <div>
                 <TextField
                   id="fechaRetiro"
