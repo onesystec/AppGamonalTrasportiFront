@@ -103,6 +103,8 @@ export const ServicioDesdeTextoPage = () => {
         tipoPedido: d.tipoPedido ?? "",
         tipoOrigen: d.tipoOrigen ?? null,
         ciudad: d.ciudad ?? "",
+        calle: d.calle ?? "",
+        cap: d.cap ?? "",
         aplicativo: d.aplicativo ?? "",
         ritiro: d.ritiro ?? "",
         km: d.km != null ? String(d.km) : "",
@@ -129,6 +131,7 @@ export const ServicioDesdeTextoPage = () => {
         ...(zona.zonaExtra ? { zona: zona.zonaExtra } : {}),
         cliente: clienteNombre,
         destinazione: lectura.ciudad.trim(),
+        ...(esExtra ? {} : { calle: lectura.calle.trim(), cap: lectura.cap.trim() }),
         fechaHora: lectura.eta,
         descripcion: lectura.descripcion,
         shipment: lectura.shipment,
@@ -308,6 +311,8 @@ export const ServicioDesdeTextoPage = () => {
                       options={[{ value: "", label: "— Nessuno —" }, ...APLICATIVO_OPTIONS.filter((o) => o.value.startsWith(`${zona.zona}_`))]}
                     />
                   )}
+                  {!esExtra && <TextField id="lec-calle" label="Destinazione (indirizzo)" className="sm:col-span-2" value={lectura.calle} onChange={(e) => setCampo("calle", e.target.value)} />}
+                  {!esExtra && <TextField id="lec-cap" label="CAP" value={lectura.cap} onChange={(e) => setCampo("cap", e.target.value)} />}
                   <TextField id="lec-ciudad" label={esExtra ? "Consegna" : "Città"} value={lectura.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
                   {!esExtra && <TextField id="lec-km" label="KM (facoltativo)" value={lectura.km} onChange={(e) => setCampo("km", e.target.value)} />}
                   <TextField

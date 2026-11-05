@@ -104,7 +104,7 @@ export const NewDhlAbServiceRecordPage = () => {
       orderNumero: d.orderNumero,
       tipoPedido: d.tipoPedido,
       // Una solicitud leida de un texto trae solo la ciudad; una de un cliente trae el destino escrito (va a la calle).
-      ...(esSolicitudDeTexto(solicitud) ? { ciudad: solicitud.destinazione } : { calle: solicitud.destinazione }),
+      ...(esSolicitudDeTexto(solicitud) ? { ciudad: solicitud.destinazione, calle: d.calle, cap: d.cap } : { calle: solicitud.destinazione }),
       aplicativo: d.aplicativo.startsWith(`${base.extrasPiazzaZona}_`) ? d.aplicativo : "",
     };
   });

@@ -129,6 +129,8 @@ export const solicitudToFormDefaults = (s) => ({
       .filter((v) => v && String(v).trim())
       .join("\n") || `Solicitud de ${s.cliente}`,
   aplicativo: s.aplicativo ?? "",
+  calle: s.calle ?? "",
+  cap: s.cap ?? "",
 });
 
 // Chofer (ficha) al que corresponde el nombre que escribio el cliente: todas las palabras del nombre dentro de "nombre apellido" y un solo candidato.
