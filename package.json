@@ -17,23 +17,23 @@
   },
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.26",
-    "@capacitor/android": "^8.4.1",
+    "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/camera": "^8.2.6",
-    "@capacitor/core": "^8.4.1",
+    "@capacitor/core": "^8.6.0",
     "@capacitor/geolocation": "^8.2.0",
-    "@capacitor/ios": "^8.4.2",
+    "@capacitor/ios": "^8.6.0",
     "@capacitor/push-notifications": "^8.1.2",
     "@react-google-maps/api": "^2.20.8",
-    "axios": "^1.18.1",
+    "axios": "^1.21.0",
     "clsx": "^2.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1",
+    "react-router-dom": "^7.18.5",
     "recharts": "^3.9.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.1",
+    "@capacitor/cli": "^8.6.0",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -43,5 +43,10 @@
     "postcss": "^8.5.17",
     "tailwindcss": "^4.3.2",
     "vite": "^8.1.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "follow-redirects": "^1.16.2"
+    }
   }
 }

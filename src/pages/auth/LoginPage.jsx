@@ -43,14 +43,7 @@ export const LoginPage = () => {
     <AuthLayout
       title="Bienvenido"
       subtitle="Inicia sesión en ONE DRIVER Express"
-      footer={
-        <>
-          ¿No tienes cuenta?{" "}
-          <Link to="/register" className="font-medium text-brand hover:text-brand-light">
-            Crea una
-          </Link>
-        </>
-      }
+      footer="¿Sin cuenta? Pídesela a la oficina."
     >
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {location.state?.resetSuccess && (

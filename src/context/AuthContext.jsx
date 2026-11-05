@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AUTH_LOGOUT_EVENT, parseApiError, setApiDriverMode } from "../lib/api";
-import { loginRequest, meRequest, registerRequest, ssoLoginRequest } from "../lib/auth.api";
+import { loginRequest, meRequest, ssoLoginRequest } from "../lib/auth.api";
 import { rememberChoferView } from "../lib/choferTips";
 import { clearToken, getToken, setToken } from "../lib/token";
 
@@ -120,17 +120,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const register = useCallback(async (payload) => {
-    try {
-      const { user: newUser, token } = await registerRequest(payload);
-      setToken(token);
-      setUser(newUser);
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: parseApiError(error) };
-    }
-  }, []);
-
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
@@ -175,12 +164,11 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated: Boolean(realUser),
       initializing,
       login,
-      register,
       logout,
       setUser,
       refreshUser,
     }),
-    [user, realUser, canUseDriverMode, driverMode, setDriverMode, initializing, login, register, logout, refreshUser]
+    [user, realUser, canUseDriverMode, driverMode, setDriverMode, initializing, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
