@@ -7,6 +7,7 @@ import { LocationSharingBlock } from "../../components/profile/LocationSharingBl
 import { Alert } from "../../components/ui/Alert";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
+import { CameraPickButton } from "../../components/ui/CameraPickButton";
 import { PasswordField } from "../../components/ui/PasswordField";
 import { Spinner } from "../../components/ui/Spinner";
 import { Switch } from "../../components/ui/Switch";
@@ -39,8 +40,8 @@ import { parseApiError } from "../../lib/api";
 import { AREA_OPTIONS, GRUPO_LABELS, TIPO_DOCUMENTO_LABELS } from "../../lib/constants";
 import { PHONE_GPS_ENABLED } from "../../lib/features";
 import { changePasswordRequest } from "../../lib/auth.api";
-import { listDocumentsRequest } from "../../lib/documents.api";
-import { formatDate, formatDateOnly, formatKm } from "../../lib/format";
+import { createDocumentRequest, listDocumentsRequest, updateDocumentRequest } from "../../lib/documents.api";
+import { formatDate, formatDateOnly, formatKm, toDateInputValue } from "../../lib/format";
 import { AREA_LABEL_BY_KEY, roleText, userAreaKeys } from "../../lib/roles";
 import { listRecordsByMonthRequest } from "../../lib/records.api";
 import {
@@ -220,6 +221,138 @@ const DocumentItem = ({ document }) => {
       </span>
       <Badge tone={status.tone}>{status.label}</Badge>
     </a>
+  );
+};
+
+// Documentos personales que cada persona sube por su cuenta (los mismos que acepta el servidor, ver SELF_DOCUMENT_TYPES en document.service.js).
+// "vence": lleva fecha de vencimiento (con ella la oficina recibe el aviso antes de que caduque).
+const MIS_DOCUMENTOS = [
+  { tipo: "CARTA_IDENTITA", vence: true },
+  { tipo: "PATENTE", vence: true },
+  { tipo: "TRADUZIONE_PATENTE", vence: false },
+  { tipo: "CODICE_FISCALE", vence: false },
+  { tipo: "PASSAPORTO", vence: true },
+  { tipo: "SOGGIORNO", vence: true },
+];
+const DOC_MAX_MB = 15;
+// Lista explicita (no "image/*"): asi el celular convierte las fotos HEIC de iPhone a JPG antes de subirlas.
+const DOC_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+const DOC_BUTTON_CLASS =
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-full glass-input px-3 py-1.5 text-[12px] font-medium text-ink-50 hover:bg-line/10";
+
+// Una tarjeta por documento: subir o reemplazar (foto o PDF), ver el archivo y poner el vencimiento.
+const MisDocumentos = ({ userId, documents, onChange }) => {
+  const [busy, setBusy] = useState({});
+  const [errors, setErrors] = useState({});
+
+  const byType = useMemo(() => {
+    const map = {};
+    for (const d of documents) if (!map[d.tipoDocumento]) map[d.tipoDocumento] = d;
+    return map;
+  }, [documents]);
+
+  const flag = (setter, tipo, value) => setter((prev) => ({ ...prev, [tipo]: value }));
+
+  const run = async (tipo, job) => {
+    flag(setBusy, tipo, true);
+    flag(setErrors, tipo, "");
+    try {
+      onChange(await job());
+    } catch (err) {
+      flag(setErrors, tipo, parseApiError(err).message);
+    } finally {
+      flag(setBusy, tipo, false);
+    }
+  };
+
+  const handleFile = (tipo) => (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!DOC_ACCEPT.split(",").includes(file.type)) {
+      flag(setErrors, tipo, "Sube una foto (JPG, PNG o WEBP) o un PDF.");
+      return;
+    }
+    if (file.size > DOC_MAX_MB * 1024 * 1024) {
+      flag(setErrors, tipo, `El archivo pesa mas de ${DOC_MAX_MB} MB.`);
+      return;
+    }
+    const existing = byType[tipo];
+    run(tipo, () => (existing ? updateDocumentRequest(existing.id, { file }) : createDocumentRequest(userId, tipo, file)));
+  };
+
+  const handleDate = (tipo) => (e) => {
+    const value = e.target.value;
+    const existing = byType[tipo];
+    if (!value || !existing) return;
+    run(tipo, () => updateDocumentRequest(existing.id, { fechaScadenza: value }));
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[13px] text-ink-300">
+        Sube una foto o un PDF de cada documento. Solo los ve la oficina.
+      </p>
+      {MIS_DOCUMENTOS.map(({ tipo, vence }) => {
+        const doc = byType[tipo];
+        const working = Boolean(busy[tipo]);
+        const status = doc
+          ? vence
+            ? documentStatus(doc)
+            : { label: "Subido", tone: "success" }
+          : { label: "Falta", tone: "warning" };
+        return (
+          <div key={tipo} className="rounded-xl border border-line/10 px-3 py-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-500/15 text-ink-300">
+                <FileTextIcon className="h-4.5 w-4.5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-medium text-ink-50">{TIPO_DOCUMENTO_LABELS[tipo]}</span>
+                <span className="block text-[12px] text-ink-400">
+                  {!doc
+                    ? "Todavia no lo subiste"
+                    : vence && doc.fechaScadenza
+                      ? `Valido hasta ${formatDateOnly(doc.fechaScadenza)}`
+                      : vence
+                        ? "Agrega la fecha de vencimiento"
+                        : `Subido el ${formatDateOnly(doc.updatedAt ?? doc.createdAt)}`}
+                </span>
+              </span>
+              <Badge tone={status.tone}>{status.label}</Badge>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {doc && (
+                <a href={doc.archivoUrl} target="_blank" rel="noreferrer" className={DOC_BUTTON_CLASS}>
+                  Ver
+                </a>
+              )}
+              <label className={DOC_BUTTON_CLASS}>
+                {working ? <Spinner className="h-3.5 w-3.5" /> : doc ? "Reemplazar" : "Subir archivo"}
+                <input type="file" accept={DOC_ACCEPT} className="hidden" onChange={handleFile(tipo)} disabled={working} />
+              </label>
+              <CameraPickButton onChange={handleFile(tipo)} disabled={working} className={DOC_BUTTON_CLASS} />
+            </div>
+
+            {doc && vence && (
+              <label className="mt-3 flex items-center gap-2">
+                <span className="shrink-0 text-[11px] uppercase tracking-wide text-ink-400">Vence</span>
+                <input
+                  type="date"
+                  defaultValue={toDateInputValue(doc.fechaScadenza)}
+                  key={doc.id + (doc.fechaScadenza ?? "")}
+                  onChange={handleDate(tipo)}
+                  disabled={working}
+                  className="glass-input w-full rounded-lg px-2 py-1 text-[13px] text-ink-50"
+                />
+              </label>
+            )}
+            {errors[tipo] && <p className="mt-2 text-[12px] text-danger-500">{errors[tipo]}</p>}
+          </div>
+        );
+      })}
+    </div>
   );
 };
 
@@ -507,6 +640,8 @@ const MyMonth = () => {
 export const ProfilePage = () => {
   const { user, setUser } = useAuth();
   const isChofer = user?.cargo === "CHOFER";
+  // Choferes, Responsables y Admin suben sus propios documentos desde aqui (los usuarios cliente y Recursos Humanos no, por ahora).
+  const canSelfUpload = ["CHOFER", "ADMIN", "OWNER"].includes(user?.cargo);
   const isOwner = user?.cargo === "OWNER";
   const isRrhh = user?.cargo === "RRHH";
 
@@ -554,11 +689,11 @@ export const ProfilePage = () => {
     return [...documents].sort((a, b) => rank(a) - rank(b));
   }, [documents]);
 
-  const missingDocuments = useMemo(() => {
-    if (!documents) return [];
-    const present = new Set(documents.map((d) => d.tipoDocumento));
-    return Object.keys(TIPO_DOCUMENTO_LABELS).filter((tipo) => !present.has(tipo));
-  }, [documents]);
+  // Los de la empresa (contrato, UNILAV...) los carga la oficina: se ven pero no se cambian desde aqui.
+  const companyDocuments = useMemo(
+    () => sortedDocuments.filter((d) => !MIS_DOCUMENTOS.some((m) => m.tipo === d.tipoDocumento)),
+    [sortedDocuments]
+  );
 
   const startEdit = useCallback(
     (section) => {
@@ -877,27 +1012,41 @@ export const ProfilePage = () => {
             )}
           </Section>
 
-          <Section icon={FileTextIcon} title="Documentos">
+          <Section icon={FileTextIcon} title={canSelfUpload ? "Mis documentos" : "Documentos"}>
             <Alert>{documentsError}</Alert>
             {!documents && !documentsError && (
               <div className="flex justify-center py-4">
                 <Spinner />
               </div>
             )}
-            {documents && sortedDocuments.length === 0 && (
+            {canSelfUpload && documents && (
+              <>
+                <MisDocumentos
+                  userId={user.id}
+                  documents={documents}
+                  onChange={(doc) => setDocuments((prev) => [doc, ...(prev ?? []).filter((d) => d.id !== doc.id)])}
+                />
+                {companyDocuments.length > 0 && (
+                  <div className="mt-4 border-t border-line/10 pt-3">
+                    <p className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-400">Documentos de la empresa</p>
+                    <div className="flex flex-col">
+                      {companyDocuments.map((document) => (
+                        <DocumentItem key={document.id} document={document} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {!canSelfUpload && documents && sortedDocuments.length === 0 && (
               <p className="text-[13px] text-ink-300">Todavia no hay documentos cargados.</p>
             )}
-            {sortedDocuments.length > 0 && (
+            {!canSelfUpload && sortedDocuments.length > 0 && (
               <div className="flex flex-col">
                 {sortedDocuments.map((document) => (
                   <DocumentItem key={document.id} document={document} />
                 ))}
               </div>
-            )}
-            {isChofer && missingDocuments.length > 0 && sortedDocuments.length > 0 && (
-              <p className="mt-3 border-t border-line/10 pt-3 text-[12px] text-ink-400">
-                Sin subir: {missingDocuments.map((tipo) => TIPO_DOCUMENTO_LABELS[tipo]).join(", ")}
-              </p>
             )}
           </Section>
 

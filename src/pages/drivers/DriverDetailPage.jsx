@@ -144,7 +144,7 @@ const DocumentRow = ({
             {uploading ? <Spinner className="h-3.5 w-3.5" /> : hasDoc ? "Reemplazar" : "Subir"}
             <input
               type="file"
-              accept="application/pdf"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
               className="hidden"
               onChange={onUpload}
               disabled={uploading}
@@ -688,7 +688,7 @@ export const DriverDetailPage = () => {
         <h2 className="text-[17px] font-medium text-ink-50">Documentos</h2>
         <p className="mt-1 text-[13px] text-ink-300">
           Documentacion del chofer. Los que faltan por subir aparecen atenuados. Una vez subido
-          cada PDF se le puede cargar su fecha de vencimiento.
+          cada documento (foto o PDF) se le puede cargar su fecha de vencimiento.
         </p>
 
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -239,7 +239,7 @@ export const TIPO_DOCUMENTO_OPTIONS = [
   { value: "RESPONSIVAS", label: "Responsivas" },
   { value: "PERMESSO_TRASPORTO", label: "Permiso de trasporto" },
   { value: "PASSAPORTO", label: "Passaporto" },
-  { value: "SOGGIORNO", label: "Soggiorno" },
+  { value: "SOGGIORNO", label: "Permesso di soggiorno" },
   { value: "TREDICESIMA_QUATTORDICESIMA", label: "13ma/14ma" },
 ];
 
