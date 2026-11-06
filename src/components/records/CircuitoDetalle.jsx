@@ -27,7 +27,7 @@ export const CircuitoDetalle = ({ circuito, recordId, className, recorridoEstado
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-400">Circuito planificado</h4>
+        <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-400">{circuito.esParte ? "Recorrido de este servicio" : circuito.viaje ? "Circuito del viaje" : "Circuito planificado"}</h4>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setOpenReal(true)} className="text-[12px] font-medium text-accent-400 hover:text-accent-300">
             Ver recorrido real
@@ -38,6 +38,12 @@ export const CircuitoDetalle = ({ circuito, recordId, className, recorridoEstado
           </button>
         </div>
       </div>
+      {circuito.esParte && circuito.nota && <p className="mt-1.5 rounded-lg bg-warning-500/10 px-3 py-1.5 text-[12px] text-warning-500">{circuito.nota}</p>}
+      {!circuito.esParte && circuito.viaje === "ANULADO_Y_RECIBIDO" && (
+        <p className="mt-1.5 rounded-lg bg-warning-500/10 px-3 py-1.5 text-[12px] text-warning-500">
+          Recorrido real del viaje: el servicio anulado y el recibido en el lugar del traspaso. El chofer no volvio al lugar de espera entre los dos.
+        </p>
+      )}
       <PeajesResumen peajes={circuito.peajes} />
       <ul className="mt-1.5 flex flex-col gap-1">
         {circuito.tramos.map((t, i) => (
