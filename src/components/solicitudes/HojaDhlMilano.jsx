@@ -1,3 +1,4 @@
+import { esNavetta } from "../../lib/navetta";
 import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -69,7 +70,8 @@ const COL_SHIPMENT = {
   ancho: AJUSTADA,
   clase: "whitespace-nowrap",
   render: (s) => <CeldaShipmentOrder s={s} />,
-  falta: (s) => !(s.shipment && s.orderNumero),
+  // Las navette nunca traen Shipment ni Order: no se pintan en rojo.
+  falta: (s) => !s.navetta && !(s.shipment && s.orderNumero),
   aviso: (s) => (!s.shipment && !s.orderNumero ? "Mancano Shipment e Order" : !s.shipment ? "Manca lo Shipment" : "Manca l'Order"),
 };
 const COL_TIPO = { id: "B", campos: ["tipoPedido"], titulo: "TIPO", ancho: AJUSTADA, clase: "whitespace-nowrap text-center font-semibold", render: (s) => s.tipoPedido ?? "", falta: (s) => !s.tipoPedido, aviso: () => "Manca il tipo (ASAP o SCHEDULED)" };
@@ -91,7 +93,7 @@ const colNumero = (zona) => ({
 });
 
 // Extra Piazza: CODICE | CLIENTE | RITIRO | CONSEGNA | ETA | KM (el KM lo escribe una persona).
-const COL_CODIGO = { id: "A", campos: ["shipment", "orderNumero"], titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.shipment, aviso: () => "Manca il codice" };
+const COL_CODIGO = { id: "A", campos: ["shipment", "orderNumero"], titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.navetta && !s.shipment, aviso: () => "Manca il codice" };
 const COL_RITIRO = { id: "R", campos: ["ritiro"], titulo: "RITIRO", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ritiro ?? "", falta: (s) => !s.ritiro, aviso: () => "Manca il luogo di ritiro" };
 const COL_CONSEGNA = { id: "D", campos: ["ciudad"], titulo: "CONSEGNA", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca il luogo di consegna" };
 
@@ -767,6 +769,7 @@ export const filaDeSolicitud = (s) => ({
   puntoTitulo: ESTADO_TITULO[s.estado] ?? s.estado,
   shipment: s.shipment,
   orderNumero: s.orderNumero,
+  navetta: esNavetta(s.destinazione, s.descripcion, s.texto),
   ritiro: s.ritiro,
   tipoPedido: s.tipoPedido,
   cliente: s.cliente,
@@ -803,6 +806,7 @@ export const filaDeServicio = (s, puntoTitulo, solicitud) => ({
   creadoPorRol: solicitud?.creadoPorRol,
   creadoAt: solicitud?.createdAt,
   tipoPedido: s.tipoPedido,
+  navetta: esNavetta(s.ciudad, s.destino, s.descripcion),
   cliente: s.cliente ?? "",
   ciudad: s.ciudad ?? "",
   eta: s.etaPlan,

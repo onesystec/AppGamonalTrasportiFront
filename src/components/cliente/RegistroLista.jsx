@@ -1,3 +1,4 @@
+import { esNavetta } from "../../lib/navetta";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -64,10 +65,11 @@ const faseDeServicio = (r, enViaje) =>
           : "PROGRAMMATO";
 
 // Lo que falta por completar (lo que la hoja pintaba de rojo y que el cliente puede escribir): codigos, tipo, cliente, ciudad / consegna, ritiro y ETA.
-const faltantes = ({ extra, shipment, order, tipo, cliente, destino, ritiro, eta }) =>
+// Las navette nunca traen Shipment ni Order: no se piden (si estan, se muestran).
+const faltantes = ({ extra, shipment, order, tipo, cliente, destino, ritiro, eta, navetta = false }) =>
   [
-    !shipment && (extra ? "Codice" : "Shipment"),
-    !extra && !order && "Order",
+    !navetta && !shipment && (extra ? "Codice" : "Shipment"),
+    !navetta && !extra && !order && "Order",
     !extra && !tipo && "Tipo",
     !extra && !cliente && "Cliente",
     !destino && (extra ? "Consegna" : "Città"),
@@ -102,7 +104,7 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       retraso: null,
       pendiente: s.estado === "PENDIENTE",
       fase: faseDeSolicitud(s),
-      faltan: s.estado === "RECHAZADA" ? [] : faltantes({ extra: s.servicio === "EXTRA_PIAZZA", shipment: s.shipment, order: s.orderNumero, tipo: s.tipoPedido, cliente: s.cliente, destino: s.destinazione, ritiro: s.ritiro, eta: !s.etaPendiente }),
+      faltan: s.estado === "RECHAZADA" ? [] : faltantes({ navetta: esNavetta(s.destinazione, s.descripcion, s.texto), extra: s.servicio === "EXTRA_PIAZZA", shipment: s.shipment, order: s.orderNumero, tipo: s.tipoPedido, cliente: s.cliente, destino: s.destinazione, ritiro: s.ritiro, eta: !s.etaPendiente }),
       solicitud: s,
     }));
   const deServicio = servicios.map((r) => {
@@ -133,7 +135,7 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       fase,
       // Posicion en vivo (si va en camino y el cliente tiene el seguimiento): hora estimada de llegada.
       enVivo: enCamino.get(r.id) ?? null,
-      faltan: fase === "ANNULLATO" ? [] : faltantes({ extra, shipment: r.shipment ?? sol?.shipment, order: r.orderNumero ?? sol?.orderNumero, tipo: r.tipoPedido, cliente: r.cliente, destino: r.ciudad || r.destino, ritiro: sol?.ritiro, eta: r.etaPlan }),
+      faltan: fase === "ANNULLATO" ? [] : faltantes({ navetta: esNavetta(r.ciudad, r.destino, r.descripcion), extra, shipment: r.shipment ?? sol?.shipment, order: r.orderNumero ?? sol?.orderNumero, tipo: r.tipoPedido, cliente: r.cliente, destino: r.ciudad || r.destino, ritiro: sol?.ritiro, eta: r.etaPlan }),
       servicio: r,
     };
   });
