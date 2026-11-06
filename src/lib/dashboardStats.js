@@ -78,6 +78,10 @@ const percentChange = (current, previous) => {
   return ((current - previous) / Math.abs(previous)) * 100;
 };
 
+// Un servicio anulado no se hizo y no suma, salvo que la oficina haya anotado los km que el chofer ya recorrio (record.anulado): esos se
+// facturan y se pagan.
+const isAnulado = (r) => r.estado === "ANNULLATO" && !r.anulado;
+
 const RECORD_STATUS_KEYS = [
   "IN_SOSPESO",
   "IN_CONSEGNA",
@@ -358,7 +362,7 @@ export const computeMonthlyRevenueTrend = (records, now = new Date(), pagoReal =
   const buckets = MONTH_LABELS.map((month) => ({ month, facturacion: 0, facturacionPotencial: 0, ganancia: 0 }));
 
   records.forEach((r) => {
-    if (r.estado === "ANNULLATO") return;
+    if (isAnulado(r)) return;
     const date = new Date(r.fechaServicio);
     if (date.getFullYear() !== year) return;
     const bucket = buckets[date.getMonth()];
@@ -379,7 +383,7 @@ export const computeMonthlyKmTrend = (records, now = new Date()) => {
   const buckets = MONTH_LABELS.map((month) => ({ month, km: 0 }));
 
   records.forEach((r) => {
-    if (r.estado === "ANNULLATO") return;
+    if (isAnulado(r)) return;
     const date = new Date(r.fechaServicio);
     if (date.getFullYear() !== year) return;
     buckets[date.getMonth()].km += kmRecorrido(r);
@@ -744,7 +748,7 @@ export const computeBirthdayAlerts = (users, now = new Date()) =>
 // Indicadores del dashboard OWNER (tarjetas, tabla por vehiculo, barras mensuales)
 // ---------------------------------------------------------------------------
 
-const isActiveRecord = (r) => r.estado !== "ANNULLATO";
+const isActiveRecord = (r) => !isAnulado(r);
 // UN solo criterio de km para todo el dashboard (tarjeta, tarjetas por area, tabla por vehiculo y grafico de tendencia): los km reales
 // si el chofer los cargo y, si no, los planificados contados como se facturan - DHL (Milano y Roma) y AB Service x2 (el cliente manda solo
 // la ida), Extras Piazza x1. Ver kmRecorrido en lib/km.js. Antes estas partes usaban dos criterios distintos y no coincidian.

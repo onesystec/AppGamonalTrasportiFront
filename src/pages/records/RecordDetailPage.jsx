@@ -26,6 +26,7 @@ import { CircuitoDetalle } from "../../components/records/CircuitoDetalle";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { ReprogramacionModal } from "../../components/records/ReprogramacionModal";
+import { AnularModal } from "../../components/records/AnularModal";
 import { MOTIVO_LABEL, ReprogramacionPanel, buildReprogBody, emptyReprog, reprogError } from "../../components/records/ReprogramacionPanel";
 import { combineStopAddress, StopListEditor } from "../../components/records/StopListEditor";
 import { buildSalidaPayload } from "../../components/records/SalidaField";
@@ -56,6 +57,7 @@ import {
   getRecordRequest,
   listRecordFilesRequest,
   reprogramarRecordRequest,
+  anularRecordRequest,
   updateRecordRequest,
   uploadRecordFileRequest,
 } from "../../lib/records.api";
@@ -119,7 +121,7 @@ const JornadaOfService = ({ record, isChofer, onOpenHours, submitsRef, onReload 
     );
   }
   // Un servicio reprogramado por la oficina tambien se carga: el chofer manejo hasta ahi y se le paga.
-  const delivered = ["CONSEGNATO", "RITIRATO", "IN_CONSEGNA"].includes(record.estado) || (record.estado === "RISCHEDULATO" && Boolean(record.reprogramado));
+  const delivered = ["CONSEGNATO", "RITIRATO", "IN_CONSEGNA"].includes(record.estado) || (record.estado === "RISCHEDULATO" && Boolean(record.reprogramado)) || (record.estado === "ANNULLATO" && Boolean(record.anulado));
   const canLoad = isChofer && delivered && j.estado !== "APROBADAS" && j.estado !== "PENDIENTE";
   const canEdit = isChofer && j.estado === "PENDIENTE";
   return (
@@ -274,6 +276,38 @@ const ReprogramacionOfService = ({ record, isChofer, onChanged }) => {
         onConfirm={undo}
         onCancel={() => setConfirming(false)}
       />
+    </div>
+  );
+};
+
+// Servicio anulado: si el chofer ya habia manejado, los km que hizo (se facturan y se pagan). La oficina puede anotarlos o corregirlos.
+const AnuladoOfService = ({ record, isChofer, onEditKm }) => {
+  if (record.estado !== "ANNULLATO") return null;
+  const { anulado } = record;
+  if (isChofer && !anulado) return null;
+  return (
+    <div className="mt-6 rounded-xl border border-danger-500/30 bg-danger-500/5 px-4 py-3">
+      <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-400">Anulacion</h3>
+      <p className="mt-1.5 text-[14px] text-ink-100">
+        {anulado?.kmHechos != null && !isChofer ? (
+          <>
+            El chofer recorrio <b>{anulado.kmHechos} km</b> antes de la anulacion
+            {anulado.kmPlanificados ? ` (el servicio tenia ${anulado.kmPlanificados} km)` : ""}; se facturan y se pagan.
+            {anulado.nota ? ` ${anulado.nota}` : ""}
+          </>
+        ) : anulado ? (
+          "Anulado despues de que el chofer ya habia salido: se paga por los km recorridos."
+        ) : (
+          "Anulado sin km recorridos: no se factura ni se paga."
+        )}
+      </p>
+      {!isChofer && (
+        <div className="mt-2">
+          <button type="button" onClick={onEditKm} className="text-[13px] font-medium text-accent-400 hover:text-accent-300">
+            {anulado ? "Corregir los km recorridos" : "Anotar km recorridos"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -624,6 +658,11 @@ export const RecordDetailPage = () => {
   const [reprogSaving, setReprogSaving] = useState(false);
   const [reprogErr, setReprogErr] = useState("");
   const [reprogDone, setReprogDone] = useState(null);
+  // Anular con los km que el chofer ya hizo (ver AnularModal): al guardar con estado Anulado, o desde el aviso de un servicio ya anulado.
+  const [showAnular, setShowAnular] = useState(false);
+  const [anularEditar, setAnularEditar] = useState(false);
+  const [anularSaving, setAnularSaving] = useState(false);
+  const [anularErr, setAnularErr] = useState("");
 
   // El aviso "Cambios guardados" se va solo.
   useEffect(() => {
@@ -784,10 +823,21 @@ export const RecordDetailPage = () => {
   // Marcar el servicio como Reprogramado abre el panel de reprogramacion: se guarda con la confirmacion de abajo.
   const wantsReprogramar = !isChofer && form?.estado === "RISCHEDULATO" && record?.estado !== "RISCHEDULATO" && record && canReprogramar(record);
 
+  // Marcar el servicio como Anulado abre el panel de km recorridos: se guarda con la confirmacion de abajo.
+  const wantsAnular = !isChofer && form?.estado === "ANNULLATO" && record?.estado !== "ANNULLATO" && record && OPEN_STATUSES.includes(record.estado);
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaveError("");
     setSaveSuccess(false);
+
+    if (wantsAnular) {
+      if (!buildSavePayload()) return;
+      setAnularErr("");
+      setAnularEditar(false);
+      setShowAnular(true);
+      return;
+    }
 
     if (wantsReprogramar) {
       const missing = reprogError(form.reprog, record.kmFacturables);
@@ -850,6 +900,37 @@ export const RecordDetailPage = () => {
       setReprogErr(parseApiError(err).message);
     } finally {
       setReprogSaving(false);
+    }
+  };
+
+  // Confirmada la anulacion: primero se guardan los demas cambios del formulario y luego se anula con los km. El estado no se manda en el
+  // guardado: lo cambia la anulacion.
+  const handleConfirmAnular = async ({ kmRecorridos, nota }) => {
+    setAnularSaving(true);
+    setAnularErr("");
+    try {
+      if (!anularEditar) {
+        const initial = toFormState(record);
+        const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null });
+        if (rest(form) !== rest(initial)) {
+          const payload = buildSavePayload();
+          if (!payload) return;
+          delete payload.estado;
+          if (Object.keys(payload).length > 0) await updateRecordRequest(id, payload);
+        }
+      }
+      const updated = await anularRecordRequest(id, { kmRecorridos, nota });
+      setRecord(updated);
+      setForm(toFormState(updated));
+      setIsEditing(false);
+      setSaveSuccess(false);
+      setShowAnular(false);
+      refreshRecords();
+      load();
+    } catch (err) {
+      setAnularErr(parseApiError(err).message);
+    } finally {
+      setAnularSaving(false);
     }
   };
 
@@ -1006,6 +1087,16 @@ export const RecordDetailPage = () => {
       }}
     />
 
+    <AnularModal
+      open={showAnular}
+      record={record}
+      editar={anularEditar}
+      loading={anularSaving}
+      error={anularErr}
+      onConfirm={handleConfirmAnular}
+      onCancel={() => setShowAnular(false)}
+    />
+
     <ConfirmModal
       open={showDeleteConfirm}
       title="Eliminar servicio"
@@ -1144,6 +1235,15 @@ const RecordSummaryView = ({
 
       <TraspasoOfService record={record} isChofer={isChofer} />
       <ReprogramacionOfService record={record} isChofer={isChofer} onChanged={onReload} />
+      <AnuladoOfService
+        record={record}
+        isChofer={isChofer}
+        onEditKm={() => {
+          setAnularErr("");
+          setAnularEditar(true);
+          setShowAnular(true);
+        }}
+      />
 
       <MancatosOfService mancatos={record.mancatos} />
 

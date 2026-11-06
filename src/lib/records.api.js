@@ -131,3 +131,8 @@ export const reprogramarRecordRequest = (id, payload) =>
 
 export const deshacerReprogramacionRequest = (id) =>
   api.post(`/records/${id}/reprogramacion/deshacer`).then((res) => res.data.data.record);
+
+// Anular un servicio (solo Admin/Responsable) anotando los km totales que el chofer hizo antes (0 = sin km): esos km se facturan y se
+// pagan. Sirve tambien para corregir los km de un servicio ya anulado.
+export const anularRecordRequest = (id, payload) =>
+  api.post(`/records/${id}/anular`, payload).then((res) => res.data.data.record);

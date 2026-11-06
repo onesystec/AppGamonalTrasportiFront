@@ -38,6 +38,7 @@ import {
 import { formatDate, formatTimeRemaining } from "../../lib/format";
 import { userAreaKeys } from "../../lib/roles";
 import { AREA_ALL, AREAS_BY_KEY, RECORD_AREAS, classifyRecord } from "../../lib/recordAreas";
+import { AnularModal } from "../../components/records/AnularModal";
 import { CompactarModal } from "../../components/records/CompactarModal";
 import { FaltantesChips, hasFaltantes } from "../../components/records/FaltantesPanel";
 import { EMPTY_RECORD_FILTERS, RecordFilters, countActiveFilters } from "../../components/records/RecordFilters";
@@ -53,6 +54,7 @@ import {
   listRecordsSummaryByMonthRequest,
   searchRecordsFilteredRequest,
   updateRecordRequest,
+  anularRecordRequest,
 } from "../../lib/records.api";
 import { kmRecorrido } from "../../lib/km";
 
@@ -490,6 +492,10 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   const [tab, setTab] = useState("en_proceso");
 
   const [showExportModal, setShowExportModal] = useState(false);
+  // Anular desde "Pendientes de hoy": pide los km que el chofer ya recorrio (ver AnularModal).
+  const [anularTarget, setAnularTarget] = useState(null);
+  const [anularSaving, setAnularSaving] = useState(false);
+  const [anularErr, setAnularErr] = useState("");
   const [showCompactar, setShowCompactar] = useState(false);
 
   // --- Vista OWNER/ADMIN: navega mes a mes, trae solo un resumen liviano del mes
@@ -631,10 +637,20 @@ export const RecordsListPage = ({ section: sectionHint }) => {
     };
   }, [isPrivileged, searchQuery, filters, activeFilters]);
 
-  const handleChangeEstado = async (recordId, estado) => {
+  const handleChangeEstado = async (recordId, estado, { anular = null } = {}) => {
+    // Anular pide primero los km recorridos: abre el dialogo y se confirma desde ahi.
+    if (estado === "ANNULLATO" && !anular && isPrivileged) {
+      const target = pendingRecords?.find((r) => r.id === recordId);
+      if (target) {
+        setAnularErr("");
+        setAnularTarget(target);
+        return;
+      }
+    }
     setUpdatingId(recordId);
     try {
-      await updateRecordRequest(recordId, { estado });
+      if (anular) await anularRecordRequest(recordId, anular);
+      else await updateRecordRequest(recordId, { estado });
       // El acordeon, el resumen del mes, la busqueda y "sin cobrar" tambien muestran el estado: se cambia ahi mismo y despues se
       // vuelve a pedir lo abierto para que todo quede al dia sin recargar la pagina.
       const patch = (r) => (r.id === recordId ? { ...r, estado } : r);
@@ -654,6 +670,8 @@ export const RecordsListPage = ({ section: sectionHint }) => {
         return prev.map((r) => (r.id === recordId ? { ...r, estado } : r));
       });
     } catch (err) {
+      // Desde el dialogo de anular el error se muestra ahi mismo.
+      if (anular) throw err;
       setError(parseApiError(err).message);
     } finally {
       setUpdatingId(null);
@@ -1159,6 +1177,27 @@ export const RecordsListPage = ({ section: sectionHint }) => {
         </div>
       )}
 
+      {isPrivileged && (
+        <AnularModal
+          open={Boolean(anularTarget)}
+          record={anularTarget}
+          loading={anularSaving}
+          error={anularErr}
+          onCancel={() => setAnularTarget(null)}
+          onConfirm={async (values) => {
+            setAnularSaving(true);
+            setAnularErr("");
+            try {
+              await handleChangeEstado(anularTarget.id, "ANNULLATO", { anular: values });
+              setAnularTarget(null);
+            } catch (err) {
+              setAnularErr(parseApiError(err).message);
+            } finally {
+              setAnularSaving(false);
+            }
+          }}
+        />
+      )}
       {isPrivileged && <ExportRecordsModal open={showExportModal} onClose={() => setShowExportModal(false)} />}
       {isPrivileged && <CompactarModal open={showCompactar} onClose={() => setShowCompactar(false)} onDone={refreshRecords} />}
     </div>
