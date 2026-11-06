@@ -110,7 +110,7 @@ export const NewDhlAbServiceRecordPage = () => {
       pagoRecibido: d.pagoRecibido,
       costoEspera: d.costoEspera,
       descripcion: d.descripcion,
-      aortic: analizarDescripcion(d.descripcion).aortic,
+      aortic: analizarDescripcion(d.descripcion, base.spedizzione).aortic,
       shipment: d.shipment,
       orderNumero: d.orderNumero,
       tipoPedido: d.tipoPedido,
@@ -169,10 +169,10 @@ export const NewDhlAbServiceRecordPage = () => {
   // misma deteccion: nunca se pisa lo que se escribio a mano).
   const autoRef = useRef({ shipment: "", orderNumero: "" });
   const aorticManualRef = useRef(false);
-  const detectado = analizarDescripcion(form.descripcion);
+  const detectado = analizarDescripcion(form.descripcion, form.spedizzione);
   const handleDescripcion = (e) => {
     const value = e.target.value;
-    const det = analizarDescripcion(value);
+    const det = analizarDescripcion(value, form.spedizzione);
     const auto = autocompletarCampos(form, autoRef.current, det);
     Object.assign(autoRef.current, auto);
     setForm((prev) => ({ ...prev, descripcion: value, ...auto, ...(aorticManualRef.current ? {} : { aortic: det.aortic }) }));

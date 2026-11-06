@@ -1491,10 +1491,10 @@ const RecordEditForm = ({
   // misma deteccion: nunca se pisa lo escrito a mano).
   const autoRef = useRef({ shipment: "", orderNumero: "" });
   const aorticManualRef = useRef(false);
-  const detectado = analizarDescripcion(form.descripcion);
+  const detectado = analizarDescripcion(form.descripcion, record.spedizzione);
   const handleDescripcion = (e) => {
     const value = e.target.value;
-    const det = analizarDescripcion(value);
+    const det = analizarDescripcion(value, record.spedizzione);
     const auto = autocompletarCampos(form, autoRef.current, det);
     Object.assign(autoRef.current, auto);
     setField("descripcion", value);
