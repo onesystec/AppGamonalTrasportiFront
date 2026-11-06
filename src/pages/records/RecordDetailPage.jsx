@@ -1063,6 +1063,11 @@ export const RecordDetailPage = () => {
           onUpload={handleUpload}
           onOpenHours={() => setShowHours(true)}
           onReload={load}
+          onEditAnular={() => {
+            setAnularErr("");
+            setAnularEditar(true);
+            setShowAnular(true);
+          }}
           submitsRef={submitsRef}
           exiting={exiting}
           exitError={exitError}
@@ -1139,6 +1144,7 @@ const RecordSummaryView = ({
   onUpload,
   onOpenHours,
   onReload,
+  onEditAnular,
   saveSuccess,
   submitsRef,
   exiting,
@@ -1250,11 +1256,7 @@ const RecordSummaryView = ({
       <AnuladoOfService
         record={record}
         isChofer={isChofer}
-        onEditKm={() => {
-          setAnularErr("");
-          setAnularEditar(true);
-          setShowAnular(true);
-        }}
+        onEditKm={onEditAnular}
       />
 
       <MancatosOfService mancatos={record.mancatos} />
