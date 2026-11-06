@@ -1,7 +1,7 @@
 // Lee la descripcion de un servicio (el mensaje que escribe la oficina) y saca lo que se puede autocompletar en el formulario. Aprendido de las
 // descripciones reales de DHL y AB Service:
 //  - AORTIC: los Medtronic criticos ("MEDTRONIC ASAP CON APP *AORTIC*", "Sempre Medtronic Aortic"). Los "scheduled" no lo son necesariamente.
-//  - Tipo de pedido: "ASAP" o "SCHEDULED" / "Schedulato".
+//  - Tipo de pedido: "ASAP" o "SCHEDULED" / "Schedulato". En el texto del portal DHL manda "Service Level SCHEDULED" (el dato oficial).
 //  - Aplicativo y zona: "MILANO 12" -> MILANO_12 (zona Milano, 1 a 18); "ROMA 2" -> ROMA_2 (zona Roma, 1 a 10).
 //  - Shipment y Order. DHL: Shipment de 9 cifras que empieza por 171, Order de 10 que empieza por 116. AB Service: Shipment 182xxxxxx, Order
 //    0xxxxxxxx (el Order conserva el cero). A veces el mensaje trae los dos cruzados ("ORDER 171434512 | SHIPMEMT 1167746741"): se asignan
@@ -9,7 +9,7 @@
 const INVISIBLES = /[​-‏⁠-⁯﻿]/g;
 
 const FORMAS = {
-  DHL: { shipment: /^171\d{6}$/, order: /^116\d{7}$/ },
+  DHL: { shipment: /^1[67]\d{7}$/, order: /^116\d{7}$/ },
   AB_SERVICE: { shipment: /^182\d{6}$/, order: /^0\d{8}$/ },
 };
 const MAX_APLICATIVO = { MILANO: 18, ROMA: 10 };
@@ -31,7 +31,7 @@ export const analizarDescripcion = (descripcion, spedizzione = "DHL") => {
 
   const avisos = [];
   if (shipment && !forma.shipment.test(shipment)) {
-    avisos.push(`El Shipment ${shipment} no tiene la forma habitual (${spedizzione === "AB_SERVICE" ? "182 + 6 cifras" : "171 + 6 cifras"}): revisalo.`);
+    avisos.push(`El Shipment ${shipment} no tiene la forma habitual (${spedizzione === "AB_SERVICE" ? "182 + 6 cifras" : "9 cifras que empiezan por 16 o 17"}): revisalo.`);
     shipment = null;
   }
   if (orderNumero && !forma.order.test(orderNumero)) {
@@ -39,7 +39,9 @@ export const analizarDescripcion = (descripcion, spedizzione = "DHL") => {
     orderNumero = null;
   }
 
-  const tipoPedido = /scheduled|schedulat/i.test(texto) ? "SCHEDULED" : /\basap\b/i.test(texto) ? "ASAP" : null;
+  // El portal de DHL trae "Service Level SCHEDULED/ASAP": ese manda. Sin el, se lee del mensaje de la oficina ("MEDTRONIC SCHEDULED CON APP").
+  const nivel = /service\s*level\s*[:#]?\s*(scheduled|asap)/i.exec(texto)?.[1]?.toUpperCase();
+  const tipoPedido = nivel ?? (/scheduled|schedulat/i.test(texto) ? "SCHEDULED" : /\basap\b/i.test(texto) ? "ASAP" : null);
   const ap = /\b(milano|roma)\s*(\d{1,2})\b/i.exec(texto);
   const zona = ap ? ap[1].toUpperCase() : null;
   const numeroAp = ap ? Number(ap[2]) : null;
