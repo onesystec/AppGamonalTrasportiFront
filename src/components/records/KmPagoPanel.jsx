@@ -7,6 +7,17 @@ import { parseApiError } from "../../lib/api";
 import { formatKmValue } from "../../lib/compactado";
 import { fijarKmPagoRequest } from "../../lib/records.api";
 
+// Lee los km escritos a mano: "2272", "2.272" (punto de miles), "2272,5" o "2.272,5". Un punto con 3 cifras detras es de miles, no un decimal.
+export const parseKm = (text) => {
+  const t = String(text ?? "").trim().replace(/\s/g, "");
+  if (!t) return null;
+  let normalized = t;
+  if (t.includes(",")) normalized = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) normalized = t.replace(/\./g, "");
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : NaN;
+};
+
 // "Km a pagar al chofer": la oficina fija los km con los que se calcula el pago del servicio (o de todo el viaje compacto) cuando lo que
 // hizo el chofer no coincide con el circuito planificado (desvios, esperas, anulaciones tardias). No cambia lo que se factura al cliente.
 export const KmPagoPanel = ({ record, onChanged, className }) => {
@@ -17,11 +28,14 @@ export const KmPagoPanel = ({ record, onChanged, className }) => {
   const [nota, setNota] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Un valor muy por debajo del calculado casi siempre es un error de tipeo: pide confirmar antes de guardarlo.
+  const [confirmar, setConfirmar] = useState(false);
 
   useEffect(() => {
     setKm(fijado?.km != null ? String(fijado.km) : "");
     setNota(fijado?.nota ?? "");
     setError("");
+    setConfirmar(false);
   }, [record.id, fijado?.km, fijado?.nota]);
 
   const save = async (value) => {
@@ -38,8 +52,9 @@ export const KmPagoPanel = ({ record, onChanged, className }) => {
     }
   };
 
-  const kmNumber = km.trim() === "" ? null : Number(km.replace(",", "."));
+  const kmNumber = parseKm(km);
   const invalid = kmNumber == null || !Number.isFinite(kmNumber) || kmNumber <= 0 || kmNumber > 10000;
+  const muyBajo = !invalid && calculado > 0 && kmNumber < calculado * 0.5;
 
   return (
     <div className={className}>
@@ -65,15 +80,22 @@ export const KmPagoPanel = ({ record, onChanged, className }) => {
           <TextField
             id="km-pago"
             label="Km a pagar (total del servicio o viaje)"
-            type="number"
+            type="text"
             inputMode="decimal"
-            min="0"
-            max="10000"
-            step="0.1"
             value={km}
             disabled={saving}
-            onChange={(e) => setKm(e.target.value)}
+            onChange={(e) => {
+              setKm(e.target.value);
+              setConfirmar(false);
+            }}
+            placeholder="Ej.: 2272"
           />
+          {!invalid && <p className="-mt-2 text-[13px] font-medium text-ink-100">Se pagaran {formatKmValue(kmNumber)} por todo el servicio o viaje.</p>}
+          {muyBajo && (
+            <p className="-mt-1 rounded-lg bg-warning-500/10 px-3 py-1.5 text-[12px] text-warning-500">
+              Es mucho menos que los km calculados ({formatKmValue(calculado)}). Revisa que no falten cifras: 2272 o 2.272 son dos mil doscientos setenta y dos.
+            </p>
+          )}
           <Textarea id="km-pago-nota" label="Motivo (opcional)" value={nota} maxLength={300} disabled={saving} onChange={(e) => setNota(e.target.value)} placeholder="Ej.: km del GPS, el chofer dio la vuelta cerca de Singen" />
           <Alert>{error}</Alert>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -82,8 +104,19 @@ export const KmPagoPanel = ({ record, onChanged, className }) => {
                 Volver al calculado
               </Button>
             )}
-            <Button className="sm:w-auto sm:px-6" loading={saving} disabled={invalid} onClick={() => save(kmNumber)}>
-              Guardar km a pagar
+            <Button
+              className="sm:w-auto sm:px-6"
+              loading={saving}
+              disabled={invalid}
+              onClick={() => {
+                if (muyBajo && !confirmar) {
+                  setConfirmar(true);
+                  return;
+                }
+                save(kmNumber);
+              }}
+            >
+              {muyBajo && confirmar ? "Si, guardar igual" : "Guardar km a pagar"}
             </Button>
           </div>
         </div>
