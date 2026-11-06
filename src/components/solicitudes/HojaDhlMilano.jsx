@@ -12,7 +12,7 @@ import { getDetalleSolicitudRequest } from "../../lib/solicitudes.api";
 // Hoja con el aspecto de Google Sheets (letras de columna, numeros de fila, rejilla y celda seleccionada) para los servicios de DHL Milano y DHL Roma. Se usa en el
 // Registro de Piazza (las solicitudes: HojaDhlMilano) y en el Historial de servicios (los servicios ya hechos: HojaServicios con sus propias filas).
 // Columnas: SHIPMENT/ORDER (una sola celda, uno encima del otro), TIPO, CLIENTE, CIUDAD, ETA, KM y MILANO / ROMA (el numero asignado de la zona; AB no lo usa).
-// Extra Piazza: CODICE, CLIENTE, RITIRO, CONSEGNA, ETA y KM.
+// Extra Piazza: CLIENTE, RITIRO, CONSEGNA, ETA y KM (no tiene Shipment ni Order).
 // - Clic en el numero de fila (a la izquierda): la fila se extiende hacia abajo y muestra Chofer, Targa y la foto de retiro (bolla).
 // - Clic en una celda: la selecciona. Doble clic (si hay onOpen): abre el registro.
 // Una celda sin dato (o incompleta, como SHIPMENT/ORDER con solo uno de los dos) se pinta de rojo apagado para que se vea que falta completarla
@@ -46,54 +46,6 @@ const CeldaShipmentOrder = ({ s }) => {
   return null;
 };
 
-// Extra Piazza: el codigo del servicio (o los dos, "S20602375 / S20602381"), uno encima del otro.
-const CeldaCodigos = ({ s }) => {
-  const codigos = [s.shipment, s.orderNumero].filter(Boolean);
-  if (!codigos.length) return null;
-  return (
-    <span className="flex flex-col leading-tight">
-      {codigos.map((c, i) => (
-        <span key={c}>
-          {c}
-          {i < codigos.length - 1 ? " /" : ""}
-        </span>
-      ))}
-    </span>
-  );
-};
-
-// Las columnas: id (para la celda seleccionada), titulo, ancho, clase de la celda, que se dibuja, cuando "falta" el dato (celda roja) y su aviso.
-const COL_SHIPMENT = {
-  id: "A",
-  campos: ["shipment", "orderNumero"],
-  titulo: "SHIPMENT/ORDER",
-  ancho: AJUSTADA,
-  clase: "whitespace-nowrap",
-  render: (s) => <CeldaShipmentOrder s={s} />,
-  // Las navette nunca traen Shipment ni Order: no se pintan en rojo.
-  falta: (s) => !s.navetta && !(s.shipment && s.orderNumero),
-  aviso: (s) => (!s.shipment && !s.orderNumero ? "Mancano Shipment e Order" : !s.shipment ? "Manca lo Shipment" : "Manca l'Order"),
-};
-const COL_TIPO = { id: "B", campos: ["tipoPedido"], titulo: "TIPO", ancho: AJUSTADA, clase: "whitespace-nowrap text-center font-semibold", render: (s) => s.tipoPedido ?? "", falta: (s) => !s.tipoPedido, aviso: () => "Manca il tipo (ASAP o SCHEDULED)" };
-const COL_CLIENTE = { id: "C", campos: ["cliente"], titulo: "CLIENTE", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.cliente, falta: (s) => !s.cliente, aviso: () => "Manca il cliente" };
-const COL_CIUDAD = { id: "D", campos: ["ciudad"], titulo: "CIUDAD", ancho: "min-w-[140px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca la città" };
-const COL_ETA = { id: "E", campos: ["eta"], titulo: "ETA", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => formatFechaHora(s.eta), falta: (s) => !s.eta, aviso: () => "Manca l'ETA" };
-const COL_KM = { id: "F", campos: ["km"], titulo: "KM", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => s.km ?? "", falta: (s) => s.km == null || s.km === "", aviso: () => "Mancano i km" };
-const colNumero = (zona) => ({
-  id: "G",
-  campos: ["aplicativo"],
-  titulo: zona.toUpperCase(),
-  ancho: AJUSTADA,
-  clase: "whitespace-nowrap text-center font-semibold",
-  claseFila: (s) => s.milano?.propuesto && "font-normal italic text-ink-300",
-  render: (s) => s.milano?.texto ?? "",
-  falta: (s) => !s.milano?.texto,
-  aviso: () => `Numero di ${zona} non ancora assegnato`,
-  titulo_fila: (s) => (s.milano?.propuesto ? "Numero proposto: l'ufficio non lo ha ancora assegnato" : undefined),
-});
-
-// Extra Piazza: CODICE | CLIENTE | RITIRO | CONSEGNA | ETA | KM (el KM lo escribe una persona).
-const COL_CODIGO = { id: "A", campos: ["shipment", "orderNumero"], titulo: "CODICE", ancho: AJUSTADA, clase: "whitespace-nowrap", render: (s) => <CeldaCodigos s={s} />, falta: (s) => !s.navetta && !s.shipment, aviso: () => "Manca il codice" };
 const COL_RITIRO = { id: "R", campos: ["ritiro"], titulo: "RITIRO", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ritiro ?? "", falta: (s) => !s.ritiro, aviso: () => "Manca il luogo di ritiro" };
 const COL_CONSEGNA = { id: "D", campos: ["ciudad"], titulo: "CONSEGNA", ancho: "min-w-[160px]", clase: "break-words", render: (s) => s.ciudad, falta: (s) => !s.ciudad, aviso: () => "Manca il luogo di consegna" };
 
@@ -101,7 +53,7 @@ const columnasDe = (variante) =>
   variante === "ab"
     ? [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM]
     : variante === "extra"
-      ? [COL_CODIGO, COL_CLIENTE, COL_RITIRO, COL_CONSEGNA, COL_ETA, COL_KM]
+      ? [COL_CLIENTE, COL_RITIRO, COL_CONSEGNA, COL_ETA, COL_KM]
       : [COL_SHIPMENT, COL_TIPO, COL_CLIENTE, COL_CIUDAD, COL_ETA, COL_KM, colNumero(variante === "roma" ? "Roma" : "Milano")];
 
 // Cuando se subio la solicitud (si la fila viene de una solicitud). Quien la subio no se muestra en la hoja.

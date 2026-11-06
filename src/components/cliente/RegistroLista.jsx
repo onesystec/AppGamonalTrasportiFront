@@ -68,7 +68,7 @@ const faseDeServicio = (r, enViaje) =>
 // Las navette nunca traen Shipment ni Order: no se piden (si estan, se muestran).
 const faltantes = ({ extra, shipment, order, tipo, cliente, destino, ritiro, eta, navetta = false }) =>
   [
-    !navetta && !shipment && (extra ? "Codice" : "Shipment"),
+    !navetta && !extra && !shipment && "Shipment",
     !navetta && !extra && !order && "Order",
     !extra && !tipo && "Tipo",
     !extra && !cliente && "Cliente",

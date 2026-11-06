@@ -103,8 +103,9 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
         destinazione: d.ciudad ?? prev.destinazione,
         fechaHora: d.eta ? toRomeInput(d.eta) : prev.fechaHora,
         km: d.km != null ? String(d.km) : prev.km,
-        shipment: d.shipment ?? prev.shipment,
-        orderNumero: d.orderNumero ?? prev.orderNumero,
+        // Extra Piazza no tiene Shipment ni Order.
+        shipment: esExtra ? "" : (d.shipment ?? prev.shipment),
+        orderNumero: esExtra ? "" : (d.orderNumero ?? prev.orderNumero),
         tipoPedido: d.tipoPedido ?? prev.tipoPedido,
         ritiro: d.ritiro ?? prev.ritiro,
         // El numero de Milano / Roma que dice el mensaje ("ROMA 2", "ASSEGNATO ROMA 4").
@@ -140,8 +141,8 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       // La descripcion de DHL Milano es el texto de DHL completo (si se pego); en AB Service, la del envio.
       descripcion: usaTexto ? form.descripcion : "",
       pagato50: esRoma ? form.pagato50 : false,
-      shipment: usaTexto ? form.shipment : "",
-      orderNumero: usaTexto ? form.orderNumero : "",
+      shipment: usaTexto && !esExtra ? form.shipment : "",
+      orderNumero: usaTexto && !esExtra ? form.orderNumero : "",
       tipoPedido: usaTexto && !esExtra ? form.tipoPedido : "",
       ritiro: esExtra ? form.ritiro : "",
       zona: esExtra ? form.zona : "",
@@ -240,14 +241,13 @@ export const SolicitudForm = ({ solicitud, onSaved, onCancel }) => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {usaTexto && (
           <>
-            <TextField id="sol-shipment" label={esExtra ? "Codice" : "Shipment"} value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
-            <TextField
-              id="sol-order"
-              label={esExtra ? "Secondo codice (facoltativo)" : "Order"}
-              value={form.orderNumero}
-              onChange={onChange("orderNumero")}
-              error={fieldErrors.orderNumero?.[0]}
-            />
+            {/* Extra Piazza (Milano y Roma) no tiene Shipment ni Order: sin esas casillas. */}
+            {!esExtra && (
+              <>
+                <TextField id="sol-shipment" label="Shipment" value={form.shipment} onChange={onChange("shipment")} error={fieldErrors.shipment?.[0]} />
+                <TextField id="sol-order" label="Order" value={form.orderNumero} onChange={onChange("orderNumero")} error={fieldErrors.orderNumero?.[0]} />
+              </>
+            )}
             {esExtra && (
               <TextField className="sm:col-span-2" id="sol-ritiro" label="Ritiro" value={form.ritiro} onChange={onChange("ritiro")} error={fieldErrors.ritiro?.[0]} />
             )}
