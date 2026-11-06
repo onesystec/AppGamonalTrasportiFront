@@ -59,6 +59,7 @@ export const it = {
   "track.plannedTime": "Orario previsto {time}",
   "track.driver": "Autista: {name}",
   "track.noSignal": "Nessun segnale dal veicolo per ora",
+  "track.emergency": "Allerta: servizio critico",
   "track.calculating": "Calcolo del percorso...",
   "track.straightLine": "A circa {km} km in linea d'aria",
   "track.byRoad": "Mancano {km} km su strada",

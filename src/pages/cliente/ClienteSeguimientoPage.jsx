@@ -346,13 +346,26 @@ export const ClienteSeguimientoPage = () => {
                         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                         getPixelPositionOffset={(width, height) => ({ x: -width / 2, y: -height - 14 })}
                       >
-                        {/* Colores fijos: una tarjeta clara que se lee bien sobre cualquier fondo del mapa. */}
-                        <div
-                          onClick={() => select(s.id)}
-                          className="w-fit cursor-pointer whitespace-nowrap rounded-md border border-gray-300 bg-white px-2 py-1 text-[12px] font-bold text-gray-900 shadow-md"
-                        >
-                          {s.targa}
-                          {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold" style={{ color: colorDe(s) }}>+{minutosTexto(s.retrasoMin)}</span>}
+                        <div className="flex w-fit flex-col items-center">
+                          {/* Servicio de Medtronic: triangulo rojo con latido y halo, centrado sobre la patente. */}
+                          {s.medtronic && (
+                            <div className="pointer-events-none relative mb-1 flex h-8 w-8 items-center justify-center" role="img" aria-label={t("track.emergency")} title={t("track.emergency")}>
+                              <span className="alerta-halo absolute h-6 w-6 rounded-full bg-red-600/60" />
+                              <svg className="alerta-triangulo relative h-8 w-8" viewBox="0 0 32 32" aria-hidden="true">
+                                <path d="M16 3 L30 28 H2 Z" fill="#dc2626" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
+                                <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#ffffff" />
+                                <circle cx="16" cy="23.4" r="1.7" fill="#ffffff" />
+                              </svg>
+                            </div>
+                          )}
+                          {/* Colores fijos: una tarjeta clara que se lee bien sobre cualquier fondo del mapa. */}
+                          <div
+                            onClick={() => select(s.id)}
+                            className="w-fit cursor-pointer whitespace-nowrap rounded-md border border-gray-300 bg-white px-2 py-1 text-[12px] font-bold text-gray-900 shadow-md"
+                          >
+                            {s.targa}
+                            {verLista && s.estado === "CON_RETRASO" && <span className="ml-1.5 font-semibold" style={{ color: colorDe(s) }}>+{minutosTexto(s.retrasoMin)}</span>}
+                          </div>
                         </div>
                       </OverlayView>
                     ))}
