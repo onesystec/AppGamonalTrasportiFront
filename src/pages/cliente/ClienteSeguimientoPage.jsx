@@ -38,6 +38,18 @@ const Targa = ({ children }) => (
   <span className="inline-block rounded-md border border-line/30 px-2 py-0.5 text-[12px] font-bold tracking-wider text-ink-50">{children}</span>
 );
 
+// Triangulo rojo de alerta con latido y halo (servicios de Medtronic): en el mapa, sobre la patente, y en la tarjeta del servicio.
+const AlertaTriangulo = ({ size = 32, label, className }) => (
+  <span className={clsx("pointer-events-none relative flex shrink-0 items-center justify-center", className)} style={{ width: size, height: size }} role="img" aria-label={label} title={label}>
+    <span className="alerta-halo absolute rounded-full bg-red-600/60" style={{ width: size * 0.75, height: size * 0.75 }} />
+    <svg className="alerta-triangulo relative" style={{ width: size, height: size }} viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M16 3 L30 28 H2 Z" fill="#dc2626" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#ffffff" />
+      <circle cx="16" cy="23.4" r="1.7" fill="#ffffff" />
+    </svg>
+  </span>
+);
+
 const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando, now }) => {
   const t = useT();
   const estado = ESTADO[s.estado];
@@ -49,9 +61,17 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando
       className={clsx(
         "glass-surface flex w-full flex-col gap-0.5 rounded-xl border-l-4 px-3 py-2 text-left transition-colors hover:bg-line/[0.06]",
         semaforo.edge,
+        s.medtronic && "bg-red-500/[0.07]",
         selected && "ring-2 ring-accent-500/60"
       )}
     >
+      {/* Servicio de Medtronic: se destaca para darle mas atencion. */}
+      {s.medtronic && (
+        <span className="mb-1 flex items-center gap-2 rounded-lg bg-danger-500/15 px-2 py-1">
+          <AlertaTriangulo size={22} label={t("track.emergency")} />
+          <span className="text-[12px] font-extrabold uppercase tracking-wider text-danger-500">{t("track.medtronic")}</span>
+        </span>
+      )}
       <span className="flex items-center gap-2">
         <Targa>{s.targa ?? t("track.noPlate")}</Targa>
         <span className="min-w-0 truncate text-[11px] text-ink-400">{s.codigo}</span>
@@ -348,16 +368,7 @@ export const ClienteSeguimientoPage = () => {
                       >
                         <div className="flex w-fit flex-col items-center">
                           {/* Servicio de Medtronic: triangulo rojo con latido y halo, centrado sobre la patente. */}
-                          {s.medtronic && (
-                            <div className="pointer-events-none relative mb-1 flex h-8 w-8 items-center justify-center" role="img" aria-label={t("track.emergency")} title={t("track.emergency")}>
-                              <span className="alerta-halo absolute h-6 w-6 rounded-full bg-red-600/60" />
-                              <svg className="alerta-triangulo relative h-8 w-8" viewBox="0 0 32 32" aria-hidden="true">
-                                <path d="M16 3 L30 28 H2 Z" fill="#dc2626" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
-                                <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#ffffff" />
-                                <circle cx="16" cy="23.4" r="1.7" fill="#ffffff" />
-                              </svg>
-                            </div>
-                          )}
+                          {s.medtronic && <AlertaTriangulo size={32} label={t("track.emergency")} className="mb-1" />}
                           {/* Colores fijos: una tarjeta clara que se lee bien sobre cualquier fondo del mapa. */}
                           <div
                             onClick={() => select(s.id)}
