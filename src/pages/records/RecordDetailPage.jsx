@@ -27,6 +27,7 @@ import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField"
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { ReprogramacionModal } from "../../components/records/ReprogramacionModal";
 import { AnularModal } from "../../components/records/AnularModal";
+import { AnularPanel, anularError, buildAnularBody, emptyAnular } from "../../components/records/AnularPanel";
 import { MOTIVO_LABEL, ReprogramacionPanel, buildReprogBody, emptyReprog, reprogError } from "../../components/records/ReprogramacionPanel";
 import { combineStopAddress, StopListEditor } from "../../components/records/StopListEditor";
 import { buildSalidaPayload } from "../../components/records/SalidaField";
@@ -456,6 +457,8 @@ const toFormState = (record) => ({
   estado: record.estado ?? "",
   // Datos de la reprogramacion (solo se usan si el estado pasa a Reprogramado, ver ReprogramacionPanel).
   reprog: emptyReprog(),
+  // Km recorridos al anular (solo se usan si el estado pasa a Anulado, ver AnularPanel).
+  anular: emptyAnular(),
   horasDia: record.horasDia ?? "",
   horasNoche: record.horasNoche ?? "",
   tiempoEspera: record.tiempoEspera ?? "",
@@ -832,10 +835,14 @@ export const RecordDetailPage = () => {
     setSaveSuccess(false);
 
     if (wantsAnular) {
+      const invalid = anularError(form.anular);
+      if (invalid) {
+        setSaveError(invalid);
+        return;
+      }
       if (!buildSavePayload()) return;
-      setAnularErr("");
       setAnularEditar(false);
-      setShowAnular(true);
+      await handleConfirmAnular(buildAnularBody(form.anular), { inline: true });
       return;
     }
 
@@ -882,7 +889,7 @@ export const RecordDetailPage = () => {
       // Solo se guarda antes lo que se haya cambiado en el formulario (la reprogramacion ya cambia el estado y los km): asi un
       // servicio que solo se reprograma no espera un guardado completo.
       const initial = toFormState(record);
-      const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null });
+      const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null, anular: null });
       if (rest(form) !== rest(initial)) {
         const payload = buildSavePayload();
         if (!payload) return;
@@ -905,13 +912,13 @@ export const RecordDetailPage = () => {
 
   // Confirmada la anulacion: primero se guardan los demas cambios del formulario y luego se anula con los km. El estado no se manda en el
   // guardado: lo cambia la anulacion.
-  const handleConfirmAnular = async ({ kmRecorridos, nota }) => {
+  const handleConfirmAnular = async ({ kmRecorridos, nota }, { inline = false } = {}) => {
     setAnularSaving(true);
     setAnularErr("");
     try {
-      if (!anularEditar) {
+      if (inline || !anularEditar) {
         const initial = toFormState(record);
-        const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null });
+        const rest = (f) => JSON.stringify({ ...f, estado: null, reprog: null, anular: null });
         if (rest(form) !== rest(initial)) {
           const payload = buildSavePayload();
           if (!payload) return;
@@ -928,7 +935,9 @@ export const RecordDetailPage = () => {
       refreshRecords();
       load();
     } catch (err) {
-      setAnularErr(parseApiError(err).message);
+      // Desde el formulario el error se ve ahi mismo; desde el dialogo de corregir km, en el dialogo.
+      if (inline) setSaveError(parseApiError(err).message);
+      else setAnularErr(parseApiError(err).message);
     } finally {
       setAnularSaving(false);
     }
@@ -1024,6 +1033,8 @@ export const RecordDetailPage = () => {
           saveError={saveError}
           saveSuccess={saveSuccess}
           reprogramar={wantsReprogramar}
+          anular={wantsAnular}
+          anularSaving={anularSaving}
           handleChange={handleChange}
           setField={setField}
           handleCheckboxChange={handleCheckboxChange}
@@ -1451,6 +1462,8 @@ const RecordEditForm = ({
   saveError,
   saveSuccess,
   reprogramar,
+  anular,
+  anularSaving,
   handleChange,
   setField,
   handleCheckboxChange,
@@ -1528,6 +1541,8 @@ const RecordEditForm = ({
             disabled={saving}
           />
         )}
+
+        {anular && <AnularPanel record={record} value={form.anular} onChange={(v) => setField("anular", v)} disabled={saving || anularSaving} />}
 
         {!isChofer && (
           <>
@@ -1947,7 +1962,7 @@ const RecordEditForm = ({
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" loading={saving} className="sm:w-auto sm:px-8">
+          <Button type="submit" loading={saving || anularSaving} className="sm:w-auto sm:px-8">
             Guardar cambios
           </Button>
           <Button
