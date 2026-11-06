@@ -136,3 +136,7 @@ export const deshacerReprogramacionRequest = (id) =>
 // pagan. Sirve tambien para corregir los km de un servicio ya anulado.
 export const anularRecordRequest = (id, payload) =>
   api.post(`/records/${id}/anular`, payload).then((res) => res.data.data.record);
+
+// Fijar los km que se le pagan al chofer en un servicio o viaje compacto (solo Admin/Responsable). km null = volver al calculo normal.
+export const fijarKmPagoRequest = (id, payload) =>
+  api.put(`/records/${id}/km-pago`, payload).then((res) => res.data.data.record);

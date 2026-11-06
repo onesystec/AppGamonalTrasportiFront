@@ -26,6 +26,7 @@ import { CircuitoDetalle } from "../../components/records/CircuitoDetalle";
 import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField";
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { ReprogramacionModal } from "../../components/records/ReprogramacionModal";
+import { KmPagoPanel } from "../../components/records/KmPagoPanel";
 import { AnularModal } from "../../components/records/AnularModal";
 import { AnularPanel, anularError, buildAnularBody, emptyAnular } from "../../components/records/AnularPanel";
 import { MOTIVO_LABEL, ReprogramacionPanel, buildReprogBody, emptyReprog, reprogError } from "../../components/records/ReprogramacionPanel";
@@ -1308,6 +1309,11 @@ const RecordSummaryView = ({
 
       {/* El circuito (km con vuelta al lugar de espera) lo ve la oficina; el chofer ve los km planificados contados. */}
       {!isChofer && <CircuitoDetalle circuito={record.circuito} recordId={record.id} recorridoEstado={record.recorridoEstado} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />}
+
+      {/* Km a pagar al chofer: la oficina los fija si lo que hizo no coincide con el circuito. Solo servicios trabajados. */}
+      {!isChofer && (record.estado !== "RISCHEDULATO" || record.reprogramado) && (record.estado !== "ANNULLATO" || record.anulado) && (
+        <KmPagoPanel record={record} onChanged={onReload} className="mt-4 rounded-xl bg-line/[0.05] px-4 py-3" />
+      )}
 
       <ViajeCompactoCard record={record} isChofer={isChofer} onChanged={onReload} />
 
