@@ -1,5 +1,5 @@
 import { BackLink } from "../../components/ui/BackLink";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { SlideOverPanel } from "../../components/ui/SlideOverPanel";
 import { Alert } from "../../components/ui/Alert";
@@ -26,6 +26,8 @@ import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField"
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { PasosFronteraCheckboxes } from "../../components/records/BrenneroCheckbox";
 import { buildSalidaPayload, EMPTY_SALIDA, SalidaField } from "../../components/records/SalidaField";
+import { AorticField } from "../../components/records/AorticField";
+import { analizarDescripcion, autocompletarCampos } from "../../lib/descripcionServicio";
 import { nombrePais, paisOptions } from "../../lib/paises";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -48,6 +50,8 @@ const INITIAL_FORM = {
   fechaRetiro: "",
   retiroPaqueteAt: "",
   descripcion: "",
+  // AORTIC (Medtronic critico): se detecta en la descripcion, ver AorticField.
+  aortic: false,
   comentarios: "",
   ciudad: "",
   // Pais de la entrega (codigo ISO; vacio = Italia).
@@ -106,6 +110,7 @@ export const NewDhlAbServiceRecordPage = () => {
       pagoRecibido: d.pagoRecibido,
       costoEspera: d.costoEspera,
       descripcion: d.descripcion,
+      aortic: analizarDescripcion(d.descripcion).aortic,
       shipment: d.shipment,
       orderNumero: d.orderNumero,
       tipoPedido: d.tipoPedido,
@@ -159,6 +164,19 @@ export const NewDhlAbServiceRecordPage = () => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Al escribir o pegar la descripcion se detecta AORTIC, el Shipment y el Order (los campos solo se rellenan si estan vacios o los puso esta
+  // misma deteccion: nunca se pisa lo que se escribio a mano).
+  const autoRef = useRef({ shipment: "", orderNumero: "" });
+  const aorticManualRef = useRef(false);
+  const detectado = analizarDescripcion(form.descripcion);
+  const handleDescripcion = (e) => {
+    const value = e.target.value;
+    const det = analizarDescripcion(value);
+    const auto = autocompletarCampos(form, autoRef.current, det);
+    Object.assign(autoRef.current, auto);
+    setForm((prev) => ({ ...prev, descripcion: value, ...auto, ...(aorticManualRef.current ? {} : { aortic: det.aortic }) }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -277,9 +295,17 @@ export const NewDhlAbServiceRecordPage = () => {
               label="Descripcion"
               placeholder="Detalle del servicio a realizar..."
               value={form.descripcion}
-              onChange={handleChange("descripcion")}
+              onChange={handleDescripcion}
               error={fieldErrors.descripcion?.[0]}
               required
+            />
+            <AorticField
+              checked={form.aortic}
+              detectado={detectado}
+              onChange={(v) => {
+                aorticManualRef.current = true;
+                setField("aortic", v);
+              }}
             />
           </div>
 

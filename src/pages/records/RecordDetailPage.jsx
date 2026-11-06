@@ -27,6 +27,8 @@ import { RetiroPaqueteField } from "../../components/records/RetiroPaqueteField"
 import { FechasAviso } from "../../components/records/FechasAviso";
 import { ReprogramacionModal } from "../../components/records/ReprogramacionModal";
 import { KmPagoPanel } from "../../components/records/KmPagoPanel";
+import { AorticField } from "../../components/records/AorticField";
+import { analizarDescripcion, autocompletarCampos } from "../../lib/descripcionServicio";
 import { AnularModal } from "../../components/records/AnularModal";
 import { AnularPanel, anularError, buildAnularBody, emptyAnular } from "../../components/records/AnularPanel";
 import { MOTIVO_LABEL, ReprogramacionPanel, buildReprogBody, emptyReprog, reprogError } from "../../components/records/ReprogramacionPanel";
@@ -453,6 +455,7 @@ const OWNER_FIELDS = [
   "pagoRecibido",
   "costoCombustible",
   "clienteConfirmado",
+  "aortic",
 ];
 
 const toFormState = (record) => ({
@@ -492,6 +495,7 @@ const toFormState = (record) => ({
     ? record.stops.map((s) => ({ direccion: s.direccion, cap: "", lat: null, lng: null }))
     : [{ direccion: "", cap: "", lat: null, lng: null }],
   descripcion: record.descripcion ?? "",
+  aortic: Boolean(record.aortic),
   ciudad: record.ciudad ?? "",
   pais: record.pais ?? "",
   // Las tres fechas van en hora de pared de Roma (el backend las interpreta asi): lo que escribe la
@@ -1205,6 +1209,9 @@ const RecordSummaryView = ({
         </div>
       </div>
 
+      {record.aortic && (
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-danger-500/15 px-3 py-1 text-[12px] font-extrabold uppercase tracking-wider text-danger-500">AORTIC · critico</p>
+      )}
       <p className="mt-3 text-[15px] text-ink-200">{record.descripcion}</p>
       {isPrivileged && <CambiosDelServicio recordId={record.id} />}
 
@@ -1480,6 +1487,20 @@ const RecordEditForm = ({
   onCancel,
 }) => {
   const isDhlAb = record.spedizzione === "DHL" || record.spedizzione === "AB_SERVICE";
+  // Al escribir o pegar la descripcion se detecta AORTIC, el Shipment y el Order (solo se rellenan los campos vacios o los que puso esta
+  // misma deteccion: nunca se pisa lo escrito a mano).
+  const autoRef = useRef({ shipment: "", orderNumero: "" });
+  const aorticManualRef = useRef(false);
+  const detectado = analizarDescripcion(form.descripcion);
+  const handleDescripcion = (e) => {
+    const value = e.target.value;
+    const det = analizarDescripcion(value);
+    const auto = autocompletarCampos(form, autoRef.current, det);
+    Object.assign(autoRef.current, auto);
+    setField("descripcion", value);
+    Object.entries(auto).forEach(([campo, valor]) => setField(campo, valor));
+    if (!aorticManualRef.current) setField("aortic", det.aortic);
+  };
   // Extras Stefania es el unico tipo sin Zona (Extras Piazza y DHL/AB Service si la
   // usan, ver ZONA_OPTIONS mas abajo - DHL empezo a operar tambien en Roma).
   const isExtrasStefania = record.spedizzione === "EXTRAS_STEFANIA";
@@ -1765,7 +1786,16 @@ const RecordEditForm = ({
               id="descripcion"
               label="Descripcion"
               value={form.descripcion}
-              onChange={handleChange("descripcion")}
+              onChange={handleDescripcion}
+            />
+            <AorticField
+              checked={form.aortic}
+              detectado={detectado}
+              disabled={saving}
+              onChange={(v) => {
+                aorticManualRef.current = true;
+                setField("aortic", v);
+              }}
             />
           </>
         )}

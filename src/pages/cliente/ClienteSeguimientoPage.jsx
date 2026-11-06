@@ -61,12 +61,12 @@ const ServicioCard = ({ s, selected, onSelect, verLista, verMapa, ruta, cargando
       className={clsx(
         "glass-surface flex w-full flex-col gap-0.5 rounded-xl border-l-4 px-3 py-2 text-left transition-colors hover:bg-line/[0.06]",
         semaforo.edge,
-        s.medtronic && "bg-red-500/[0.07]",
+        s.critico && "bg-red-500/[0.07]",
         selected && "ring-2 ring-accent-500/60"
       )}
     >
       {/* Servicio de Medtronic: se destaca para darle mas atencion. */}
-      {s.medtronic && (
+      {s.critico && (
         <span className="mb-1 flex items-center gap-2 rounded-lg bg-danger-500/15 px-2 py-1">
           <AlertaTriangulo size={22} label={t("track.emergency")} />
           <span className="text-[12px] font-extrabold uppercase tracking-wider text-danger-500">{t("track.medtronic")}</span>
@@ -368,7 +368,7 @@ export const ClienteSeguimientoPage = () => {
                       >
                         <div className="flex w-fit flex-col items-center">
                           {/* Servicio de Medtronic: triangulo rojo con latido y halo, centrado sobre la patente. */}
-                          {s.medtronic && <AlertaTriangulo size={32} label={t("track.emergency")} className="mb-1" />}
+                          {s.critico && <AlertaTriangulo size={32} label={t("track.emergency")} className="mb-1" />}
                           {/* Colores fijos: una tarjeta clara que se lee bien sobre cualquier fondo del mapa. */}
                           <div
                             onClick={() => select(s.id)}
