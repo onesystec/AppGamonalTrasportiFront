@@ -12,7 +12,7 @@ import { compactarRequest, listCompactablesRequest } from "../../lib/records.api
 
 const chofer = (s) => (s.driver ? `${s.driver.nombre} ${s.driver.apellido}` : "Sin chofer");
 
-// "Compactar": el Admin/Responsable junta 2 o mas servicios de un mismo chofer y vehiculo en un solo viaje.
+// "Compactar": el Admin/Responsable junta 2 o mas servicios de un mismo chofer y vehiculo (un anulado puede ser de otro vehiculo) en un solo viaje.
 // Sugiere los ultimos servicios creados (solo de sus areas; tambien los de ETA vencida o ya entregados sin horas); al elegir el primero, solo se pueden sumar los del
 // mismo chofer y vehiculo. El orden de las paradas se puede dejar por ETA o ajustar a mano; el primero es el
 // servicio principal (ahi se cargan las horas de todo el viaje).
@@ -48,6 +48,9 @@ export const CompactarModal = ({ open, onClose, onDone }) => {
   const byId = useMemo(() => new Map((items ?? []).map((s) => [s.id, s])), [items]);
   const chosen = selected.map((id) => byId.get(id)).filter(Boolean);
   const lock = chosen[0] ?? null;
+  // El vehiculo del viaje lo marca el primer servicio que se hizo: un servicio anulado puede ir en otro vehiculo (el chofer sigue con
+  // otro servicio despues de anular).
+  const vehiculoViaje = chosen.find((s) => s.estado !== "ANNULLATO")?.vehicle?.id ?? null;
 
   if (!open) return null;
 
@@ -55,7 +58,7 @@ export const CompactarModal = ({ open, onClose, onDone }) => {
   const blockedReason = (s) => {
     if (!lock || selected.includes(s.id)) return null;
     if (s.driver?.id !== lock.driver?.id) return "Otro chofer";
-    if (s.vehicle?.id !== lock.vehicle?.id) return "Otro vehículo";
+    if (s.estado !== "ANNULLATO" && vehiculoViaje && s.vehicle?.id !== vehiculoViaje) return "Otro vehículo";
     if (selected.length >= MAX_SERVICIOS_VIAJE) return `Máximo ${MAX_SERVICIOS_VIAJE}`;
     return null;
   };
@@ -222,7 +225,7 @@ export const CompactarModal = ({ open, onClose, onDone }) => {
                 ))}
               </ol>
               <p className="mt-2 text-[12px] text-ink-400">
-                {chofer(chosen[0])} · {chosen[0].vehicle?.targa ?? "-"}. El primero es el servicio principal: ahí se
+                {chofer(chosen[0])} · {[...new Set(chosen.map((s) => s.vehicle?.targa ?? "-"))].join(" / ")}. El primero es el servicio principal: ahí se
                 cargan las horas, los peajes y el carburante de todo el viaje.
               </p>
             </div>

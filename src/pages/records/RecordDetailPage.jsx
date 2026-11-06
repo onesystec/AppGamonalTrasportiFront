@@ -292,7 +292,8 @@ const AnuladoOfService = ({ record, isChofer, onEditKm }) => {
       <p className="mt-1.5 text-[14px] text-ink-100">
         {anulado?.kmHechos != null && !isChofer ? (
           <>
-            El chofer recorrio <b>{anulado.kmHechos} km</b> antes de la anulacion
+            El chofer recorrio <b>{anulado.kmHechos} km</b>
+            {anulado.soloIda ? ` (${anulado.kmIngresados} de ida y otros tantos de vuelta)` : ""} antes de la anulacion
             {anulado.kmPlanificados ? ` (el servicio tenia ${anulado.kmPlanificados} km)` : ""}; se facturan y se pagan.
             {anulado.nota ? ` ${anulado.nota}` : ""}
           </>
@@ -912,7 +913,7 @@ export const RecordDetailPage = () => {
 
   // Confirmada la anulacion: primero se guardan los demas cambios del formulario y luego se anula con los km. El estado no se manda en el
   // guardado: lo cambia la anulacion.
-  const handleConfirmAnular = async ({ kmRecorridos, nota }, { inline = false } = {}) => {
+  const handleConfirmAnular = async ({ kmRecorridos, soloIda = false, nota }, { inline = false } = {}) => {
     setAnularSaving(true);
     setAnularErr("");
     try {
@@ -926,7 +927,7 @@ export const RecordDetailPage = () => {
           if (Object.keys(payload).length > 0) await updateRecordRequest(id, payload);
         }
       }
-      const updated = await anularRecordRequest(id, { kmRecorridos, nota });
+      const updated = await anularRecordRequest(id, { kmRecorridos, soloIda, nota });
       setRecord(updated);
       setForm(toFormState(updated));
       setIsEditing(false);
