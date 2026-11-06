@@ -12,7 +12,7 @@ import { listVehiclesRequest } from "../../lib/vehicles.api";
 
 // Filtros de la lista de Registros (chofer, vehiculo/targa, cliente, estado, tipo y rango de fechas). Se combinan entre si y con el
 // texto del buscador: la busqueda se hace en el servidor sobre todo el historico (no solo el mes que se esta viendo).
-export const EMPTY_RECORD_FILTERS = { driverId: "", vehicleId: "", clientId: "", estado: "", spedizzione: "", from: "", to: "" };
+export const EMPTY_RECORD_FILTERS = { driverId: "", vehicleId: "", clientId: "", estado: "", spedizzione: "", from: "", to: "", montoMin: "", montoMax: "" };
 export const countActiveFilters = (filters) => Object.values(filters).filter(Boolean).length;
 
 const SPEDIZZIONE_OPTIONS = [
@@ -88,6 +88,8 @@ export const RecordFilters = ({ filters, onChange, total }) => {
         filters.clientId && { key: "clientId", text: `Cliente: ${labelOf(options?.clients, filters.clientId)}` },
         filters.estado && { key: "estado", text: `Estado: ${labelOf(ESTADO_OPTIONS, filters.estado)}` },
         filters.spedizzione && { key: "spedizzione", text: `Tipo: ${SPEDIZZIONE_LABELS[filters.spedizzione]}` },
+        filters.montoMin && { key: "montoMin", text: `Monto recibido desde ${filters.montoMin} €` },
+        filters.montoMax && { key: "montoMax", text: `Monto recibido hasta ${filters.montoMax} €` },
         filters.from && { key: "from", text: `Desde ${formatDate(`${filters.from}T12:00:00`)}` },
         filters.to && { key: "to", text: `Hasta ${formatDate(`${filters.to}T12:00:00`)}` },
       ].filter(Boolean),
@@ -176,6 +178,28 @@ export const RecordFilters = ({ filters, onChange, total }) => {
             <div className="grid grid-cols-2 gap-3">
               <TextField id="filtro-desde" label="Desde" type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => set({ from: e.target.value })} />
               <TextField id="filtro-hasta" label="Hasta" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => set({ to: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3" title="Monto recibido del servicio, en euros">
+              <TextField
+                id="filtro-monto-min"
+                label="Monto desde (€)"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={filters.montoMin}
+                onChange={(e) => set({ montoMin: e.target.value })}
+              />
+              <TextField
+                id="filtro-monto-max"
+                label="Monto hasta (€)"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={filters.montoMax}
+                onChange={(e) => set({ montoMax: e.target.value })}
+              />
             </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">

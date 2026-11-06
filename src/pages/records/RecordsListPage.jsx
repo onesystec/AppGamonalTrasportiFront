@@ -608,6 +608,8 @@ export const RecordsListPage = ({ section: sectionHint }) => {
         ...(filters.spedizzione ? { spedizzione: filters.spedizzione } : {}),
         ...(from ? { from } : {}),
         ...(to ? { to } : {}),
+        ...(filters.montoMin ? { montoMin: filters.montoMin } : {}),
+        ...(filters.montoMax ? { montoMax: filters.montoMax } : {}),
       })
         .then((data) => {
           if (!cancelled) {

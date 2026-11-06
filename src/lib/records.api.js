@@ -16,7 +16,7 @@ export const listPendingRecordsRequest = () =>
 export const searchRecordsRequest = (q) =>
   api.get("/records/search", { params: { q } }).then((res) => res.data.data.records);
 
-// Buscador con filtros (ver RecordFilters.jsx): q, driverId, vehicleId, clientId, estado, spedizzione, from, to (AAAA-MM-DD).
+// Buscador con filtros (ver RecordFilters.jsx): q, driverId, vehicleId, clientId, estado, spedizzione, from, to (AAAA-MM-DD), montoMin, montoMax (€ recibidos).
 // Devuelve { records, total }: total puede ser mayor que records.length (el servidor limita la cantidad que manda).
 export const searchRecordsFilteredRequest = (params) =>
   api.get("/records/search", { params }).then((res) => res.data.data);
