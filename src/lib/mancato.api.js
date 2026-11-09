@@ -19,6 +19,10 @@ export const listMancatosRequest = (params) =>
   api.get(BASE, { params }).then((res) => res.data.data);
 
 // Cantidad y total en plata por estado: { VENCIDO, PENDIENTE, PAGADO } -> { count, total }.
+// Informe en Excel o PDF con los mismos filtros de la lista (solo la oficina): devuelve el archivo.
+export const exportMancatosRequest = (params, formato) =>
+  api.get(`${BASE}/export`, { params: { ...params, formato }, responseType: "blob", timeout: 120000 }).then((res) => res.data);
+
 export const getMancatoSummaryRequest = (params) =>
   api.get(`${BASE}/summary`, { params }).then((res) => res.data.data.summary);
 

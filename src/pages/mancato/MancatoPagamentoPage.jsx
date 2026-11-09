@@ -31,7 +31,9 @@ import {
   asignacionInfo,
   sitioWebHref,
 } from "../../lib/mancato";
+import { downloadBlob } from "../../lib/csv";
 import {
+  exportMancatosRequest,
   getMancatoMesesRequest,
   getMancatoStatsRequest,
   getMancatoSummaryRequest,
@@ -682,6 +684,22 @@ const MancatoOficinaPage = () => {
 
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
+  // Informe en Excel o PDF con los filtros de la lista (sin paginar).
+  const [exporting, setExporting] = useState("");
+  const [exportError, setExportError] = useState("");
+  const exportar = async (formato) => {
+    setExporting(formato);
+    setExportError("");
+    try {
+      const blob = await exportMancatosRequest({ ...listParams, estado: filters.estado || undefined }, formato);
+      downloadBlob(`mancato_pagamento_${new Date().toISOString().slice(0, 10)}.${formato}`, blob);
+    } catch (err) {
+      setExportError(parseApiError(err).message || "No se pudo generar el informe");
+    } finally {
+      setExporting("");
+    }
+  };
+
   const visibleEstados = MANCATO_ESTADOS_PAGAMENTO.filter((e) => !filters.estado || e.value === filters.estado);
   const sinResumen = { count: 0, total: 0 };
   const driverOptions = [
@@ -739,6 +757,7 @@ const MancatoOficinaPage = () => {
               />
             )}
 
+            {exportError && <Alert>{exportError}</Alert>}
             {/* Una sola barra: buscador + boton "Filtros" (abre un panel con el resto) + agrupar por mes o estado */}
             <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2">
               <TextField
@@ -768,6 +787,30 @@ const MancatoOficinaPage = () => {
                 )}
                 <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
               </button>
+              {isPrivileged && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => exportar("xlsx")}
+                    disabled={Boolean(exporting)}
+                    title="Descargar el informe en Excel con los filtros actuales"
+                    className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+                  >
+                    {exporting === "xlsx" ? <Spinner className="h-4 w-4" /> : null}
+                    Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportar("pdf")}
+                    disabled={Boolean(exporting)}
+                    title="Descargar el informe en PDF con los filtros actuales"
+                    className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+                  >
+                    {exporting === "pdf" ? <Spinner className="h-4 w-4" /> : null}
+                    PDF
+                  </button>
+                </>
+              )}
               {hasActiveFilters && (
                 <button
                   type="button"
