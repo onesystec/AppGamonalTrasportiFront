@@ -36,7 +36,9 @@ import {
   quienPagaLabel,
   titularLabel,
 } from "../../lib/multas";
+import { downloadBlob } from "../../lib/csv";
 import {
+  exportMultasRequest,
   getMultaSummaryRequest,
   listMultasRequest,
   updateMultaRequest,
@@ -60,8 +62,16 @@ const EMPTY_FILTERS = {
   orden: "",
 };
 
-// Filtro de "datos del conductor" (art. 126-bis).
-const DATI_FILTER_OPTIONS = [{ value: "", label: "Todas" }, ...DATI_ESTADO_OPTIONS];
+// Filtro de "datos del conductor" (art. 126-bis): las que faltan enviar (todas, con el plazo vencido o que vencen
+// en 7 dias), enviadas o que no lo requieren.
+const DATI_FILTER_OPTIONS = [
+  { value: "", label: "Todas" },
+  { value: "PENDIENTE", label: "Faltan enviar (todas)" },
+  { value: "VENCIDO", label: "Faltan enviar: plazo vencido" },
+  { value: "SEMANA", label: "Faltan enviar: vencen en 7 dias" },
+  ...DATI_ESTADO_OPTIONS.filter((o) => o.value !== "PENDIENTE"),
+];
+const DATI_PENDIENTES = ["PENDIENTE", "VENCIDO", "SEMANA"];
 
 const TITULAR_FILTER_OPTIONS = [
   { value: "", label: "Todos" },
@@ -762,6 +772,32 @@ const MultasOficinaPage = () => {
 
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
+  // Atajo: solo las multas a las que les faltan enviar los datos del conductor, el limite mas cercano primero.
+  const datiOn = DATI_PENDIENTES.includes(filters.datiEstado);
+  const toggleDati = () =>
+    setFilters((prev) =>
+      DATI_PENDIENTES.includes(prev.datiEstado)
+        ? { ...prev, datiEstado: "", orden: prev.orden === "datiLimite" ? "" : prev.orden }
+        : { ...prev, datiEstado: "PENDIENTE", orden: "datiLimite" }
+    );
+
+  // Informe en Excel o PDF con los filtros de la lista (sin paginar).
+  const [exporting, setExporting] = useState("");
+  const [exportError, setExportError] = useState("");
+  const exportar = async (formato) => {
+    setExporting(formato);
+    setExportError("");
+    try {
+      const blob = await exportMultasRequest({ ...listParams, estado: filters.estado || undefined }, formato);
+      const hoy = new Date().toISOString().slice(0, 10);
+      downloadBlob(`multas_${hoy}.${formato}`, blob);
+    } catch (err) {
+      setExportError(parseApiError(err).message || "No se pudo generar el informe");
+    } finally {
+      setExporting("");
+    }
+  };
+
   const visibleEstados = MULTA_ESTADOS.filter((e) => !filters.estado || e.value === filters.estado);
   const driverOptions = [
     { value: "", label: "Todos" },
@@ -795,6 +831,7 @@ const MultasOficinaPage = () => {
 
       {summary && (
         <div className="flex min-w-0 flex-col gap-4">
+          {exportError && <Alert>{exportError}</Alert>}
           {/* Una sola barra: buscador + boton "Filtros" (abre un panel con el resto), como en Mancato Pagamento */}
           <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2">
             <TextField
@@ -823,6 +860,38 @@ const MultasOficinaPage = () => {
                 </span>
               )}
               <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+            </button>
+            <button
+              type="button"
+              onClick={toggleDati}
+              aria-pressed={datiOn}
+              title="Multas que quitan puntos y todavia no se mandaron los datos del conductor (art. 126-bis)"
+              className={clsx(
+                "flex items-center gap-2 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors",
+                datiOn ? "bg-warning-500/20 text-warning-500 ring-1 ring-warning-500/40" : "glass-input text-ink-300 hover:bg-line/10"
+              )}
+            >
+              Faltan datos del conductor
+            </button>
+            <button
+              type="button"
+              onClick={() => exportar("xlsx")}
+              disabled={Boolean(exporting)}
+              title="Descargar el informe en Excel con los filtros actuales"
+              className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+            >
+              {exporting === "xlsx" ? <Spinner className="h-4 w-4" /> : null}
+              Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => exportar("pdf")}
+              disabled={Boolean(exporting)}
+              title="Descargar el informe en PDF con los filtros actuales"
+              className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+            >
+              {exporting === "pdf" ? <Spinner className="h-4 w-4" /> : null}
+              PDF
             </button>
             {hasActiveFilters && (
               <button

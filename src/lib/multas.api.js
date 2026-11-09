@@ -18,6 +18,12 @@ const toFormData = (fields = {}, files = {}) => {
 export const listMultasRequest = (params) => api.get(BASE, { params }).then((res) => res.data.data);
 
 // Cantidad y total en plata por estado: { VENCIDO, PENDIENTE, PAGADO } -> { count, total }.
+// Informe de multas en Excel o PDF con los mismos filtros de la lista: descarga el archivo.
+export const exportMultasRequest = (params, formato) =>
+  api
+    .get("/multas/export", { params: { ...params, formato }, responseType: "blob", timeout: 120000 })
+    .then((res) => res.data);
+
 export const getMultaSummaryRequest = (params) =>
   api.get(`${BASE}/summary`, { params }).then((res) => res.data.data.summary);
 
