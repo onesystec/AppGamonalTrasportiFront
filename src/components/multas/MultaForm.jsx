@@ -19,7 +19,7 @@ import {
   QUIEN_PAGA_OPTIONS,
   TITULAR_OPTIONS,
 } from "../../lib/multas";
-import { suggestMultaDriverRequest } from "../../lib/multas.api";
+import { listMultasRequest, suggestMultaDriverRequest } from "../../lib/multas.api";
 import { addDaysToDay, parseCosto, romeToday } from "../../lib/mancato";
 import { listUsersRequest } from "../../lib/users.api";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
@@ -121,7 +121,30 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     datiLimite: multa?.datiLimite ? new Date(multa.datiLimite).toISOString().slice(0, 10) : "",
     datiEnviadoAt: multa?.datiEnviadoAt ? new Date(multa.datiEnviadoAt).toISOString().slice(0, 10) : "",
     datiConductor: multa?.datiConductor ?? "",
+    // Si es la sancion por no comunicar los datos del conductor: la multa original.
+    multaOrigenId: multa?.multaOrigen?.id ?? "",
   }));
+  const [origenLabel, setOrigenLabel] = useState(multa?.multaOrigen ? `#${multa.multaOrigen.numeroVerbale} (${multa.multaOrigen.targa})` : "");
+  const [origenQuery, setOrigenQuery] = useState("");
+  const [origenResults, setOrigenResults] = useState(null);
+  // Busca la multa original por numero de verbale (o targa) para vincular la sancion.
+  useEffect(() => {
+    const q = origenQuery.trim();
+    if (q.length < 3) {
+      setOrigenResults(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      listMultasRequest({ q, page: 1, pageSize: 8 })
+        .then((data) => !cancelled && setOrigenResults(data.items.filter((m) => m.id !== multa?.id)))
+        .catch(() => !cancelled && setOrigenResults([]));
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [origenQuery, multa?.id]);
   // El vencimiento lo dice el verbale: se sugiere recepcion + 60 dias hasta que se toque a mano.
   const [vencimientoTouched, setVencimientoTouched] = useState(isEdit);
   const [archivoMulta, setArchivoMulta] = useState(null);
@@ -248,6 +271,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       datiLimite: datiAplica ? datiLimite : "",
       datiEnviadoAt: datiEstado === "ENVIADO" ? form.datiEnviadoAt : "",
       datiConductor: form.datiConductor.trim(),
+      multaOrigenId: form.multaOrigenId,
     };
     if (costoSinDato) delete fields.costo;
     if (isEdit) {
@@ -259,7 +283,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       if (!fields.horaInfraccion) delete fields.horaInfraccion;
       if (!fields.area) delete fields.area;
       if (!fields.titular) delete fields.titular;
-      for (const key of ["datiEstado", "datiLimite", "datiEnviadoAt", "datiConductor"]) {
+      for (const key of ["datiEstado", "datiLimite", "datiEnviadoAt", "datiConductor", "multaOrigenId"]) {
         if (!fields[key]) delete fields[key];
       }
     }
@@ -496,6 +520,56 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           checked={form.puntosPatente}
           onChange={(v) => setField("puntosPatente", v)}
         />
+        <div>
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">
+            Sancion por no comunicar los datos de otra multa (art. 126-bis c.2)
+          </span>
+          {form.multaOrigenId ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-accent-500/15 px-3 py-1 text-[13px] font-medium text-accent-300">
+                Multa original: {origenLabel || "vinculada"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setField("multaOrigenId", "");
+                  setOrigenLabel("");
+                }}
+                className="text-[12px] font-medium text-ink-400 hover:text-ink-50"
+              >
+                Quitar
+              </button>
+            </div>
+          ) : (
+            <>
+              <TextField
+                id="multaOrigen"
+                placeholder="Busca la multa original por N. verbale o targa"
+                value={origenQuery}
+                onChange={(e) => setOrigenQuery(e.target.value)}
+              />
+              {origenResults && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {origenResults.length === 0 && <span className="text-[12px] text-ink-400">Sin resultados.</span>}
+                  {origenResults.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setField("multaOrigenId", m.id);
+                        setOrigenLabel(`#${m.numeroVerbale} (${m.targa})`);
+                        setOrigenQuery("");
+                      }}
+                      className="glass-input rounded-full px-3 py-1 text-left text-[12px] font-medium text-ink-50 hover:bg-line/10"
+                    >
+                      #{m.numeroVerbale} <span className="font-normal text-ink-400">- {m.targa}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
         {datiAplica && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">

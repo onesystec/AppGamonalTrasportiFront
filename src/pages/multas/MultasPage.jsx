@@ -337,6 +337,19 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
         <span className="block whitespace-nowrap text-[13px] text-ink-200" title={multa.numeroVerbale}>
           #{multa.numeroVerbale}
         </span>
+        {multa.multaOrigen && (
+          <span
+            className="mt-1 block truncate text-[11px] font-medium text-ink-400"
+            title={`Sancion por no comunicar los datos del conductor de #${multa.multaOrigen.numeroVerbale}`}
+          >
+            Sancion datos de #{multa.multaOrigen.numeroVerbale}
+          </span>
+        )}
+        {multa.sancionesDati?.length > 0 && (
+          <span className="mt-1 block text-[11px] font-medium text-danger-500">
+            Con sancion por datos ({multa.sancionesDati.length})
+          </span>
+        )}
         {dati && (
           <span
             className={clsx("mt-1 inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", dati.tone)}

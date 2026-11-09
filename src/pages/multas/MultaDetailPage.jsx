@@ -1,7 +1,7 @@
 import { BackLink } from "../../components/ui/BackLink";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { MancatoBadge } from "../../components/mancato/MancatoBadge";
 import { MultaChoferCard } from "../../components/chofer/MultaChoferCard";
 import { MultaForm } from "../../components/multas/MultaForm";
@@ -88,6 +88,9 @@ const Attachment = ({ title, file, emptyText, action }) => (
 const MultaOficinaDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Al saltar a la multa vinculada se mantiene la pantalla de fondo (la lista).
+  const linkState = { backgroundLocation: location.state?.backgroundLocation };
   const { user } = useAuth();
   const { refresh } = useDataRefresh("multas");
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
@@ -286,6 +289,34 @@ const MultaOficinaDetail = () => {
                   )}
                 </Fact>
               </div>
+
+              {(multa.multaOrigen || multa.sancionesDati?.length > 0) && (
+                <div className="mt-5 flex flex-col gap-2 border-t border-line/10 pt-4">
+                  {multa.multaOrigen && (
+                    <div className="text-[14px] text-ink-50">
+                      <span className="block text-[12px] uppercase tracking-wide text-ink-400">
+                        Sancion por no comunicar los datos del conductor de
+                      </span>
+                      <Link to={`/finanzas/multas/${multa.multaOrigen.id}`} state={linkState} className="font-medium text-accent-400 hover:text-accent-300">
+                        #{multa.multaOrigen.numeroVerbale} ({multa.multaOrigen.targa}
+                        {multa.multaOrigen.fechaInfraccion ? `, ${formatDateOnly(multa.multaOrigen.fechaInfraccion)}` : ""})
+                      </Link>
+                    </div>
+                  )}
+                  {multa.sancionesDati?.length > 0 && (
+                    <div className="text-[14px] text-ink-50">
+                      <span className="block text-[12px] uppercase tracking-wide text-ink-400">
+                        Sancion por no comunicar los datos de esta multa
+                      </span>
+                      {multa.sancionesDati.map((s) => (
+                        <Link key={s.id} to={`/finanzas/multas/${s.id}`} state={linkState} className="mr-3 font-medium text-danger-500 hover:underline">
+                          #{s.numeroVerbale} ({formatCurrency(s.costo)})
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {multa.datiEstado && (
                 <div className="mt-5 border-t border-line/10 pt-4">
