@@ -936,5 +936,28 @@ export const computeMultaAlerts = (data, isPrivileged) => {
     });
   }
 
+  // Datos del conductor (art. 126-bis) sin mandar con el limite legal dentro de 7 dias o vencido.
+  if (isPrivileged && data.datiConducente) {
+    data.datiConducente.items.forEach((item) => {
+      const d = item.diasRestantes;
+      const cuando = d < 0 ? `vencio hace ${plural(-d, "dia", "dias")}` : d === 0 ? "vence hoy" : `vence en ${plural(d, "dia", "dias")}`;
+      list.push({
+        id: `multa-dati-${item.id}`,
+        severity: d <= 2 ? "urgent" : "warning",
+        message: `Datos del conductor del verbale ${item.numeroVerbale} (${item.targa}${item.conductor ? ` - ${item.conductor}` : ""}): el plazo ${cuando}.`,
+        link: `/finanzas/multas/${item.id}`,
+      });
+    });
+    const datiRestantes = data.datiConducente.count - data.datiConducente.items.length;
+    if (datiRestantes > 0) {
+      list.push({
+        id: `multas-dati-mas-${datiRestantes}`,
+        severity: "warning",
+        message: `Hay ${plural(datiRestantes, "verbale mas", "verbali mas")} con los datos del conductor por enviar en los proximos 7 dias o vencidos.`,
+        link: "/finanzas/multas",
+      });
+    }
+  }
+
   return list;
 };

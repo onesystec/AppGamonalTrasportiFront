@@ -27,7 +27,7 @@ import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
-import { MULTA_ESTADO_BY_VALUE, quienPagaLabel, titularLabel } from "../../lib/multas";
+import { DATI_ESTADO_OPTIONS, MULTA_ESTADO_BY_VALUE, datiConducenteInfo, quienPagaLabel, titularLabel } from "../../lib/multas";
 import { deleteMultaRequest, getMultaRequest, updateMultaRequest } from "../../lib/multas.api";
 
 // Fecha y hora siempre en hora de Roma (la operacion es ahi), sin importar donde se mire.
@@ -286,6 +286,26 @@ const MultaOficinaDetail = () => {
                   )}
                 </Fact>
               </div>
+
+              {multa.datiEstado && (
+                <div className="mt-5 border-t border-line/10 pt-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[12px] uppercase tracking-wide text-ink-400">Datos del conductor (art. 126-bis)</span>
+                    {datiConducenteInfo(multa) && (
+                      <span className={clsx("inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-medium", datiConducenteInfo(multa).tone)}>
+                        {datiConducenteInfo(multa).text}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+                    <Fact label="Quita puntos">{multa.puntosPatente ? "Si" : "No"}</Fact>
+                    <Fact label="Estado">{DATI_ESTADO_OPTIONS.find((o) => o.value === multa.datiEstado)?.label ?? "-"}</Fact>
+                    <Fact label="Limite legal">{multa.datiLimite ? formatDateOnly(multa.datiLimite) : "-"}</Fact>
+                    <Fact label="Enviado">{multa.datiEnviadoAt ? formatDateOnly(multa.datiEnviadoAt) : "-"}</Fact>
+                    {multa.datiConductor && <Fact label="Conductor declarado">{multa.datiConductor}</Fact>}
+                  </div>
+                </div>
+              )}
 
               {!multa.driver && (
                 <div className="mt-5">

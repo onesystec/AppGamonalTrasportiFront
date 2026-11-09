@@ -11,7 +11,14 @@ import { Textarea } from "../ui/Textarea";
 import { CheckCircleIcon, ClockIcon, EuroIcon } from "../ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { AREA_ACCESS_OPTIONS, userAreaKeys } from "../../lib/roles";
-import { MULTA_ESTADO_BY_VALUE, MULTA_PLAZO_POR_DEFECTO_DIAS, QUIEN_PAGA_OPTIONS, TITULAR_OPTIONS } from "../../lib/multas";
+import {
+  DATI_ESTADO_OPTIONS,
+  DATI_PLAZO_DIAS,
+  MULTA_ESTADO_BY_VALUE,
+  MULTA_PLAZO_POR_DEFECTO_DIAS,
+  QUIEN_PAGA_OPTIONS,
+  TITULAR_OPTIONS,
+} from "../../lib/multas";
 import { suggestMultaDriverRequest } from "../../lib/multas.api";
 import { addDaysToDay, parseCosto, romeToday } from "../../lib/mancato";
 import { listUsersRequest } from "../../lib/users.api";
@@ -108,6 +115,12 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     comentarios: multa?.comentarios ?? "",
     pagado: multa?.pagado ?? false,
     descontado: multa?.descontado ?? false,
+    // Datos del conductor (art. 126-bis).
+    puntosPatente: multa?.puntosPatente ?? false,
+    datiEstado: multa?.datiEstado ?? "",
+    datiLimite: multa?.datiLimite ? new Date(multa.datiLimite).toISOString().slice(0, 10) : "",
+    datiEnviadoAt: multa?.datiEnviadoAt ? new Date(multa.datiEnviadoAt).toISOString().slice(0, 10) : "",
+    datiConductor: multa?.datiConductor ?? "",
   }));
   // El vencimiento lo dice el verbale: se sugiere recepcion + 60 dias hasta que se toque a mano.
   const [vencimientoTouched, setVencimientoTouched] = useState(isEdit);
@@ -177,6 +190,11 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     if (vehicle?.conductores?.length === 1) setField("driverId", vehicle.conductores[0].id);
   };
 
+  // Limite para mandar los datos del conductor: el cargado o, si no, recepcion + 60 dias.
+  const datiAplica = form.puntosPatente || Boolean(form.datiEstado);
+  const datiLimite = form.datiLimite || (datiAplica ? addDaysToDay(form.fechaRecepcion || romeToday(), DATI_PLAZO_DIAS) : "");
+  const datiEstado = form.datiEstado || (form.puntosPatente ? "PENDIENTE" : "");
+
   const isPaid = isEdit ? form.pagado || Boolean(comprobante) : Boolean(comprobante);
   const previewEstado = isPaid ? "PAGADO" : vencimiento && vencimiento < romeToday() ? "VENCIDO" : "PENDIENTE";
   const estadoInfo = MULTA_ESTADO_BY_VALUE[previewEstado];
@@ -204,6 +222,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     if (form.fechaInfraccion && form.fechaRecepcion && form.fechaInfraccion > form.fechaRecepcion) {
       next.fechaInfraccion = "No puede ser posterior a la fecha de recepcion";
     }
+    if (form.datiEnviadoAt && form.datiEnviadoAt > romeToday()) next.datiEnviadoAt = "No puede ser futura";
     if (!isEdit && !archivoMulta) next.multa = "Sube la foto o el PDF de la multa";
     setLocalErrors(next);
     if (Object.keys(next).length > 0) return;
@@ -224,6 +243,11 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       comentarios: form.comentarios.trim(),
       // En edicion "" borra la fecha; al crear, si esta vacia no se manda.
       fechaInfraccion: form.fechaInfraccion,
+      puntosPatente: String(form.puntosPatente),
+      datiEstado,
+      datiLimite: datiAplica ? datiLimite : "",
+      datiEnviadoAt: datiEstado === "ENVIADO" ? form.datiEnviadoAt : "",
+      datiConductor: form.datiConductor.trim(),
     };
     if (costoSinDato) delete fields.costo;
     if (isEdit) {
@@ -235,6 +259,9 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       if (!fields.horaInfraccion) delete fields.horaInfraccion;
       if (!fields.area) delete fields.area;
       if (!fields.titular) delete fields.titular;
+      for (const key of ["datiEstado", "datiLimite", "datiEnviadoAt", "datiConductor"]) {
+        if (!fields[key]) delete fields[key];
+      }
     }
 
     onSubmit(fields, { multa: archivoMulta, comprobante });
@@ -458,6 +485,64 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           existing={multa?.comprobante}
           error={err("comprobante")}
         />
+      </div>
+
+      {/* Datos del conductor (art. 126-bis C.d.S.) */}
+      <div className="flex flex-col gap-4 rounded-xl glass-surface-sm px-4 py-3">
+        <Switch
+          id="puntosPatente"
+          label="Quita puntos de la patente"
+          description="Hay que comunicar los datos del conductor (art. 126-bis) dentro de los 60 dias desde la notificacion."
+          checked={form.puntosPatente}
+          onChange={(v) => setField("puntosPatente", v)}
+        />
+        {datiAplica && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Datos del conductor</span>
+              <SegmentedControl
+                options={DATI_ESTADO_OPTIONS}
+                value={datiEstado}
+                onChange={(v) => setField("datiEstado", v)}
+                className="w-full sm:w-auto"
+              />
+            </div>
+            <div>
+              <TextField
+                id="datiLimite"
+                label="Limite legal para enviarlos"
+                type="date"
+                value={datiLimite}
+                onChange={(e) => setField("datiLimite", e.target.value)}
+                error={err("datiLimite")}
+              />
+              <span className="mt-1.5 block text-[12px] text-ink-400">
+                {form.datiLimite ? "Cargado a mano." : `Sugerido: ${DATI_PLAZO_DIAS} dias desde la recepcion.`}
+              </span>
+            </div>
+            {datiEstado === "ENVIADO" && (
+              <TextField
+                id="datiEnviadoAt"
+                label="Fecha de envio"
+                type="date"
+                max={romeToday()}
+                value={form.datiEnviadoAt}
+                onChange={(e) => setField("datiEnviadoAt", e.target.value)}
+                error={err("datiEnviadoAt")}
+              />
+            )}
+            <div className="sm:col-span-2">
+              <TextField
+                id="datiConductor"
+                label="Conductor declarado (opcional)"
+                placeholder="Si no es el chofer responsable, ej. Yan Gamonal"
+                value={form.datiConductor}
+                onChange={(e) => setField("datiConductor", e.target.value)}
+                error={err("datiConductor")}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {isEdit && (

@@ -27,7 +27,15 @@ import { useAuth } from "../../context/AuthContext";
 import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
-import { MULTA_ESTADOS, QUIEN_PAGA_OPTIONS, TITULAR_OPTIONS, quienPagaLabel, titularLabel } from "../../lib/multas";
+import {
+  DATI_ESTADO_OPTIONS,
+  MULTA_ESTADOS,
+  QUIEN_PAGA_OPTIONS,
+  TITULAR_OPTIONS,
+  datiConducenteInfo,
+  quienPagaLabel,
+  titularLabel,
+} from "../../lib/multas";
 import {
   getMultaSummaryRequest,
   listMultasRequest,
@@ -47,9 +55,13 @@ const EMPTY_FILTERS = {
   quienPaga: "",
   descuentoPendiente: false,
   titular: "",
+  datiEstado: "",
   q: "",
   orden: "",
 };
+
+// Filtro de "datos del conductor" (art. 126-bis).
+const DATI_FILTER_OPTIONS = [{ value: "", label: "Todas" }, ...DATI_ESTADO_OPTIONS];
 
 const TITULAR_FILTER_OPTIONS = [
   { value: "", label: "Todos" },
@@ -67,6 +79,7 @@ const ORDEN_OPTIONS = [
   { value: "recientes", label: "Mas recientes" },
   { value: "antiguos", label: "Mas antiguos" },
   { value: "monto", label: "Mayor monto" },
+  { value: "datiLimite", label: "Limite datos del conductor" },
 ];
 
 const AVATAR_COLORS = ["#ff3b57", "#ff8a1a", "#2f8dff", "#a78bfa", "#22d3ee"];
@@ -250,6 +263,7 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
   const estado = MULTA_ESTADOS.find((e) => e.value === multa.estado);
   const plazo = plazoParts(multa);
   const quien = quienPagaLabel(multa);
+  const dati = datiConducenteInfo(multa);
   const driverName = multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "Sin chofer";
   const openDetail = () => navigate(`/finanzas/multas/${multa.id}`, { state: { backgroundLocation: location } });
 
@@ -318,10 +332,20 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
       {/* Costo */}
       <span className="whitespace-nowrap text-[14px] font-semibold text-ink-50 lg:text-right">{formatCurrency(multa.costo)}</span>
 
-      {/* N. verbale */}
-      <span className="whitespace-nowrap text-[13px] text-ink-200" title={multa.numeroVerbale}>
-        #{multa.numeroVerbale}
-      </span>
+      {/* N. verbale (y, si quita puntos, el contador para mandar los datos del conductor) */}
+      <div className="min-w-0">
+        <span className="block whitespace-nowrap text-[13px] text-ink-200" title={multa.numeroVerbale}>
+          #{multa.numeroVerbale}
+        </span>
+        {dati && (
+          <span
+            className={clsx("mt-1 inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", dati.tone)}
+            title={multa.datiLimite ? `Limite legal (art. 126-bis): ${formatDateOnly(multa.datiLimite)}` : undefined}
+          >
+            {dati.text}
+          </span>
+        )}
+      </div>
 
       {/* ¿Chofer pago? */}
       <div>
@@ -683,6 +707,7 @@ const MultasOficinaPage = () => {
       quienPaga: filters.quienPaga || undefined,
       descuentoPendiente: filters.descuentoPendiente ? "true" : undefined,
       titular: filters.titular || undefined,
+      datiEstado: filters.datiEstado || undefined,
     }),
     [
       filters.q,
@@ -693,6 +718,7 @@ const MultasOficinaPage = () => {
       filters.quienPaga,
       filters.descuentoPendiente,
       filters.titular,
+      filters.datiEstado,
     ]
   );
   const params = useDebounced(rawParams, 350);
@@ -806,6 +832,15 @@ const MultasOficinaPage = () => {
                     options={estadoOptions}
                     value={filters.estado}
                     onChange={(e) => setFilter("estado", e.target.value)}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <Select
+                    id="filtro-dati"
+                    label="Datos del conductor"
+                    options={DATI_FILTER_OPTIONS}
+                    value={filters.datiEstado}
+                    onChange={(e) => setFilter("datiEstado", e.target.value)}
                   />
                 </div>
                 <div className="min-w-0">
