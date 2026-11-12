@@ -545,7 +545,7 @@ export const NewDhlAbServiceRecordPage = () => {
         <GlassCard>
           <h2 className="text-[17px] font-medium text-ink-50">Kilometraje y costos</h2>
           <p className="mt-1 text-[13px] text-ink-300">
-            Kilometros planificados (obligatorios). El chofer carga despues los kilometros reales para la
+            Kilometros planificados (opcionales: se pueden completar despues). El chofer carga despues los kilometros reales para la
             comparativa.
           </p>
 
@@ -553,11 +553,10 @@ export const NewDhlAbServiceRecordPage = () => {
             <div>
               <TextField
                 id="kilometros"
-                label="Km del cliente (solo ida) *"
+                label="Km del cliente (solo ida, opcional)"
                 type="number"
                 step="0.1"
                 min="0.1"
-                required
                 value={form.kilometros}
                 onChange={handleChange("kilometros")}
                 error={fieldErrors.kilometros?.[0]}

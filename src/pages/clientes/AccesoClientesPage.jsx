@@ -14,7 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { AREA_ACCESS_OPTIONS, AREA_LABEL_BY_KEY } from "../../lib/roles";
 import { listClienteUsersRequest } from "../../lib/cliente.api";
-import { listClientsRequest } from "../../lib/clients.api";
+import { listClientsRequest, updateClientRequest } from "../../lib/clients.api";
 import { CLIENTE_MODULO_CORTO, CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
 import { createUserRequest, deleteUserRequest, updateUserRequest, uploadUserAvatarRequest } from "../../lib/users.api";
 
@@ -40,6 +40,12 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const onChange = (field) => (e) => setField(field, e.target.value);
 
+  // "Servicios directos" es un ajuste de la EMPRESA (todos sus usuarios): lo que carguen entra directo al Registro, sin solicitud. Se guarda junto con el usuario.
+  const empresa = clientes.find((c) => c.id === form.clienteId) ?? null;
+  const [directoElegido, setDirectoElegido] = useState(null); // null = no se toco
+  const directo = directoElegido ?? Boolean(empresa?.serviciosDirectos);
+  useEffect(() => setDirectoElegido(null), [form.clienteId]);
+
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -47,6 +53,9 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
     setFieldErrors({});
     let savedId = null;
     try {
+      if (empresa && directoElegido !== null && directoElegido !== Boolean(empresa.serviciosDirectos)) {
+        await updateClientRequest(empresa.id, { serviciosDirectos: directoElegido });
+      }
       if (isEdit) {
         const payload = {
           nombre: form.nombre,
@@ -178,6 +187,17 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           <p className="mt-1.5 text-[12px] text-ink-400">
             Si la eliges, tambien ve los servicios de esa empresa (se suman a las spedizioni). Tiene que tener al menos una spedizione o una empresa.
           </p>
+          {empresa && (
+            <div className="mt-3">
+              <Switch
+                id="cu-directo"
+                label="Servicios directos"
+                description="Lo que cargue esta empresa entra directo al Registro (con chofer y vehiculo «Sin asignar») en vez de quedar como solicitud pendiente. Vale para todos sus usuarios."
+                checked={directo}
+                onChange={setDirectoElegido}
+              />
+            </div>
+          )}
         </div>
 
         <div>

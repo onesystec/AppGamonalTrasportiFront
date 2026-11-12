@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
@@ -108,7 +109,10 @@ const longDayLabel = (value) => {
 };
 
 const driverName = (record) =>
-  record.driver ? `${record.driver.nombre} ${record.driver.apellido}` : "Sin chofer asignado";
+  record.driver ? `${record.driver.nombre} ${record.driver.apellido}`.trim() : "Sin chofer asignado";
+
+// Servicios que entraron directo desde el portal del cliente: llevan el chofer interno "Sin asignar" hasta que la oficina elige el real.
+const sinChofer = (record) => record.driver?.nombre === "Sin asignar" && !record.driver?.apellido;
 
 const fmtKm = (km) => Math.round(km).toLocaleString("es-AR");
 
@@ -258,7 +262,7 @@ const RecordRow = ({ record }) => {
         <span className="block truncate text-ink-100">{record.vehicle?.targa ?? "-"}</span>
         <span className="block truncate text-[11px] text-ink-400">{record.vehicle?.modelo ?? ""}</span>
       </span>
-      <span className="truncate" title={driverName(record)}>
+      <span className={clsx("truncate", sinChofer(record) && "font-semibold text-warning-500")} title={driverName(record)}>
         {driverName(record)}
       </span>
       <span>
@@ -306,7 +310,7 @@ const PendingRow = ({ record, closeTo, onChangeEstado, updating }) => {
       </div>
       <span className="min-w-0 truncate text-ink-300">{record.destinazione}</span>
       <div className="flex items-center justify-between gap-2 text-[12px] text-ink-400">
-        <span className="min-w-0 truncate">{driverName(record)}</span>
+        <span className={clsx("min-w-0 truncate", sinChofer(record) && "font-semibold text-warning-500")}>{driverName(record)}</span>
         <span className="shrink-0">{formatTimeRemaining(record.eta)}</span>
       </div>
     </Link>
