@@ -14,11 +14,11 @@ import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
 import { AREA_ACCESS_OPTIONS, AREA_LABEL_BY_KEY } from "../../lib/roles";
 import { listClienteUsersRequest } from "../../lib/cliente.api";
-import { listClientsRequest, updateClientRequest } from "../../lib/clients.api";
+import { listClientsRequest } from "../../lib/clients.api";
 import { CLIENTE_MODULO_CORTO, CLIENTE_MODULOS, CLIENTE_MODULOS_DEFAULT, toggleModulo } from "../../lib/clientes";
 import { createUserRequest, deleteUserRequest, updateUserRequest, uploadUserAvatarRequest } from "../../lib/users.api";
 
-const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteAreas: [], clienteModulos: CLIENTE_MODULOS_DEFAULT, activo: true };
+const EMPTY_FORM = { nombre: "", apellido: "", correoElectronico: "", password: "", clienteId: "", clienteAreas: [], clienteModulos: CLIENTE_MODULOS_DEFAULT, serviciosDirectos: false, activo: true };
 
 const moduloLabel = (key) => CLIENTE_MODULOS.find((m) => m.key === key)?.label ?? key;
 
@@ -27,7 +27,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
   const isEdit = Boolean(initial?.id);
   const [form, setForm] = useState(
     initial
-      ? { nombre: initial.nombre, apellido: initial.apellido, correoElectronico: initial.correoElectronico, password: "", clienteId: initial.clienteId ?? "", clienteAreas: initial.clienteAreas ?? [], clienteModulos: initial.clienteModulos ?? [], activo: initial.estado === "ACTIVO" }
+      ? { nombre: initial.nombre, apellido: initial.apellido, correoElectronico: initial.correoElectronico, password: "", clienteId: initial.clienteId ?? "", clienteAreas: initial.clienteAreas ?? [], clienteModulos: initial.clienteModulos ?? [], serviciosDirectos: Boolean(initial.serviciosDirectos), activo: initial.estado === "ACTIVO" }
       : EMPTY_FORM
   );
   const [saving, setSaving] = useState(false);
@@ -40,12 +40,6 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const onChange = (field) => (e) => setField(field, e.target.value);
 
-  // "Servicios directos" es un ajuste de la EMPRESA (todos sus usuarios): lo que carguen entra directo al Registro, sin solicitud. Se guarda junto con el usuario.
-  const empresa = clientes.find((c) => c.id === form.clienteId) ?? null;
-  const [directoElegido, setDirectoElegido] = useState(null); // null = no se toco
-  const directo = directoElegido ?? Boolean(empresa?.serviciosDirectos);
-  useEffect(() => setDirectoElegido(null), [form.clienteId]);
-
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -53,9 +47,6 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
     setFieldErrors({});
     let savedId = null;
     try {
-      if (empresa && directoElegido !== null && directoElegido !== Boolean(empresa.serviciosDirectos)) {
-        await updateClientRequest(empresa.id, { serviciosDirectos: directoElegido });
-      }
       if (isEdit) {
         const payload = {
           nombre: form.nombre,
@@ -64,6 +55,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           clienteId: form.clienteId || null,
           clienteAreas: form.clienteAreas,
           clienteModulos: form.clienteModulos,
+          serviciosDirectos: form.serviciosDirectos,
           estado: form.activo ? "ACTIVO" : "INACTIVO",
         };
         if (form.password) payload.password = form.password;
@@ -79,6 +71,7 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           clienteId: form.clienteId || undefined,
           clienteAreas: form.clienteAreas,
           clienteModulos: form.clienteModulos,
+          serviciosDirectos: form.serviciosDirectos,
         });
         savedId = created.id;
       }
@@ -187,17 +180,6 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           <p className="mt-1.5 text-[12px] text-ink-400">
             Si la eliges, tambien ve los servicios de esa empresa (se suman a las spedizioni). Tiene que tener al menos una spedizione o una empresa.
           </p>
-          {empresa && (
-            <div className="mt-3">
-              <Switch
-                id="cu-directo"
-                label="Servicios directos"
-                description="Lo que cargue esta empresa entra directo al Registro (con chofer y vehiculo «Sin asignar») en vez de quedar como solicitud pendiente. Vale para todos sus usuarios."
-                checked={directo}
-                onChange={setDirectoElegido}
-              />
-            </div>
-          )}
         </div>
 
         <div>
@@ -221,6 +203,14 @@ const ClienteUsuarioForm = ({ initial, clientes, onSaved, onCancel }) => {
           </div>
           {fieldErrors.clienteModulos?.[0] && <span className="mt-1.5 block text-[13px] text-danger-500">{fieldErrors.clienteModulos[0]}</span>}
         </div>
+
+        <Switch
+          id="cu-directo"
+          label="Servicios directos"
+          description="Lo que cargue este usuario entra directo al Registro de la oficina como servicio, con chofer y vehiculo «Sin asignar», en vez de quedar como solicitud pendiente. La oficina solo asigna chofer y vehiculo."
+          checked={form.serviciosDirectos}
+          onChange={(v) => setField("serviciosDirectos", v)}
+        />
 
         {isEdit && <Switch id="cu-activo" label="Usuario activo" description="Si lo desactivas, pierde el acceso de inmediato." checked={form.activo} onChange={(v) => setField("activo", v)} />}
 
