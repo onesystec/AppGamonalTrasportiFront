@@ -47,6 +47,7 @@ import { ViajeChip } from "../../components/records/ViajeChip";
 import { DesvioChip } from "../../components/records/DesvioChip";
 import { CambiosButton } from "../../components/solicitudes/CambiosButton";
 import { SolicitudesButton } from "../../components/solicitudes/SolicitudesButton";
+import { AsignarModal } from "../../components/records/AsignarModal";
 import {
   listPendingRecordsRequest,
   listRecordsByDayRequest,
@@ -113,6 +114,32 @@ const driverName = (record) =>
 
 // Servicios que entraron directo desde el portal del cliente: llevan el chofer interno "Sin asignar" hasta que la oficina elige el real.
 const sinChofer = (record) => record.driver?.nombre === "Sin asignar" && !record.driver?.apellido;
+
+// Abrir el modal de asignar chofer y vehiculo desde cualquier fila (las filas son enlaces: el aviso viaja por un evento para no anidar botones dentro de un <a>).
+const ASIGNAR_EVENT = "record:asignar";
+const pedirAsignar = (e, record) => {
+  e.preventDefault();
+  e.stopPropagation();
+  window.dispatchEvent(new CustomEvent(ASIGNAR_EVENT, { detail: record }));
+};
+// El chofer de la fila: con el servicio sin asignar es un texto ambar que abre el modal de asignar.
+const ChoferCelda = ({ record, className }) =>
+  sinChofer(record) ? (
+    <span
+      role="button"
+      tabIndex={0}
+      title="Asignar chofer y vehiculo"
+      onClick={(e) => pedirAsignar(e, record)}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && pedirAsignar(e, record)}
+      className={clsx(className, "cursor-pointer font-semibold text-warning-500 underline decoration-dotted underline-offset-2 hover:text-warning-400")}
+    >
+      Asignar
+    </span>
+  ) : (
+    <span className={className} title={driverName(record)}>
+      {driverName(record)}
+    </span>
+  );
 
 const fmtKm = (km) => Math.round(km).toLocaleString("es-AR");
 
@@ -262,9 +289,7 @@ const RecordRow = ({ record }) => {
         <span className="block truncate text-ink-100">{record.vehicle?.targa ?? "-"}</span>
         <span className="block truncate text-[11px] text-ink-400">{record.vehicle?.modelo ?? ""}</span>
       </span>
-      <span className={clsx("truncate", sinChofer(record) && "font-semibold text-warning-500")} title={driverName(record)}>
-        {driverName(record)}
-      </span>
+      <ChoferCelda record={record} className="truncate" />
       <span>
         <StatusBadge status={record.estado} className="px-2 py-0.5 text-[11px]" />
       </span>
@@ -310,7 +335,7 @@ const PendingRow = ({ record, closeTo, onChangeEstado, updating }) => {
       </div>
       <span className="min-w-0 truncate text-ink-300">{record.destinazione}</span>
       <div className="flex items-center justify-between gap-2 text-[12px] text-ink-400">
-        <span className={clsx("min-w-0 truncate", sinChofer(record) && "font-semibold text-warning-500")}>{driverName(record)}</span>
+        <ChoferCelda record={record} className="min-w-0 truncate" />
         <span className="shrink-0">{formatTimeRemaining(record.eta)}</span>
       </div>
     </Link>
@@ -475,6 +500,13 @@ const savedListState = () => {
 export const RecordsListPage = ({ section: sectionHint }) => {
   const location = useLocation();
   const { version, refresh: refreshRecords } = useDataRefresh("records");
+  // Servicio al que se le esta asignando chofer y vehiculo (lo pide el texto "Asignar" de una fila).
+  const [asignando, setAsignando] = useState(null);
+  useEffect(() => {
+    const onAsignar = (e) => setAsignando(e.detail);
+    window.addEventListener(ASIGNAR_EVENT, onAsignar);
+    return () => window.removeEventListener(ASIGNAR_EVENT, onAsignar);
+  }, []);
   const { user } = useAuth();
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   // Un Responsable solo ve las areas que el Admin le marco; las demas ni siquiera se le ofrecen (el
@@ -868,6 +900,16 @@ export const RecordsListPage = ({ section: sectionHint }) => {
               <MonthPicker value={viewDate} onChange={setViewDate} />
               <SolicitudesButton />
               <CambiosButton />
+              {asignando && (
+                <AsignarModal
+                  record={asignando}
+                  onClose={() => setAsignando(null)}
+                  onSaved={() => {
+                    setAsignando(null);
+                    refreshRecords();
+                  }}
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setShowCompactar(true)}

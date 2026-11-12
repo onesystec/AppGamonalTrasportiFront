@@ -161,7 +161,7 @@ const SolicitudesModal = ({ onClose, onChanged }) => {
   );
 };
 
-// Boton "Solicitudes" del registro principal, con el numero de pendientes. Se actualiza solo y cuando se acepta una solicitud.
+// Boton "Solicitudes" del registro principal, con el numero de pendientes (oculto si no hay ninguna). Se actualiza solo y cuando se acepta una solicitud.
 export const SolicitudesButton = () => {
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -183,6 +183,10 @@ export const SolicitudesButton = () => {
       stop();
     };
   }, [loadCount]);
+
+  // Lo que cargan los clientes con servicios directos ya entra al Registro como servicio: el boton solo aparece cuando queda alguna solicitud pendiente (de una empresa sin
+  // servicios directos o una cargada con "Da un testo").
+  if (count === 0 && !open) return null;
 
   return (
     <>
