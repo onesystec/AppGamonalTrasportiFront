@@ -128,7 +128,7 @@ export const ClienteDashboardPage = () => {
   if (!user?.clienteModulos?.includes("DASHBOARD") || !user?.clienteModulos?.includes("REGISTRO")) return <Navigate to="/cliente" replace />;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[28px] font-semibold text-ink-50">{t("dash.title")}</h1>
@@ -157,17 +157,17 @@ export const ClienteDashboardPage = () => {
             <KpiTarjeta icon={CheckCircleIcon} label={t("dash.kpi.done")} value={actual.entregados} tono="bien">
               <Variacion actual={actual.entregados} previo={previo?.entregados} />
             </KpiTarjeta>
-            <KpiTarjeta icon={TargetIcon} label={t("dash.kpi.punctual")} value={actual.puntualidad == null ? "—" : `${actual.puntualidad}%`}>
+            <KpiTarjeta icon={TargetIcon} tono="neutro" label={t("dash.kpi.punctual")} value={actual.puntualidad == null ? "—" : `${actual.puntualidad}%`}>
               <Variacion actual={actual.puntualidad} previo={previo?.puntualidad} puntos />
             </KpiTarjeta>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] xl:items-start">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
             <EvolucionMensual datos={evolucion} mes={month} />
             <ActividadReciente eventos={eventos} />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <ResumenMes stats={stats} total={actual.total} totalKm={totalKm} areaKey={areaKey} onArea={setAreaKey} />
             <PendientesHoy filas={pendientesHoy} />
           </div>

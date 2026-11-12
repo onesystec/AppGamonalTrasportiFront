@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { Link } from "react-router-dom";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AreaBadge } from "../records/AreaBadge";
 import { useChartAxisColors } from "../charts/useChartAxisColors";
 import { PanelShell } from "../ui/PanelShell";
@@ -16,10 +16,11 @@ import { AREAS, RetrasoPill } from "./RegistroLista";
 const COLOR_SERVICIOS = "#3b82f6";
 const COLOR_ENTREGADOS = "#94a3b8";
 
-// Tono de cada indicador: la barra de la izquierda y el color del numero.
+// Tono de cada indicador: la barra de la izquierda y el color del recuadro del icono.
 const TONOS = {
-  info: { barra: "border-l-accent-500", icono: "text-accent-400" },
-  bien: { barra: "border-l-success-500", icono: "text-success-500" },
+  info: { barra: "border-l-accent-500", recuadro: "bg-accent-500/15 text-accent-400" },
+  bien: { barra: "border-l-success-500", recuadro: "bg-success-500/15 text-success-500" },
+  neutro: { barra: "border-l-ink-400", recuadro: "bg-line/15 text-ink-200" },
 };
 
 // Variacion contra el mes anterior: flecha y porcentaje (o puntos, en la puntualidad). Sin datos del mes anterior no se muestra nada.
@@ -39,7 +40,7 @@ const Variacion = ({ actual, previo, puntos = false }) => {
   );
 };
 
-// Un indicador del mes: icono, numero grande, variacion y el icono grande de fondo.
+// Un indicador del mes: icono en un recuadro a la izquierda y, al lado, la etiqueta, el numero grande y la variacion.
 export const KpiTarjeta = ({ icon: Icon, label, value, tono = "info", onClick, children }) => {
   const Tag = onClick ? "button" : "div";
   return (
@@ -47,18 +48,19 @@ export const KpiTarjeta = ({ icon: Icon, label, value, tono = "info", onClick, c
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={clsx(
-        "glass-surface relative flex flex-col gap-2 overflow-hidden rounded-2xl border-l-4 p-5 text-left",
+        "glass-surface flex items-center gap-4 rounded-2xl border-l-4 p-5 text-left",
         TONOS[tono].barra,
         onClick && "transition-colors hover:bg-line/[0.05]"
       )}
     >
-      <Icon aria-hidden="true" className="pointer-events-none absolute -bottom-3 right-3 h-24 w-24 text-ink-50 opacity-[0.06]" />
-      <span className="flex items-center gap-2.5 text-[14px] font-medium text-ink-200">
-        <Icon className={clsx("h-5 w-5", TONOS[tono].icono)} />
-        {label}
+      <span className={clsx("flex h-14 w-14 shrink-0 items-center justify-center rounded-xl", TONOS[tono].recuadro)}>
+        <Icon className="h-7 w-7" />
       </span>
-      <span className="text-[38px] font-semibold leading-none text-ink-50">{value}</span>
-      {children}
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="truncate text-[14px] font-medium text-ink-200">{label}</span>
+        <span className="text-[34px] font-semibold leading-none text-ink-50">{value}</span>
+        {children}
+      </span>
     </Tag>
   );
 };
@@ -97,6 +99,7 @@ export const EvolucionMensual = ({ datos, mes }) => {
   const hayDatos = datos.some((d) => d.servicios > 0);
   return (
     <PanelShell
+      className="flex h-full flex-col"
       icon={BarsIcon}
       title={t("dash.chart.title")}
       aside={
@@ -113,10 +116,9 @@ export const EvolucionMensual = ({ datos, mes }) => {
       }
     >
       {hayDatos ? (
-        <div className="h-[260px]">
+        <div className="min-h-[260px] flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={datos} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke={axisLineColor} />
               <XAxis dataKey="dia" ticks={inicios} tickFormatter={etiqueta} tick={{ fill: tickColor, fontSize: 11 }} axisLine={{ stroke: axisLineColor }} tickLine={false} />
               <YAxis width={30} tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip content={<TooltipEvolucion mes={mes} />} cursor={{ stroke: axisLineColor }} />
@@ -126,7 +128,7 @@ export const EvolucionMensual = ({ datos, mes }) => {
           </ResponsiveContainer>
         </div>
       ) : (
-        <p className="py-16 text-center text-[13px] text-ink-300">{t("dash.chart.empty")}</p>
+        <p className="my-auto py-16 text-center text-[13px] text-ink-300">{t("dash.chart.empty")}</p>
       )}
     </PanelShell>
   );
@@ -154,6 +156,7 @@ export const ActividadReciente = ({ eventos }) => {
   };
   return (
     <PanelShell
+      className="h-full"
       icon={BellIcon}
       title={t("dash.activity.title")}
       aside={
@@ -201,7 +204,7 @@ export const ResumenMes = ({ stats, total, totalKm, areaKey, onArea }) => {
   const { language } = useLanguage();
   const cuenta = (count) => t("reg.serviceCount", { count });
   return (
-    <PanelShell icon={BarsIcon} title={t("reg.monthSummary")}>
+    <PanelShell className="flex h-full flex-col" icon={BarsIcon} title={t("reg.monthSummary")}>
       <div className="grid grid-cols-2 gap-2.5">
         {AREAS.map((a) => (
           <button
@@ -221,7 +224,7 @@ export const ResumenMes = ({ stats, total, totalKm, areaKey, onArea }) => {
           </button>
         ))}
       </div>
-      <p className="mt-3 flex items-center justify-between border-t border-line/10 pt-3 text-[12px] text-ink-300">
+      <p className="mt-auto flex items-center justify-between border-t border-line/10 pt-3 text-[12px] text-ink-300">
         <span>{t("reg.monthTotal")}</span>
         <span className="font-medium text-ink-100">
           {cuenta(total)} · {Math.round(totalKm).toLocaleString(language === "it" ? "it-IT" : "es-AR")} km
@@ -235,7 +238,7 @@ export const ResumenMes = ({ stats, total, totalKm, areaKey, onArea }) => {
 export const PendientesHoy = ({ filas }) => {
   const t = useT();
   return (
-    <PanelShell icon={ClockIcon} title={t("reg.pendingToday")}>
+    <PanelShell className="h-full" icon={ClockIcon} title={t("reg.pendingToday")}>
       <p className="mb-3 text-[12px] text-ink-400">{t("reg.pendingHint")}</p>
       {filas.length === 0 ? (
         <p className="py-2 text-center text-[13px] text-ink-300">{t("reg.noPendingToday")}</p>
