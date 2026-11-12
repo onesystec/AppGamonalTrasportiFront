@@ -190,6 +190,7 @@ export const es = {
   "reg.noPhotoDelivery": "Todavia no hay foto de la entrega",
   "reg.serviceTitle": "Servicio {code}",
   "reg.editData": "Modificar datos",
+  "reg.sentText": "Texto enviado",
   "reg.campo.cliente": "Cliente",
   "reg.campo.km": "Km",
   "reg.campo.ritiro": "Retiro",

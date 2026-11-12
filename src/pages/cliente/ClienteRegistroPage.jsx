@@ -44,7 +44,7 @@ const Modal = ({ title, onClose, children, ancho = false }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className={clsx("relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl", ancho ? "max-w-5xl" : "max-w-2xl")}>
+      <div className={clsx("relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl", ancho ? "max-w-5xl xl:max-w-7xl" : "max-w-2xl")}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="text-[17px] font-semibold text-ink-50">{title}</h2>
           <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
@@ -227,9 +227,11 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
       )}
       {!editando ? (
         <>
-          {/* Dos partes: los datos del servicio a la izquierda; la cronologia y las acciones a la derecha (en pantallas chicas, una debajo de la otra). */}
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8">
-            <dl className="flex flex-col gap-2.5">
+          {/* Tres partes: los datos del servicio; el texto que envio el cliente, entero y en grande; y la cronologia con las acciones. En pantallas grandes son tres columnas;
+              en las medianas el texto ocupa toda la derecha y la cronologia pasa debajo de los datos; en el telefono van una debajo de otra. Sin texto enviado, son dos
+              partes como antes. */}
+          <div className={clsx("grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8", fila.texto && "xl:grid-cols-3")}>
+            <dl className={clsx("flex flex-col gap-2.5", fila.texto && "lg:col-start-1 lg:row-start-1")}>
               {filas.map(([label, valor]) => (
                 <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                   <dt className="w-32 shrink-0 text-[12px] uppercase tracking-wide text-ink-400">{label}</dt>
@@ -237,7 +239,18 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
                 </div>
               ))}
             </dl>
-            <div className="flex min-w-0 flex-col gap-5 border-t border-line/10 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            {fila.texto && (
+              <div className="flex min-w-0 flex-col border-t border-line/10 pt-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 xl:row-span-1">
+                <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">{t("reg.sentText")}</h3>
+                <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-xl bg-line/[0.06] p-3 font-sans text-[14px] leading-relaxed text-ink-100 lg:max-h-[62dvh]">{fila.texto}</pre>
+              </div>
+            )}
+            <div
+              className={clsx(
+                "flex min-w-0 flex-col gap-5 border-t border-line/10 pt-5 lg:border-t-0 lg:pt-0",
+                fila.texto ? "lg:col-start-1 lg:row-start-2 xl:col-start-3 xl:row-start-1 xl:border-l xl:pl-8" : "lg:border-l lg:pl-8"
+              )}
+            >
               {cambios && (
                 <div>
                   <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">{t("reg.history")}</h3>

@@ -119,6 +119,8 @@ export const filasRegistro = ({ solicitudes, servicios, seguimiento, ahora }) =>
       orden: (r.shipment ?? sol?.shipment) ? (r.orderNumero ?? sol?.orderNumero ?? null) : null,
       cliente: r.cliente ?? "",
       ritiro: sol?.ritiro ?? null,
+      // El texto que envio el cliente (el mensaje completo del servicio), para que lo vea entero en la ficha.
+      texto: sol?.descripcion?.trim() || null,
       destino: r.ciudad || r.destino,
       tipo: r.tipoPedido,
       km: r.km != null ? String(Math.round(r.km * 10) / 10).replace(".", ",") : null,
