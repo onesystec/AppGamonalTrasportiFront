@@ -3,9 +3,8 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AreaBadge } from "../records/AreaBadge";
-import { PanelShell } from "../ui/PanelShell";
 import { TextField } from "../ui/TextField";
-import { BarsIcon, ClipboardListIcon, ClockIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
+import { ClipboardListIcon, DownloadIcon, ImageIcon, SearchIcon } from "../ui/icons";
 import { aplicativoTexto } from "./TablaServicios";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { buildFullCsv, downloadCsv } from "../../lib/csv";
@@ -13,17 +12,17 @@ import { AREA_ALL, RECORD_AREAS } from "../../lib/recordAreas";
 import { horaRoma, minutosTexto, RETRASO_AVISO_MIN } from "../../lib/seguimiento";
 import { kmDeSolicitud } from "../../lib/solicitudes";
 
-// Vista del Registro del cliente (Piazza) igual que la de la oficina: areas arriba, los servicios del mes agrupados por dia, el resumen del mes y los pendientes de hoy.
+// Vista del Registro del cliente (Piazza) igual que la de la oficina: areas arriba y los servicios del mes agrupados por dia (el resumen del mes y los pendientes de hoy estan en su Dashboard).
 // Junta las solicitudes (lo que pidio) y los servicios ya creados por la oficina, con los datos que tenia la hoja tipo Excel. La unica alerta es la de la ETA: el chofer
 // no llego a tiempo (en rojo).
 
-const AREAS = RECORD_AREAS.filter((a) => a.key !== "otros");
+export const AREAS = RECORD_AREAS.filter((a) => a.key !== "otros");
 const FINALES = new Set(["CONSEGNATO", "ANNULLATO", "RISCHEDULATO"]);
 // Pasadas estas horas sin llegar, un servicio se da por olvidado y no se marca (igual que el seguimiento del cliente).
 const OLVIDADO_MIN = 12 * 60;
 
 const mayuscula = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
-const diaRoma = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+export const diaRoma = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
 
 const areaDeServicio = (r) =>
   r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "dhl-roma" : "dhl-milano") : r.spedizzione === "AB_SERVICE" ? "ab-service" : r.zona === "ROMA" ? "piazza-roma" : "piazza-milano";
@@ -166,7 +165,7 @@ export const filasACsv = (filas, area) =>
   ]);
 
 // Filtros de estado de la lista: coincide(fila) decide si entra.
-const FILTROS = {
+export const FILTROS = {
   all: { coincide: () => true },
   late: { coincide: (f) => f.retraso != null },
   incomplete: { coincide: (f) => f.faltan.length > 0 },
@@ -183,7 +182,7 @@ const ChevronIcon = ({ open }) => (
   </svg>
 );
 
-const RetrasoPill = ({ min, className }) => {
+export const RetrasoPill = ({ min, className }) => {
   const t = useT();
   return (
     <span className={clsx("inline-block rounded-full bg-danger-500/15 px-2 py-0.5 text-[11px] font-semibold text-danger-500", className)}>
@@ -386,10 +385,10 @@ const Fila = ({ fila, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio,
   );
 };
 
-export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio, onFotos }) => {
+export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, areaInicial, verFotos, verSeguimiento, onOpenSolicitud, onOpenServicio, onFotos }) => {
   const t = useT();
   const { language } = useLanguage();
-  const [areaKey, setAreaKey] = useState(AREA_ALL);
+  const [areaKey, setAreaKey] = useState(areaInicial ?? AREA_ALL);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("all");
   // El dia de hoy empieza abierto.
@@ -406,7 +405,6 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
     return out;
   }, [filas]);
   const total = filas.length;
-  const totalKm = Object.values(stats).reduce((sum, s) => sum + s.km, 0);
 
   const q = busqueda.trim().toLowerCase();
   // Area y busqueda; sobre eso se aplica el filtro de estado (los contadores de los filtros salen de esta base).
@@ -438,12 +436,6 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
     if (filtro !== "all" || q) setAbiertos(new Set(dias.map((d) => d.dia)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro, q, areaKey]);
-
-  const hoy = diaRoma(new Date().toISOString());
-  const pendientesHoy = useMemo(
-    () => filas.filter((f) => f.dia === hoy && f.pendiente && (areaKey === AREA_ALL || f.area === areaKey)).sort((a, b) => new Date(a.eta ?? 0) - new Date(b.eta ?? 0)),
-    [filas, hoy, areaKey]
-  );
 
   const etiquetaDia = (dia) => mayuscula(new Date(`${dia}T12:00:00Z`).toLocaleDateString(language === "it" ? "it-IT" : "es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }));
   const nombreMes = mayuscula(new Date(`${month}-15T12:00:00Z`).toLocaleDateString(language === "it" ? "it-IT" : "es-AR", { month: "long", year: "numeric", timeZone: "UTC" }));
@@ -522,7 +514,7 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_330px] 2xl:items-start">
+      <div>
         <section className="glass-surface min-w-0 rounded-2xl">
           <header className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
             <h2 className="text-[15px] font-semibold text-ink-50">
@@ -583,58 +575,6 @@ export const RegistroLista = ({ solicitudes, servicios, seguimiento, month, verF
           </div>
         </section>
 
-        <aside className="flex flex-col gap-5 2xl:sticky 2xl:top-6">
-          <PanelShell icon={BarsIcon} title={t("reg.monthSummary")}>
-            <div className="grid grid-cols-2 gap-2.5">
-              {AREAS.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  onClick={() => setAreaKey(a.key)}
-                  className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors hover:bg-line/[0.05] ${areaKey === a.key ? "border-accent-500/50 bg-accent-500/10" : "border-line/10"}`}
-                >
-                  <AreaBadge areaKey={a.key} size={30} />
-                  <span className="min-w-0">
-                    <span className="block text-[18px] font-semibold leading-none text-ink-50">{stats[a.key].count}</span>
-                    <span className="mt-1 block truncate text-[11px] text-ink-400">{a.shortLabel ?? a.label}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 flex items-center justify-between border-t border-line/10 pt-3 text-[12px] text-ink-300">
-              <span>{t("reg.monthTotal")}</span>
-              <span className="font-medium text-ink-100">
-                {cuenta(total)} · {Math.round(totalKm).toLocaleString(language === "it" ? "it-IT" : "es-AR")} km
-              </span>
-            </p>
-          </PanelShell>
-
-          <PanelShell icon={ClockIcon} title={t("reg.pendingToday")}>
-            <p className="mb-3 text-[12px] text-ink-400">{t("reg.pendingHint")}</p>
-            {pendientesHoy.length === 0 ? (
-              <p className="py-2 text-center text-[13px] text-ink-300">{t("reg.noPendingToday")}</p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {pendientesHoy.map((f) => (
-                  <li
-                    key={f.key}
-                    className={clsx("rounded-xl border border-line/10 px-3 py-2", f.retraso != null && "border-l-4 border-l-danger-500 bg-danger-500/[0.09]")}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <AreaBadge areaKey={f.area} size={22} />
-                        <span className="truncate text-[13px] font-semibold text-ink-50">{f.codigo || "—"}</span>
-                      </span>
-                      <span className="shrink-0 text-[12px] text-ink-200">{f.eta ? horaRoma(f.eta) : "—"}</span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[12px] text-ink-300">{f.destino}</p>
-                    {f.retraso != null && <RetrasoPill min={f.retraso} className="mt-1" />}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </PanelShell>
-        </aside>
       </div>
     </div>
   );

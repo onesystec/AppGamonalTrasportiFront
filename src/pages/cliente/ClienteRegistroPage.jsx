@@ -494,6 +494,7 @@ export const ClienteRegistroPage = () => {
           servicios={servicios}
           seguimiento={seguimiento}
           month={month}
+          areaInicial={location.state?.area ?? undefined}
           verFotos={verFotos}
           verSeguimiento={verSeguimiento}
           onOpenSolicitud={setSelectedId}

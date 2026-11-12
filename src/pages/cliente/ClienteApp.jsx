@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.webp";
 import { PageLoader } from "../../components/ui/PageLoader";
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardListIcon, CloseIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
+import { BarsIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClipboardListIcon, CloseIcon, FileTextIcon, MapPinIcon, MoonIcon, RouteIcon, SunIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useT } from "../../i18n/index.jsx";
@@ -15,6 +15,7 @@ import { AREA_LABEL_BY_KEY } from "../../lib/roles";
 
 const ClienteSeguimientoPage = lazy(() => import("./ClienteSeguimientoPage").then((m) => ({ default: m.ClienteSeguimientoPage })));
 const ClienteHistorialPage = lazy(() => import("./ClienteHistorialPage").then((m) => ({ default: m.ClienteHistorialPage })));
+const ClienteDashboardPage = lazy(() => import("./ClienteDashboardPage").then((m) => ({ default: m.ClienteDashboardPage })));
 const ClienteRegistroPage = lazy(() => import("./ClienteRegistroPage").then((m) => ({ default: m.ClienteRegistroPage })));
 
 const ClienteDisponibilidadPage = lazy(() => import("./ClienteDisponibilidadPage").then((m) => ({ default: m.ClienteDisponibilidadPage })));
@@ -34,8 +35,11 @@ const buildNav = (modulos) => {
     ...(modulos.includes("EN_VIVO") ? [{ to: "/cliente/en-vivo", label: "nav.live", icon: MapPinIcon }] : []),
     ...(verSeguimiento ? [{ to: "/cliente", label: "nav.tracking", icon: RouteIcon, end: true }] : []),
   ];
-  // El Registro va el primero de la barra, sin grupo.
-  const registro = modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : [];
+  // El Dashboard (si lo tiene, y necesita el Registro: usa sus datos) y el Registro van los primeros de la barra, sin grupo.
+  const registro = [
+    ...(modulos.includes("REGISTRO") && modulos.includes("DASHBOARD") ? [{ to: "/cliente/dashboard", label: "nav.dashboard", icon: BarsIcon }] : []),
+    ...(modulos.includes("REGISTRO") ? [{ to: "/cliente/registro", label: "nav.register", icon: ClipboardListIcon }] : []),
+  ];
   const otras = [
     ...(modulos.includes("DISPONIBILIDAD") ? [{ to: "/cliente/disponibilidad", label: "nav.availability", icon: CalendarIcon }] : []),
     // Registro e Historial son una sola vista (la hoja de servicios): con el Registro activo, el Historial se ve ahi mismo.
@@ -274,7 +278,7 @@ const ClienteInicio = () => {
   const t = useT();
   const { user } = useAuth();
   const modulos = user?.clienteModulos ?? [];
-  if (modulos.includes("REGISTRO") && !haEntrado()) return <Navigate to="/cliente/registro" replace />;
+  if (modulos.includes("REGISTRO") && !haEntrado()) return <Navigate to={modulos.includes("DASHBOARD") ? "/cliente/dashboard" : "/cliente/registro"} replace />;
   if (modulos.includes("MAPA") || modulos.includes("LISTA")) return <ClienteSeguimientoPage />;
   if (modulos.includes("EN_VIVO")) return <Navigate to="/cliente/en-vivo" replace />;
   if (modulos.includes("DISPONIBILIDAD")) return <Navigate to="/cliente/disponibilidad" replace />;
@@ -300,6 +304,7 @@ export const ClienteApp = () => (
       <Route path="/cliente/en-vivo" element={<ClienteEnVivoPage />} />
       <Route path="/cliente/disponibilidad" element={<ClienteDisponibilidadPage />} />
       <Route path="/cliente/historial" element={<HistorialORegistro />} />
+      <Route path="/cliente/dashboard" element={<ClienteDashboardPage />} />
       <Route path="/cliente/registro" element={<ClienteRegistroPage />} />
       <Route path="*" element={<Navigate to="/cliente" replace />} />
     </Route>
