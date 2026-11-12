@@ -24,6 +24,9 @@ export const getClienteServiciosRequest = (month) => api.get("/cliente/servicios
 
 export const exportClienteServiciosRequest = (month) => api.get("/cliente/exportar", { params: { month } }).then((res) => res.data.data);
 
+// Actividad reciente de los servicios (Dashboard): nuevos, entregados y cambios.
+export const getClienteActividadRequest = () => api.get("/cliente/actividad").then((res) => res.data.data.eventos);
+
 // Cambios de un servicio (de la oficina y de la propia empresa).
 export const getClienteCambiosRequest = (id) => api.get(`/cliente/servicios/${id}/cambios`).then((res) => res.data.data.cambios);
 

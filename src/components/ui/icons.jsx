@@ -48,6 +48,14 @@ export const ArrowRightIcon = (props) => (
   </Svg>
 );
 
+export const TargetIcon = (props) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1.2" />
+  </Svg>
+);
+
 export const SearchIcon = (props) => (
   <Svg {...props}>
     <circle cx="11" cy="11" r="6.5" />
