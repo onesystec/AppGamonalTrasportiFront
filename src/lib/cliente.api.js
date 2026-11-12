@@ -24,6 +24,9 @@ export const getClienteServiciosRequest = (month) => api.get("/cliente/servicios
 
 export const exportClienteServiciosRequest = (month) => api.get("/cliente/exportar", { params: { month } }).then((res) => res.data.data);
 
+// Anular un servicio que todavia no salio (Pendiente): la oficina recibe un aviso.
+export const anularServicioClienteRequest = (id) => api.post(`/cliente/servicios/${id}/anular`).then((res) => res.data.data);
+
 // Actividad reciente de los servicios (Dashboard): nuevos, entregados y cambios.
 export const getClienteActividadRequest = () => api.get("/cliente/actividad").then((res) => res.data.data.eventos);
 

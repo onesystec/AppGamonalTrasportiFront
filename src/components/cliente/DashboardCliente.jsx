@@ -134,12 +134,13 @@ export const EvolucionMensual = ({ datos, mes }) => {
   );
 };
 
-const CAMPOS = ["shipment", "orderNumero", "tipoPedido", "ciudad", "eta"];
+const CAMPOS = ["shipment", "orderNumero", "tipoPedido", "ciudad", "eta", "cliente", "km", "ritiro"];
 
 // Un evento de la actividad reciente: icono de color, titulo, detalle y la hora a la derecha.
 const eventoVista = (e, t) => {
   if (e.tipo === "NUEVO") return { icono: ClipboardListIcon, color: "bg-accent-500/15 text-accent-400", titulo: t("dash.act.new") };
   if (e.tipo === "CONSEGNADO") return { icono: CheckCircleIcon, color: "bg-success-500/15 text-success-500", titulo: t("dash.act.delivered") };
+  if (e.campo === "estado") return { icono: PencilIcon, color: "bg-danger-500/15 text-danger-500", titulo: t("dash.act.cancelled") };
   if (e.campo === "chofer") return { icono: PencilIcon, color: "bg-warning-500/15 text-warning-500", titulo: e.nuevo ? t("dash.act.driver", { value: e.nuevo }) : t("dash.act.driverNoName") };
   if (e.campo === "targa") return { icono: PencilIcon, color: "bg-warning-500/15 text-warning-500", titulo: t(e.anterior ? "dash.act.plateChanged" : "dash.act.plate", { value: e.nuevo ?? "—" }) };
   const campo = CAMPOS.includes(e.campo) ? t(`dash.field.${e.campo}`) : e.campo;

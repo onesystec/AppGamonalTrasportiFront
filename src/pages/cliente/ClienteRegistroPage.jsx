@@ -18,7 +18,7 @@ import { SolicitudWhatsappButton } from "../../components/solicitudes/SolicitudW
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage, useT } from "../../i18n/index.jsx";
 import { parseApiError } from "../../lib/api";
-import { editarCeldaRequest, getClienteCambiosRequest, getClienteMeRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
+import { anularServicioClienteRequest, editarCeldaRequest, getClienteCambiosRequest, getClienteMeRequest, getClienteSeguimientoRequest, getClienteServiciosRequest } from "../../lib/cliente.api";
 import { startVisibleInterval } from "../../lib/polling";
 import { horaRoma, minutosTexto } from "../../lib/seguimiento";
 import { currentMonth } from "../../lib/finanzas";
@@ -38,12 +38,13 @@ const HOJAS = { DHL_MILANO: "dhl", DHL_ROMA: "roma", AB_SERVICE: "ab", EXTRA_PIA
 // En que pestana va un servicio ya hecho (Historial): DHL Milano / DHL Roma, AB Service y el resto como Extra Piazza.
 const tipoDeServicio = (r) => (r.spedizzione === "DHL" ? (r.zona === "ROMA" ? "DHL_ROMA" : "DHL_MILANO") : r.spedizzione === "AB_SERVICE" ? "AB_SERVICE" : "EXTRA_PIAZZA");
 
-const Modal = ({ title, onClose, children }) => {
+// ancho: con la ficha de un servicio el modal se ensancha para repartir la informacion en dos columnas.
+const Modal = ({ title, onClose, children, ancho = false }) => {
   const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl">
+      <div className={clsx("relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-popover p-5 shadow-xl", ancho ? "max-w-5xl" : "max-w-2xl")}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="text-[17px] font-semibold text-ink-50">{title}</h2>
           <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-lg p-1.5 text-ink-300 hover:bg-line/10 hover:text-ink-50">
@@ -130,10 +131,27 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
   const { language } = useLanguage();
   const r = fila.servicio;
   const extra = fila.area === "piazza-milano" || fila.area === "piazza-roma";
+  // Lo que se puede cambiar depende de en que punto esta el servicio: pendiente (todavia no salio) casi todo; retirado o en camino solo codigos, tipo y ETA;
+  // entregado, anulado o reprogramado, nada. El chofer y el vehiculo los elige siempre la oficina.
+  const pendiente = r.estado === "IN_SOSPESO";
+  const enCamino = r.estado === "RITIRATO" || r.estado === "IN_CONSEGNA";
+  const editable = pendiente || enCamino;
+  const esAb = fila.area === "ab-service";
   const inicial = useMemo(
-    () => ({ shipment: r.shipment ?? "", orderNumero: r.orderNumero ?? "", tipoPedido: r.tipoPedido ?? "", ciudad: r.ciudad || r.destino || "", eta: toRomeInput(r.etaPlan) }),
-    [r]
+    () => ({
+      shipment: r.shipment ?? "",
+      orderNumero: r.orderNumero ?? "",
+      tipoPedido: r.tipoPedido ?? "",
+      ciudad: r.ciudad || r.destino || "",
+      eta: toRomeInput(r.etaPlan),
+      // "Por completar" es la ficha provisional de un servicio cargado sin cliente: se muestra vacio.
+      cliente: r.cliente && r.cliente !== "Por completar" ? r.cliente : "",
+      km: r.km != null ? String(Math.round(r.km * 10) / 10) : "",
+      ritiro: fila.ritiro ?? "",
+    }),
+    [r, fila.ritiro]
   );
+  const [confirmandoAnular, setConfirmandoAnular] = useState(false);
   const [editando, setEditando] = useState(false);
   const [cambios, setCambios] = useState(null); // historial: lo que cambio la oficina y la propia empresa
   const [valores, setValores] = useState(inicial);
@@ -152,6 +170,19 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
   }, [r.id]);
 
   const etiquetaCampo = (campo) => (extra && campo === "shipment" ? "Codice" : extra && campo === "orderNumero" ? "Secondo codice" : extra && campo === "ciudad" ? "Consegna" : t(`reg.campo.${campo}`));
+
+  const anular = async () => {
+    setGuardando(true);
+    setError("");
+    try {
+      await anularServicioClienteRequest(r.id);
+      onSaved();
+    } catch (err) {
+      setError(parseApiError(err).message);
+      setGuardando(false);
+      setConfirmandoAnular(false);
+    }
+  };
 
   const guardar = async () => {
     const cambiosHechos = {};
@@ -189,59 +220,86 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
   ].filter(([, valor]) => valor);
 
   return (
-    <Modal title={t("reg.serviceTitle", { code: fila.codigo || r.codigo })} onClose={onClose}>
+    <Modal title={t("reg.serviceTitle", { code: fila.codigo || r.codigo })} onClose={onClose} ancho={!editando}>
       <Alert>{error}</Alert>
       {fila.retraso != null && (
         <p className="mb-3 rounded-xl bg-danger-500/10 px-3 py-2 text-[13px] font-medium text-danger-500">{t("reg.late", { min: minutosTexto(fila.retraso) })}</p>
       )}
       {!editando ? (
         <>
-          <dl className="flex flex-col gap-2.5">
-            {filas.map(([label, valor]) => (
-              <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="w-32 shrink-0 text-[12px] uppercase tracking-wide text-ink-400">{label}</dt>
-                <dd className="min-w-0 break-words text-[14px] text-ink-50">{valor}</dd>
+          {/* Dos partes: los datos del servicio a la izquierda; la cronologia y las acciones a la derecha (en pantallas chicas, una debajo de la otra). */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-8">
+            <dl className="flex flex-col gap-2.5">
+              {filas.map(([label, valor]) => (
+                <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                  <dt className="w-32 shrink-0 text-[12px] uppercase tracking-wide text-ink-400">{label}</dt>
+                  <dd className="min-w-0 break-words text-[14px] text-ink-50">{valor}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex min-w-0 flex-col gap-5 border-t border-line/10 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+              {cambios && (
+                <div>
+                  <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">{t("reg.history")}</h3>
+                  {cambios.length === 0 ? (
+                    <p className="text-[13px] text-ink-400">{t("reg.historyNone")}</p>
+                  ) : (
+                    <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto pr-1">
+                      {cambios.map((c) => (
+                        <li key={c.id} className="text-[13px] text-ink-200">
+                          <span className="text-ink-400">
+                            {formatFechaHora(c.fecha)} · {c.editor}
+                          </span>
+                          <br />
+                          <span className="font-medium text-ink-100">{etiquetaCampo(c.campo)}:</span> {c.anterior ?? "—"} → {c.nuevo ?? "—"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2 lg:mt-auto">
+                {verFotos && (
+                  <span className={`inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100 ${r.fotos > 0 ? "" : "opacity-40"}`}>
+                    <BotonGaleria servicio={r} onFotos={r.fotos > 0 ? onFotos : () => {}} />
+                    {t("reg.gallery")}
+                  </span>
+                )}
+                {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="!px-4 !py-2 !text-[13px]" />}
+                <ContactarUfficio numero={contacto} texto={`Ciao, ho una domanda sul servizio ${fila.codigo || r.codigo} (${fila.destino}, ${formatFechaHora(r.etaPlan)}).`} />
+                {editable && (
+                  <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
+                    {t("reg.editData")}
+                  </Button>
+                )}
+                {pendiente && (
+                  <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px] !text-danger-500" onClick={() => setConfirmandoAnular(true)}>
+                    {t("reg.cancelService")}
+                  </Button>
+                )}
               </div>
-            ))}
-          </dl>
-          {cambios && (
-            <div className="mt-5 border-t border-line/10 pt-4">
-              <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400">{t("reg.history")}</h3>
-              {cambios.length === 0 ? (
-                <p className="text-[13px] text-ink-400">{t("reg.historyNone")}</p>
-              ) : (
-                <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
-                  {cambios.map((c) => (
-                    <li key={c.id} className="text-[13px] text-ink-200">
-                      <span className="text-ink-400">
-                        {formatFechaHora(c.fecha)} · {c.editor}
-                      </span>
-                      <br />
-                      <span className="font-medium text-ink-100">{etiquetaCampo(c.campo)}:</span> {c.anterior ?? "—"} → {c.nuevo ?? "—"}
-                    </li>
-                  ))}
-                </ul>
+              {!editable && <p className="text-[12px] text-ink-400">{t("reg.readOnly")}</p>}
+              {confirmandoAnular && (
+                <div className="rounded-xl border border-danger-500/30 bg-danger-500/10 p-3">
+                  <p className="mb-3 text-[13px] text-ink-100">{t("reg.cancelConfirm")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button className="!w-auto !bg-danger-500 px-4 py-2 text-[13px]" loading={guardando} onClick={anular}>
+                      {t("reg.cancelYes")}
+                    </Button>
+                    <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" disabled={guardando} onClick={() => setConfirmandoAnular(false)}>
+                      {t("reg.cancelNo")}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
-          )}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            {verFotos && (
-              <span className={`inline-flex items-center gap-1 rounded-xl border border-line/20 pr-3 text-[13px] text-ink-100 ${r.fotos > 0 ? "" : "opacity-40"}`}>
-                <BotonGaleria servicio={r} onFotos={r.fotos > 0 ? onFotos : () => {}} />
-                {t("reg.gallery")}
-              </span>
-            )}
-            {fila.enVivo && verSeguimiento && <Segui id={fila.id} className="!px-4 !py-2 !text-[13px]" />}
-            <ContactarUfficio numero={contacto} texto={`Ciao, ho una domanda sul servizio ${fila.codigo || r.codigo} (${fila.destino}, ${formatFechaHora(r.etaPlan)}).`} />
-            <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setEditando(true)}>
-              {t("reg.editData")}
-            </Button>
           </div>
         </>
       ) : (
         <>
           <p className="mb-3 text-[13px] text-ink-300">{t("reg.editHint")}</p>
-          {r.estado === "CONSEGNATO" && <p className="mb-3 rounded-xl bg-warning-500/10 px-3 py-2 text-[13px] text-warning-500">{t("reg.deliveredWarn")}</p>}
+          {enCamino && <p className="mb-3 rounded-xl bg-warning-500/10 px-3 py-2 text-[13px] text-warning-500">{t("reg.routeWarn")}</p>}
+          {enCamino && <p className="mb-3 text-[12px] text-ink-400">{t("reg.editLockedRoute")}</p>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField id="vs-shipment" label={extra ? "Codice" : "Shipment"} value={valores.shipment} onChange={(e) => setCampo("shipment", e.target.value)} />
             <TextField id="vs-order" label={extra ? "Secondo codice" : "Order"} value={valores.orderNumero} onChange={(e) => setCampo("orderNumero", e.target.value)} />
@@ -258,8 +316,15 @@ const VistaServicio = ({ fila, contacto, verFotos, verSeguimiento, onClose, onFo
                 ]}
               />
             )}
-            <TextField id="vs-ciudad" label={extra ? "Consegna" : "Città"} value={valores.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
             <TextField id="vs-eta" label="ETA" type="datetime-local" value={valores.eta} onChange={(e) => setCampo("eta", e.target.value)} />
+            {pendiente && (
+              <>
+                {!esAb && <TextField id="vs-cliente" label="Cliente" value={valores.cliente} onChange={(e) => setCampo("cliente", e.target.value)} />}
+                <TextField id="vs-ciudad" label={extra ? "Consegna" : "Città"} value={valores.ciudad} onChange={(e) => setCampo("ciudad", e.target.value)} />
+                {extra && <TextField id="vs-ritiro" label={t("reg.pickup")} value={valores.ritiro} onChange={(e) => setCampo("ritiro", e.target.value)} />}
+                <TextField id="vs-km" label="KM" inputMode="decimal" value={valores.km} onChange={(e) => setCampo("km", e.target.value)} />
+              </>
+            )}
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <Button className="!w-auto px-5 py-2 text-[13px]" loading={guardando} onClick={guardar}>
