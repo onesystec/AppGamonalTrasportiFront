@@ -48,6 +48,7 @@ import { DesvioChip } from "../../components/records/DesvioChip";
 import { CambiosButton } from "../../components/solicitudes/CambiosButton";
 import { SolicitudesButton } from "../../components/solicitudes/SolicitudesButton";
 import { AsignarModal } from "../../components/records/AsignarModal";
+import { PorAsignar } from "../../components/records/PorAsignar";
 import {
   listPendingRecordsRequest,
   listRecordsByDayRequest,
@@ -928,6 +929,9 @@ export const RecordsListPage = ({ section: sectionHint }) => {
           )}
         </div>
       </div>
+
+      {/* Servicios que faltan por asignar (de cualquier fecha): siempre arriba, solo para la oficina. */}
+      {isPrivileged && <PorAsignar />}
 
       {/* Areas: cada una con su cantidad del mes. */}
       <div role="tablist" aria-label="Areas de servicio" className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">

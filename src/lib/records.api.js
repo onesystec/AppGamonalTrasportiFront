@@ -57,6 +57,9 @@ export const listRecordsByMonthRequest = (year, month) =>
 export const createRecordRequest = (payload) =>
   api.post("/records", payload).then((res) => res.data.data.record);
 
+// Servicios sin chofer o sin vehiculo, de cualquier fecha (panel "Por asignar" del Registro de la oficina).
+export const listSinAsignarRequest = () => api.get("/records/sin-asignar").then((res) => res.data.data.records);
+
 export const getRecordRequest = (id) =>
   api.get(`/records/${id}`).then((res) => res.data.data.record);
 

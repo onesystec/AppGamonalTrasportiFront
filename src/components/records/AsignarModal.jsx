@@ -55,7 +55,7 @@ export const AsignarModal = ({ record, onClose, onSaved }) => {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Asignar chofer y vehiculo">
       <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-backdrop backdrop-blur-sm" />
-      <div className="glass-surface relative z-10 w-full max-w-md rounded-3xl bg-background p-5">
+      <div className="glass-surface relative z-10 max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-background p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-[18px] font-semibold text-ink-50">Asignar chofer y vehiculo</h2>
@@ -88,10 +88,10 @@ export const AsignarModal = ({ record, onClose, onSaved }) => {
               onChange={setVehicleId}
             />
             <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={onClose} disabled={saving}>
+              <Button variant="ghost" className="!w-auto px-4 py-2.5 text-[14px]" onClick={onClose} disabled={saving}>
                 Cancelar
               </Button>
-              <Button className="!w-auto px-5 py-2 text-[13px]" loading={saving} disabled={!driverId || !vehicleId} onClick={guardar}>
+              <Button className="!w-auto px-6 py-2.5 text-[14px]" loading={saving} disabled={!driverId || !vehicleId} onClick={guardar}>
                 Asignar
               </Button>
             </div>
