@@ -248,7 +248,7 @@ const ClienteShell = () => {
 
       <div className="min-w-0 flex-1">
         {/* Celular: la cabecera es el boton del menu (al tocar el logo se ven las vistas). */}
-        <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 border-b border-line/10 bg-background/95 pt-[var(--sat)] backdrop-blur lg:hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <button
               type="button"

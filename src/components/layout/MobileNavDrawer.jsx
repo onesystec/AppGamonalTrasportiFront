@@ -77,7 +77,7 @@ export const MobileNavDrawer = ({ open, onClose, items, theme, updateDot, onTogg
         className="absolute inset-0 bg-backdrop backdrop-blur-sm"
       />
 
-      <div className="relative z-10 flex h-dvh w-72 max-w-[80vw] animate-slide-in-left flex-col justify-between border-r border-sidebar-border bg-sidebar px-4 py-6">
+      <div className="relative z-10 flex h-dvh w-72 max-w-[80vw] animate-slide-in-left flex-col justify-between border-r border-sidebar-border bg-sidebar px-4 pb-6 pt-[calc(1.5rem+var(--sat))]">
         <div>
           <div className="flex items-center gap-3 px-2">
             <img src={logo} alt="ONE DRIVER Express" className="h-10 w-10 shrink-0 rounded-full" />

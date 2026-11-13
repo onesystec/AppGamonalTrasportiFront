@@ -607,7 +607,7 @@ const AppShellContent = () => {
 
 
         <div className="min-w-0 flex-1">
-          <header className="flex items-center justify-between gap-4 px-4 py-6 sm:hidden">
+          <header className="flex items-center justify-between gap-4 px-4 pb-6 pt-[calc(1.5rem+var(--sat))] sm:hidden">
             <button
               type="button"
               onClick={() => setMobileNavOpen(true)}

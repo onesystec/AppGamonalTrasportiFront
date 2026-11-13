@@ -46,7 +46,10 @@ export const FullscreenMap = ({ className, children }) => {
         onClick={() => setFull((value) => !value)}
         aria-label={full ? t("fullscreen.exit") : t("fullscreen.enter")}
         title={full ? t("fullscreen.exit") : t("fullscreen.title")}
-        className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-md hover:bg-gray-100"
+        className={clsx(
+          "absolute left-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-800 shadow-md hover:bg-gray-100",
+          full ? "top-[calc(0.75rem+var(--sat))]" : "top-3"
+        )}
       >
         {full ? <CollapseIcon /> : <ExpandIcon />}
       </button>

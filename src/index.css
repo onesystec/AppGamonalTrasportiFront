@@ -803,6 +803,14 @@ html[data-palette="navidad"].dark {
   --glass-input-focus-bg: #14463e;
 }
 
+/* Alto de la isla dinamica / muesca (solo en la app de iPhone; en el resto vale 0). */
+:root {
+  --sat: 0px;
+}
+html.app-ios {
+  --sat: env(safe-area-inset-top, 0px);
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;

@@ -8,5 +8,14 @@
   "server": {
     "url": "https://app-gamonal-trasporti-front.vercel.app",
     "errorPath": "offline.html"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
   }
 }

@@ -237,7 +237,7 @@ const RoleChangeNotice = () => {
   return (
     <div
       role="status"
-      className="fixed inset-x-4 top-4 z-[100] mx-auto max-w-md rounded-2xl bg-accent-500 px-4 py-3 text-center text-[14px] font-medium text-white shadow-lg"
+      className="fixed inset-x-4 top-[calc(1rem+var(--sat))] z-[100] mx-auto max-w-md rounded-2xl bg-accent-500 px-4 py-3 text-center text-[14px] font-medium text-white shadow-lg"
       onClick={() => setNotice("")}
     >
       {notice}
