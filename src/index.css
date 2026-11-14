@@ -811,6 +811,20 @@ html.app-ios {
   --sat: env(safe-area-inset-top, 0px);
 }
 
+/* iOS hace zoom solo al tocar un campo con letra menor de 16px y deja la pantalla ampliada y deformada.
+   En iPhone (app y Safari) los campos de texto usan 16px; el resto de dispositivos no cambia. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;

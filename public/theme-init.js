@@ -6,7 +6,8 @@
   try {
     if (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios") {
       var vp = document.querySelector('meta[name="viewport"]');
-      if (vp && vp.content.indexOf("viewport-fit") === -1) vp.content += ", viewport-fit=cover";
+      // maximum-scale=1 evita ademas que iOS deje la pantalla ampliada al enfocar un campo.
+      if (vp && vp.content.indexOf("viewport-fit") === -1) vp.content += ", viewport-fit=cover, maximum-scale=1";
       document.documentElement.classList.add("app-ios");
     }
   } catch (e) {}
