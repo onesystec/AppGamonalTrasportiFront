@@ -13,7 +13,7 @@ import { useGpsRespaldo } from "../../hooks/useGpsRespaldo";
 import { useLocationSharing } from "../../hooks/useLocationSharing";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { Avatar } from "../ui/Avatar";
-import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, FileTextIcon, SearchIcon, SettingsIcon, ShieldIcon, WalletIcon } from "../ui/icons";
+import { BriefcaseIcon, CalendarIcon, ChevronDownIcon, ClockIcon, ExternalLinkIcon, FileTextIcon, SearchIcon, SettingsIcon, ShieldIcon, WalletIcon } from "../ui/icons";
 import { MemorandumsPendientesBanner, usePendingMemorandums } from "../memorandums/MemorandumsPendientesBanner";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { DriverModeSwitch } from "./DriverModeSwitch";
@@ -532,6 +532,7 @@ const AppShellContent = () => {
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} compact={compact} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} compact={compact} />}
               {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} compact={compact} />}
+              {user?.cargo === "OWNER" && <SidebarNavTab to="/app-collegate" label="App collegate" icon={ExternalLinkIcon} compact={compact} />}
               {isPrivileged && <SidebarNavTab to="/mapa" label="Mapa" icon={MapPinIcon} compact={compact} />}
               {isPrivileged && <SidebarNavTab to="/mecanica" label="Mecánica" icon={WrenchIcon} compact={compact} />}
             </nav>
@@ -694,7 +695,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }, { to: "/app-collegate", label: "App collegate", icon: ExternalLinkIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}

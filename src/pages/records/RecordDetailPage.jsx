@@ -1179,6 +1179,15 @@ const RecordSummaryView = ({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <span className="text-[13px] font-medium text-ink-400">{record.codigo}</span>
+          {/* Servicio que llego por una app conectada (App Piazza): al cambiar chofer, vehiculo o estado se le avisa solo. */}
+          {record.origenApp && (
+            <span
+              className="ml-2 rounded-full bg-accent-500/15 px-2.5 py-0.5 text-[12px] font-medium text-accent-300"
+              title="El cambio de estado, chofer o vehiculo se avisa automaticamente a esa app"
+            >
+              Da {record.origenApp}
+            </span>
+          )}
           <h1 className="mt-0.5 text-[22px] font-semibold text-ink-50">{record.destinazione}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-2">

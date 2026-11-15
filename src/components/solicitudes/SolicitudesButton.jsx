@@ -12,6 +12,7 @@ import { parseApiError } from "../../lib/api";
 import { startVisibleInterval } from "../../lib/polling";
 import { AREAS_BY_KEY } from "../../lib/recordAreas";
 import { SOLICITUDES_CHANGED_EVENT } from "../../lib/solicitudes";
+import { reinviaSolicitudRequest } from "../../lib/collegamenti.api";
 import { listSolicitudesOficinaRequest, rechazarSolicitudRequest } from "../../lib/solicitudes.api";
 
 const REFRESH_MS = 60 * 1000;
@@ -25,7 +26,21 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
   const [motivo, setMotivo] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reenviando, setReenviando] = useState(false);
   const pendiente = solicitud.estado === "PENDIENTE";
+
+  const handleReenviar = async () => {
+    setReenviando(true);
+    setError("");
+    try {
+      await reinviaSolicitudRequest(solicitud.id);
+      onRejected();
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setReenviando(false);
+    }
+  };
 
   const handleReject = async () => {
     setSaving(true);
@@ -45,6 +60,18 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
         <span className="text-[15px] font-semibold text-ink-50">{solicitud.cliente}</span>
         <EstadoPill estado={solicitud.estado} />
       </div>
+      {/* Llego por una app conectada (App Piazza): se ve de donde y, si no se pudo avisar el estado, un boton para reenviarlo. */}
+      {solicitud.origen && (
+        <p className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
+          <span className="rounded-full bg-accent-500/15 px-2.5 py-0.5 font-medium text-accent-300">Da {solicitud.origen.empresa ?? "app conectada"}</span>
+          {solicitud.estado === "ACEPTADA" && (
+            <button type="button" disabled={reenviando} onClick={handleReenviar} className="text-ink-300 underline underline-offset-2 hover:text-ink-50 disabled:opacity-50">
+              {reenviando ? "Reenviando…" : "Reenviar estado"}
+            </button>
+          )}
+          {solicitud.origen.errore && <span className="text-danger-500">No se pudo avisar: {solicitud.origen.errore}</span>}
+        </p>
+      )}
       <SolicitudDetalle solicitud={solicitud} />
       <Alert>{error}</Alert>
       <div className="mt-4 flex flex-wrap items-start gap-2">
@@ -62,7 +89,7 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
       </div>
       {pendiente && rechazando && (
         <div className="mt-3 flex flex-col gap-2">
-          <Textarea id={`motivo-${solicitud.id}`} label="Motivo (lo ve el cliente)" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+          <Textarea id={`motivo-${solicitud.id}`} label={solicitud.origen ? `Motivo (lo ve ${solicitud.origen.empresa ?? "la otra app"})` : "Motivo (lo ve el cliente)"} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" className="!w-auto px-4 py-2 text-[13px]" onClick={() => setRechazando(false)} disabled={saving}>
               Cancelar

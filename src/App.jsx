@@ -125,6 +125,9 @@ const ClienteApp = lazy(() => import("./pages/cliente/ClienteApp").then((m) => (
 const AccesoClientesPage = lazy(() =>
   import("./pages/clientes/AccesoClientesPage").then((m) => ({ default: m.AccesoClientesPage })),
 );
+const AppCollegatePage = lazy(() =>
+  import("./pages/collegamenti/AppCollegatePage").then((m) => ({ default: m.AppCollegatePage })),
+);
 const DisponibilidadPage = lazy(() =>
   import("./pages/disponibilidad/DisponibilidadPage").then((m) => ({ default: m.DisponibilidadPage })),
 );
@@ -331,6 +334,7 @@ function App() {
               <Route path="/records/:id" element={<RecordDetailPage />} />
               <Route path="/vencimientos" element={<RoleOnly privileged allowRrhh><VencimientosPage /></RoleOnly>} />
               <Route path="/acceso-clientes" element={<RoleOnly privileged><AccesoClientesPage /></RoleOnly>} />
+              <Route path="/app-collegate" element={<RoleOnly privileged><AppCollegatePage /></RoleOnly>} />
               <Route path="/choferes" element={<RoleOnly privileged allowRrhh><DriversPage /></RoleOnly>} />
               <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
               <Route path="/choferes/:id" element={<RoleOnly privileged allowRrhh><DriverDetailPage /></RoleOnly>} />
