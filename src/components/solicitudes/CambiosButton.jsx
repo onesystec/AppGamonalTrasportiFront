@@ -21,6 +21,23 @@ const LineaCambio = ({ c }) => (
   </li>
 );
 
+// Una linea de la linea de tiempo de un servicio: un cambio de dato (antes -> ahora) o un hito (recibido, anulado), con quien y cuando.
+export const LineaDeTiempo = ({ c }) => (
+  <li className="text-[13px] text-ink-200">
+    {c.hito ? (
+      <span className="font-medium text-ink-50">{c.nuevo}</span>
+    ) : (
+      <>
+        <span className="font-semibold text-ink-100">{c.label}:</span> <span className="text-ink-300 line-through decoration-ink-400/60">{c.anterior ?? "—"}</span> →{" "}
+        <span className="font-medium text-ink-50">{c.nuevo ?? "—"}</span>
+      </>
+    )}
+    <span className="block text-[12px] text-ink-400">
+      {c.editor} · {formatFechaHora(c.createdAt)}
+    </span>
+  </li>
+);
+
 const CambiosModal = ({ onClose, onRead }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -161,16 +178,10 @@ export const CambiosDelServicio = ({ recordId }) => {
   if (items.length === 0) return null;
   return (
     <section className="mt-6">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-400">Cambios del cliente</h3>
+      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-400">Cambios y línea de tiempo</h3>
       <ul className="mt-2 flex flex-col gap-1.5">
         {items.map((c) => (
-          <li key={c.id} className="text-[13px] text-ink-200">
-            <span className="font-semibold text-ink-100">{c.label}:</span> <span className="text-ink-300 line-through decoration-ink-400/60">{c.anterior ?? "—"}</span> →{" "}
-            <span className="font-medium text-ink-50">{c.nuevo ?? "—"}</span>
-            <span className="block text-[12px] text-ink-400">
-              {c.editor} · {formatFechaHora(c.createdAt)}
-            </span>
-          </li>
+          <LineaDeTiempo key={c.id} c={c} />
         ))}
       </ul>
     </section>

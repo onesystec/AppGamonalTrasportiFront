@@ -6,6 +6,7 @@ import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { Textarea } from "../ui/Textarea";
 import { ClipboardListIcon, CloseIcon } from "../ui/icons";
+import { LineaDeTiempo } from "./CambiosButton";
 import { EstadoPill, SolicitudDetalle } from "./SolicitudDetalle";
 import { SolicitudWhatsappButton } from "./SolicitudWhatsappButton";
 import { parseApiError } from "../../lib/api";
@@ -28,6 +29,7 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
   const [error, setError] = useState("");
   const [reenviando, setReenviando] = useState(false);
   const pendiente = solicitud.estado === "PENDIENTE";
+  const cambiosDeLaApp = (solicitud.cambios ?? []).filter((c) => !c.hito);
 
   const handleReenviar = async () => {
     setReenviando(true);
@@ -72,7 +74,23 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
           {solicitud.origen.errore && <span className="text-danger-500">No se pudo avisar: {solicitud.origen.errore}</span>}
         </p>
       )}
+      {/* Lo que la otra app cambio despues de mandar el servicio: aviso destacado y la linea de tiempo completa. */}
+      {cambiosDeLaApp.length > 0 && (
+        <p className="mb-2 rounded-lg bg-warning-500/15 px-3 py-2 text-[12px] font-medium text-warning-500">
+          {solicitud.origen?.empresa ?? "La app conectada"} modificó este servicio ({cambiosDeLaApp.length} {cambiosDeLaApp.length === 1 ? "cambio" : "cambios"}): revisa la línea de tiempo.
+        </p>
+      )}
       <SolicitudDetalle solicitud={solicitud} />
+      {solicitud.cambios?.length > 0 && (
+        <details className="mt-3" open={cambiosDeLaApp.length > 0}>
+          <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-wide text-ink-400">Línea de tiempo</summary>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {[...solicitud.cambios].reverse().map((c) => (
+              <LineaDeTiempo key={c.id} c={c} />
+            ))}
+          </ul>
+        </details>
+      )}
       <Alert>{error}</Alert>
       <div className="mt-4 flex flex-wrap items-start gap-2">
         {pendiente && (
