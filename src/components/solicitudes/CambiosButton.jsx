@@ -176,8 +176,25 @@ export const CambiosDelServicio = ({ recordId }) => {
   }, [recordId]);
 
   if (items.length === 0) return null;
+  // Lo que cambio la app conectada en los ultimos dias (el mas reciente de cada dato): aviso destacado para que la oficina decida si lo aplica.
+  const hace7Dias = Date.now() - 7 * 24 * 3600 * 1000;
+  const vistos = new Set();
+  const recientes = items.filter((c) => c.remoto && !c.hito && new Date(c.createdAt).getTime() > hace7Dias && !vistos.has(c.label) && vistos.add(c.label));
   return (
     <section className="mt-6">
+      {recientes.length > 0 && (
+        <div className="mb-3 rounded-xl bg-warning-500/15 px-3 py-2 text-[13px] text-warning-500">
+          <p className="font-semibold">{recientes[0].editor} actualizó este servicio:</p>
+          <ul className="mt-0.5 list-disc pl-5">
+            {recientes.map((c) => (
+              <li key={c.id}>
+                {c.label}: {c.nuevo ?? "—"} (antes {c.anterior ?? "—"})
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-[12px] opacity-80">El servicio de Gamonal no se cambió solo: aplica los cambios a mano si corresponde.</p>
+        </div>
+      )}
       <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-400">Cambios y línea de tiempo</h3>
       <ul className="mt-2 flex flex-col gap-1.5">
         {items.map((c) => (

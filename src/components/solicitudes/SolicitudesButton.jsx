@@ -66,6 +66,7 @@ const SolicitudCard = ({ solicitud, onComplete, onRejected }) => {
       {solicitud.origen && (
         <p className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
           <span className="rounded-full bg-accent-500/15 px-2.5 py-0.5 font-medium text-accent-300">Da {solicitud.origen.empresa ?? "app conectada"}</span>
+          {solicitud.km != null && <span className="rounded-full bg-line/10 px-2.5 py-0.5 font-medium text-ink-100">Km pianificati: {String(solicitud.km).replace(".", ",")}</span>}
           {solicitud.estado === "ACEPTADA" && (
             <button type="button" disabled={reenviando} onClick={handleReenviar} className="text-ink-300 underline underline-offset-2 hover:text-ink-50 disabled:opacity-50">
               {reenviando ? "Reenviando…" : "Reenviar estado"}

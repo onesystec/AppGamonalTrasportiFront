@@ -8,6 +8,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { CheckIcon, CopyIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
+import { startVisibleInterval } from "../../lib/polling";
 import { listClientsRequest } from "../../lib/clients.api";
 import {
   accettaCollegamentoRequest,
@@ -169,6 +170,8 @@ export const AppCollegatePage = () => {
 
   useEffect(() => {
     void load();
+    // Una solicitud de conexion puede llegar con la pantalla abierta: se revisa sola cada 30 s (solo con la pestana visible).
+    return startVisibleInterval(() => void load(), 30000);
   }, [load]);
 
   if (user?.cargo !== "OWNER") return <Navigate to="/" replace />;
