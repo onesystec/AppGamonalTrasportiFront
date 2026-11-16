@@ -7,6 +7,9 @@ export const rigeneraCodiceRequest = () => api.post("/collegamenti/codice").then
 // clientId = ficha de cliente existente; sin eso se crea una con el nombre de la otra empresa.
 export const accettaCollegamentoRequest = (id, clientId) =>
   api.post(`/collegamenti/${id}/accetta`, { clientId: clientId || null }).then((res) => res.data.data.collegamento);
+// Interruptor del Owner: compartir (o no) con esa app los servicios en curso de Gamonal (posicion, chofer, targa y cliente).
+export const impostaCondivisioneRequest = (id, condividiServiziInCorso) =>
+  api.patch(`/collegamenti/${id}/condivisione`, { condividiServiziInCorso }).then((res) => res.data.data.collegamento);
 export const rifiutaCollegamentoRequest = (id) => api.post(`/collegamenti/${id}/rifiuta`).then((res) => res.data);
 export const scollegaRequest = (id) => api.delete(`/collegamenti/${id}`).then((res) => res.data);
 // Volver a avisar a la otra app el estado, chofer y targa de una solicitud ya aceptada.

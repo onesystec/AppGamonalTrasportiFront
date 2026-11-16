@@ -5,6 +5,7 @@ import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { PageLoader } from "../../components/ui/PageLoader";
+import { Switch } from "../../components/ui/Switch";
 import { CheckIcon, CopyIcon } from "../../components/ui/icons";
 import { useAuth } from "../../context/AuthContext";
 import { parseApiError } from "../../lib/api";
@@ -13,6 +14,7 @@ import { listClientsRequest } from "../../lib/clients.api";
 import {
   accettaCollegamentoRequest,
   getCollegamentiRequest,
+  impostaCondivisioneRequest,
   rifiutaCollegamentoRequest,
   rigeneraCodiceRequest,
   scollegaRequest,
@@ -127,7 +129,38 @@ const SolicitudConexion = ({ item, clientes, onDone }) => {
   );
 };
 
-const ConexionActiva = ({ item, onScollega }) => (
+// Interruptor "Condividi i miei servizi in corso": apagado hasta que el Owner lo enciende; la otra app solo ve los servicios que ya salieron.
+const InterruptorCondivisione = ({ item, onChanged }) => {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const cambiar = async (valor) => {
+    setSaving(true);
+    setError("");
+    try {
+      await impostaCondivisioneRequest(item.id, valor);
+      onChanged();
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="mt-3 border-t border-line/10 pt-3">
+      <Switch
+        id={`condividi-${item.id}`}
+        label="Condividi i miei servizi in corso con questa app"
+        description="L'altra azienda vedrà in tempo reale posizione, autista, targa e cliente dei tuoi servizi in viaggio."
+        checked={Boolean(item.condividiServiziInCorso)}
+        onChange={cambiar}
+        disabled={saving}
+      />
+      <Alert>{error}</Alert>
+    </div>
+  );
+};
+
+const ConexionActiva = ({ item, onScollega, onChanged }) => (
   <li className="glass-surface-sm rounded-2xl p-4">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="min-w-0">
@@ -140,6 +173,7 @@ const ConexionActiva = ({ item, onScollega }) => (
         Desconectar
       </Button>
     </div>
+    <InterruptorCondivisione item={item} onChanged={onChanged} />
     {item.ultimoErrore && (
       <p className="mt-2 rounded-lg bg-danger-500/10 px-3 py-2 text-[12px] text-danger-500">
         Ultimo problema al avisar a la otra app ({fechaHora(item.ultimoErroreAt)}): {item.ultimoErrore}. Se reintenta con el siguiente cambio, o usa &quot;Reenviar&quot; en la solicitud.
@@ -230,7 +264,7 @@ export const AppCollegatePage = () => {
             ) : (
               <ul className="flex flex-col gap-3">
                 {activas.map((c) => (
-                  <ConexionActiva key={c.id} item={c} onScollega={setADesconectar} />
+                  <ConexionActiva key={c.id} item={c} onScollega={setADesconectar} onChanged={load} />
                 ))}
               </ul>
             )}
