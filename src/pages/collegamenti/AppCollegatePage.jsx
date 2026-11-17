@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -191,9 +191,11 @@ export const AppCollegatePage = () => {
   const [desconectando, setDesconectando] = useState(false);
   const [errorDesconectar, setErrorDesconectar] = useState("");
 
+  // La lista de clientes de la Anagrafica se pide una sola vez; en cada refresco solo se vuelven a pedir las conexiones.
+  const clientesRef = useRef(null);
   const load = useCallback(() => {
     setError("");
-    return Promise.all([getCollegamentiRequest(), listClientsRequest()])
+    return Promise.all([getCollegamentiRequest(), clientesRef.current ?? listClientsRequest().then((l) => (clientesRef.current = l))])
       .then(([estado, lista]) => {
         setData(estado);
         const ocupados = new Set(estado.collegamenti.map((c) => c.client?.id).filter(Boolean));
@@ -204,8 +206,8 @@ export const AppCollegatePage = () => {
 
   useEffect(() => {
     void load();
-    // Una solicitud de conexion puede llegar con la pantalla abierta: se revisa sola cada 30 s (solo con la pestana visible).
-    return startVisibleInterval(() => void load(), 30000);
+    // Una solicitud de conexion puede llegar con la pantalla abierta: se revisa sola cada minuto (solo con la pestana visible y en uso).
+    return startVisibleInterval(() => void load(), 60000);
   }, [load]);
 
   if (user?.cargo !== "OWNER") return <Navigate to="/" replace />;
@@ -251,7 +253,15 @@ export const AppCollegatePage = () => {
             ) : (
               <ul className="flex flex-col gap-3">
                 {pendientes.map((p) => (
-                  <SolicitudConexion key={p.id} item={p} clientes={clientes} onDone={load} />
+                  <SolicitudConexion
+                    key={p.id}
+                    item={p}
+                    clientes={clientes}
+                    onDone={() => {
+                      clientesRef.current = null; // al aceptar puede haberse creado un cliente nuevo
+                      void load();
+                    }}
+                  />
                 ))}
               </ul>
             )}

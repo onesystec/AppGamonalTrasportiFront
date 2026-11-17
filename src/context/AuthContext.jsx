@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AUTH_LOGOUT_EVENT, parseApiError, setApiDriverMode } from "../lib/api";
 import { loginRequest, meRequest, ssoLoginRequest } from "../lib/auth.api";
 import { rememberChoferView } from "../lib/choferTips";
+import { startVisibleInterval } from "../lib/polling";
 import { clearToken, getToken, setToken } from "../lib/token";
 
 const AuthContext = createContext(null);
@@ -93,11 +94,12 @@ export const AuthProvider = ({ children }) => {
     const onVisible = () => {
       if (document.visibilityState === "visible") refreshUser();
     };
-    const timer = window.setInterval(onVisible, REFRESH_INTERVAL_MS);
+    // Se repite cada minuto solo mientras alguien usa la pantalla (si no, una pestana olvidada abierta mantiene despierta la base: Neon cobra por hora despierta).
+    const stopPolling = startVisibleInterval(() => refreshUser(), REFRESH_INTERVAL_MS);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     return () => {
-      window.clearInterval(timer);
+      stopPolling();
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };

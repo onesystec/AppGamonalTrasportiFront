@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { listMemorandumsRecibidosRequest } from "../../lib/memorandums.api";
+import { startVisibleInterval } from "../../lib/polling";
 import { FileTextIcon } from "../ui/icons";
 
 export const MEMORANDUMS_CHANGED = "memorandums:changed";
@@ -22,13 +23,11 @@ export const usePendingMemorandums = () => {
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, 5 * 60 * 1000);
-    const onVisible = () => document.visibilityState === "visible" && load();
-    document.addEventListener("visibilitychange", onVisible);
+    // Cada 5 minutos pero solo con la pantalla a la vista y con alguien usandola (una pestana olvidada abierta de noche no debe mantener despierta la base: Neon cobra por hora despierta).
+    const stop = startVisibleInterval(load, 5 * 60 * 1000);
     window.addEventListener(MEMORANDUMS_CHANGED, load);
     return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisible);
+      stop();
       window.removeEventListener(MEMORANDUMS_CHANGED, load);
     };
   }, [load]);
