@@ -3,6 +3,8 @@ import { clearSharedRequests } from "./sharedRequest";
 import { clearToken, getToken } from "./token";
 
 export const AUTH_LOGOUT_EVENT = "gt:auth-logout";
+// ONESYSTEC GENERALE ha apagado la app: el backend responde 503 { code: "APP_SUSPENDIDA", mensaje }. Lo escucha components/AppSuspendida.
+export const APP_SUSPENDIDA_EVENT = "gt:app-suspendida";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -36,6 +38,9 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (error.response?.status === 503 && error.response.data?.code === "APP_SUSPENDIDA") {
+      window.dispatchEvent(new CustomEvent(APP_SUSPENDIDA_EVENT, { detail: String(error.response.data.mensaje || "") }));
+    }
     if (error.response?.status === 401) {
       clearToken();
       window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));

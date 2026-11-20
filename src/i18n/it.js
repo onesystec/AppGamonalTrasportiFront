@@ -295,5 +295,9 @@ export const it = {
   "hist.driverCircuit": "Autista / Milano o Roma",
   "disp.client.search": "Cerca autista o veicolo",
   "firma.madeBy": "Realizzato da",
+  "suspendida.titulo": "L'applicazione è in manutenzione",
+  "suspendida.mensaje": "Stiamo facendo manutenzione. Riprova tra qualche minuto.",
+  "suspendida.reintentar": "Riprova",
+  "suspendida.gestionado": "Gestito da ONESYSTEC GENERALE",
   // @@END
 };

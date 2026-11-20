@@ -296,5 +296,9 @@ export const es = {
   "hist.driverCircuit": "Chofer / Milano o Roma",
   "disp.client.search": "Buscar chofer o vehículo",
   "firma.madeBy": "Hecho por",
+  "suspendida.titulo": "La aplicación está en mantenimiento",
+  "suspendida.mensaje": "Estamos haciendo mantenimiento. Vuelve a intentarlo en unos minutos.",
+  "suspendida.reintentar": "Reintentar",
+  "suspendida.gestionado": "Gestionado por ONESYSTEC GENERALE",
   // @@END
 };
