@@ -1,26 +1,62 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useT } from "../i18n/index.jsx";
-import { APP_SUSPENDIDA_EVENT } from "../lib/api";
+import { api, APP_SUSPENDIDA_EVENT } from "../lib/api";
 
 // Pantalla completa cuando ONESYSTEC GENERALE ha apagado la app (el backend responde 503 APP_SUSPENDIDA).
-// "Reintentar" recarga: si la app sigue apagada, la primera llamada a la API vuelve a mostrar esta pantalla.
+// - Mantenimiento (motivo "mantenimiento" o "apagada"): símbolo de carga y el aviso. Cada 30 s comprueba sola si la app ha
+//   vuelto y, en cuanto vuelve, recarga la página.
+// - Servicio suspendido (motivo "pago" o "acceso"): aviso serio, con la indicación de contactar al proveedor del servicio.
+const COMPROBAR_MS = 30_000;
+
+
+/** true si la API ya responde algo que no es "app suspendida" (cualquier ruta sirve: el interruptor va antes del enrutado). */
+async function appVolvio() {
+  try {
+    const res = await fetch((api.defaults.baseURL || "") + "/auth/me", { cache: "no-store" });
+    if (res.status !== 503) return true;
+    const body = await res.json().catch(() => null);
+    return body?.code !== "APP_SUSPENDIDA";
+  } catch {
+    return false; // sin conexión: se sigue esperando
+  }
+}
+
 export function AppSuspendida() {
   const t = useT();
-  const [mensaje, setMensaje] = useState(null);
+  const [estado, setEstado] = useState(null);
+  const [comprobando, setComprobando] = useState(false);
 
   useEffect(() => {
-    const alSuspender = (e) => setMensaje(e.detail || "");
+    const alSuspender = (e) => {
+      const d = e.detail;
+      setEstado(typeof d === "string" ? { mensaje: d, motivo: "" } : { mensaje: d?.mensaje || "", motivo: d?.motivo || "" });
+    };
     window.addEventListener(APP_SUSPENDIDA_EVENT, alSuspender);
     return () => window.removeEventListener(APP_SUSPENDIDA_EVENT, alSuspender);
   }, []);
 
-  if (mensaje === null) return null;
+  const comprobar = useCallback(async () => {
+    setComprobando(true);
+    if (await appVolvio()) window.location.reload();
+    else setComprobando(false);
+  }, []);
+
+  const suspendido = estado?.motivo === "pago" || estado?.motivo === "acceso";
+
+  useEffect(() => {
+    if (!estado || suspendido) return undefined;
+    const id = window.setInterval(comprobar, COMPROBAR_MS);
+    return () => window.clearInterval(id);
+  }, [estado, suspendido, comprobar]);
+
+  if (estado === null) return null;
 
   return (
     <div
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="app-suspendida-titulo"
+      aria-describedby="app-suspendida-texto"
       style={{
         position: "fixed",
         inset: 0,
@@ -36,30 +72,68 @@ export function AppSuspendida() {
         textAlign: "center",
       }}
     >
-      <div
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          display: "grid",
-          placeItems: "center",
-          border: "1px solid rgba(252,211,77,.4)",
-          background: "rgba(120,53,15,.4)",
-        }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fcd34d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-        </svg>
-      </div>
+      <style>{"@keyframes app-suspendida-giro{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.app-suspendida-carga{animation:none!important}}"}</style>
+      {suspendido ? (
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid rgba(248,113,113,.5)",
+            background: "rgba(127,29,29,.5)",
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="4" y="11" width="16" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </div>
+      ) : (
+        <div
+          className="app-suspendida-carga"
+          role="img"
+          aria-label={t("suspendida.cargando")}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            border: "4px solid rgba(6,182,212,.2)",
+            borderTopColor: "#22d3ee",
+            animation: "app-suspendida-giro 1s linear infinite",
+          }}
+        />
+      )}
       <h1 id="app-suspendida-titulo" style={{ maxWidth: 440, margin: 0, fontSize: 24, fontWeight: 800 }}>
-        {t("suspendida.titulo")}
+        {suspendido ? t("suspendida.suspendidoTitulo") : t("suspendida.titulo")}
       </h1>
-      <p style={{ maxWidth: 440, margin: 0, fontSize: 16, lineHeight: 1.6, color: "#9ca3af" }}>
-        {mensaje || t("suspendida.mensaje")}
+      <p id="app-suspendida-texto" style={{ maxWidth: 440, margin: 0, fontSize: 16, lineHeight: 1.6, color: "#d1d5db" }}>
+        {estado.mensaje || (suspendido ? t("suspendida.suspendidoMensaje") : t("suspendida.mensaje"))}
       </p>
+      {suspendido ? (
+        <p
+          style={{
+            maxWidth: 440,
+            margin: 0,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: "1px solid rgba(248,113,113,.4)",
+            background: "rgba(127,29,29,.35)",
+            color: "#fecaca",
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          {t("suspendida.contacto")}
+        </p>
+      ) : (
+        <p style={{ maxWidth: 440, margin: 0, fontSize: 14, color: "#9ca3af" }}>{t("suspendida.auto")}</p>
+      )}
       <button
         type="button"
-        onClick={() => window.location.reload()}
+        onClick={() => void comprobar()}
+        disabled={comprobando}
         style={{
           minHeight: 48,
           padding: "0 28px",
@@ -71,10 +145,11 @@ export function AppSuspendida() {
           fontSize: 14,
           letterSpacing: 1,
           textTransform: "uppercase",
-          cursor: "pointer",
+          cursor: comprobando ? "wait" : "pointer",
+          opacity: comprobando ? 0.6 : 1,
         }}
       >
-        {t("suspendida.reintentar")}
+        {comprobando ? "…" : t("suspendida.reintentar")}
       </button>
       <span style={{ paddingTop: 24, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#9ca3af" }}>
         {t("suspendida.gestionado")}
