@@ -109,8 +109,13 @@ export function AppSuspendida() {
         {suspendido ? t("suspendida.suspendidoTitulo") : t("suspendida.titulo")}
       </h1>
       <p id="app-suspendida-texto" style={{ maxWidth: 440, margin: 0, fontSize: 16, lineHeight: 1.6, color: "#d1d5db" }}>
-        {estado.mensaje || (suspendido ? t("suspendida.suspendidoMensaje") : t("suspendida.mensaje"))}
+        {suspendido ? t("suspendida.suspendidoMensaje") : t("suspendida.mensaje")}
       </p>
+      {estado.mensaje && (
+        <p style={{ maxWidth: 440, margin: 0, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.06)", fontSize: 15, lineHeight: 1.5, color: "#f3f4f6" }}>
+          {estado.mensaje}
+        </p>
+      )}
       {suspendido ? (
         <p
           style={{
