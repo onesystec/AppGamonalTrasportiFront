@@ -32,9 +32,11 @@ import {
   MULTA_ESTADOS,
   QUIEN_PAGA_OPTIONS,
   TITULAR_OPTIONS,
+  GESTOR_OPTIONS,
   datiConducenteInfo,
   quienPagaLabel,
   titularLabel,
+  gestorLabel,
 } from "../../lib/multas";
 import { downloadBlob } from "../../lib/csv";
 import {
@@ -57,6 +59,7 @@ const EMPTY_FILTERS = {
   quienPaga: "",
   descuentoPendiente: false,
   titular: "",
+  gestor: "",
   datiEstado: "",
   q: "",
   orden: "",
@@ -78,6 +81,17 @@ const TITULAR_FILTER_OPTIONS = [
   ...TITULAR_OPTIONS,
   { value: "SIN", label: "Sin indicar" },
 ];
+
+const GESTOR_FILTER_OPTIONS = [
+  { value: "", label: "Todos" },
+  ...GESTOR_OPTIONS,
+  { value: "SIN", label: "Sin responsable" },
+];
+
+const GESTOR_TONE = {
+  Yan: "text-accent-300",
+  Claudia: "text-[#22d3ee]",
+};
 
 const TITULAR_TONE = {
   SRL: "bg-accent-500/15 text-accent-300",
@@ -325,6 +339,13 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
         >
           {titularLabel(multa.titular)}
         </span>
+        {/* Responsable de la oficina que la gestiona */}
+        <span
+          className={clsx("mt-1 block truncate text-[11px] font-medium", GESTOR_TONE[multa.gestor] ?? "text-ink-400")}
+          title="Responsable que gestiona la multa"
+        >
+          {gestorLabel(multa.gestor)}
+        </span>
       </div>
 
       {/* Targa */}
@@ -481,7 +502,7 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
               >
                 <span className={headerClass}>Estado</span>
                 {showDriver && <span className={headerClass}>Chofer responsable</span>}
-                <span className={headerClass}>Titular</span>
+                <span className={headerClass}>Titular / Resp.</span>
                 <span className={headerClass}>Targa</span>
                 <span className={headerClass}>Recepcion</span>
                 <span className={headerClass}>Vencimiento</span>
@@ -730,6 +751,7 @@ const MultasOficinaPage = () => {
       quienPaga: filters.quienPaga || undefined,
       descuentoPendiente: filters.descuentoPendiente ? "true" : undefined,
       titular: filters.titular || undefined,
+      gestor: filters.gestor || undefined,
       datiEstado: filters.datiEstado || undefined,
     }),
     [
@@ -741,6 +763,7 @@ const MultasOficinaPage = () => {
       filters.quienPaga,
       filters.descuentoPendiente,
       filters.titular,
+      filters.gestor,
       filters.datiEstado,
     ]
   );
@@ -932,6 +955,15 @@ const MultasOficinaPage = () => {
                     options={TITULAR_FILTER_OPTIONS}
                     value={filters.titular}
                     onChange={(e) => setFilter("titular", e.target.value)}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <Select
+                    id="filtro-gestor"
+                    label="Responsable"
+                    options={GESTOR_FILTER_OPTIONS}
+                    value={filters.gestor}
+                    onChange={(e) => setFilter("gestor", e.target.value)}
                   />
                 </div>
                 {isPrivileged && (

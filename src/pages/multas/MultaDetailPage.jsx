@@ -27,7 +27,7 @@ import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { formatCurrency, formatDateOnly } from "../../lib/format";
 import { AREA_LABEL_BY_KEY } from "../../lib/roles";
-import { DATI_ESTADO_OPTIONS, MULTA_ESTADO_BY_VALUE, datiConducenteInfo, quienPagaLabel, titularLabel } from "../../lib/multas";
+import { DATI_ESTADO_OPTIONS, MULTA_ESTADO_BY_VALUE, datiConducenteInfo, gestorLabel, quienPagaLabel, titularLabel } from "../../lib/multas";
 import { deleteMultaRequest, getMultaRequest, updateMultaRequest } from "../../lib/multas.api";
 
 // Fecha y hora siempre en hora de Roma (la operacion es ahi), sin importar donde se mire.
@@ -267,6 +267,7 @@ const MultaOficinaDetail = () => {
                 <Fact label="Costo">{formatCurrency(multa.costo)}</Fact>
                 <Fact label="Targa">{multa.targa}</Fact>
                 <Fact label="Titular">{titularLabel(multa.titular)}</Fact>
+                <Fact label="Responsable">{gestorLabel(multa.gestor)}</Fact>
                 <Fact label="Area">{AREA_LABEL_BY_KEY[multa.area] ?? "Sin area (solo Admin)"}</Fact>
                 <Fact label="Chofer responsable">
                   {multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "-"}

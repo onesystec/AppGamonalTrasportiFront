@@ -26,6 +26,15 @@ export const TITULAR_OPTIONS = [
 
 export const titularLabel = (titular) => TITULAR_OPTIONS.find((o) => o.value === titular)?.label ?? "Sin indicar";
 
+// Responsable de la oficina que gestiona la multa. Hasta el 18/11/2026 las gestiono Yan; desde el 19/11/2026, Claudia
+// (las nuevas se cargan a nombre de Claudia si no se elige otro).
+export const GESTOR_OPTIONS = [
+  { value: "Yan", label: "Yan" },
+  { value: "Claudia", label: "Claudia" },
+];
+export const GESTOR_POR_DEFECTO = "Claudia";
+export const gestorLabel = (gestor) => gestor || "Sin responsable";
+
 // Comunicacion de los datos del conductor (art. 126-bis C.d.S.): si la multa quita puntos, hay que
 // decir quien manejaba dentro de los 60 dias desde la notificacion.
 export const DATI_PLAZO_DIAS = 60;

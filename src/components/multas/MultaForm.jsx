@@ -18,6 +18,8 @@ import {
   MULTA_PLAZO_POR_DEFECTO_DIAS,
   QUIEN_PAGA_OPTIONS,
   TITULAR_OPTIONS,
+  GESTOR_OPTIONS,
+  GESTOR_POR_DEFECTO,
 } from "../../lib/multas";
 import { listMultasRequest, suggestMultaDriverRequest } from "../../lib/multas.api";
 import { addDaysToDay, parseCosto, romeToday } from "../../lib/mancato";
@@ -108,6 +110,8 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     quienPaga: multa?.quienPaga ?? "",
     area: multa?.area ?? (myAreaKeys?.length === 1 ? myAreaKeys[0] : ""),
     titular: multa?.titular ?? "",
+    // Al crear, la gestiona el responsable actual; al editar, el que tenga (o ninguno).
+    gestor: multa ? (multa.gestor ?? "") : GESTOR_POR_DEFECTO,
     fechaInfraccion: multa?.fechaInfraccion ? new Date(multa.fechaInfraccion).toISOString().slice(0, 10) : "",
     horaInfraccion: multa?.horaInfraccion ?? "",
     fechaRecepcion: multa ? new Date(multa.fechaRecepcion).toISOString().slice(0, 10) : romeToday(),
@@ -261,6 +265,8 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       area: form.area,
       // En edicion "" quita el titular; al crear, si esta vacio no se manda.
       titular: form.titular,
+      // En edicion "" quita el responsable.
+      gestor: form.gestor,
       fechaRecepcion: form.fechaRecepcion,
       fechaVencimiento: vencimiento,
       comentarios: form.comentarios.trim(),
@@ -283,6 +289,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       if (!fields.horaInfraccion) delete fields.horaInfraccion;
       if (!fields.area) delete fields.area;
       if (!fields.titular) delete fields.titular;
+      if (!fields.gestor) delete fields.gestor;
       for (const key of ["datiEstado", "datiLimite", "datiEnviadoAt", "datiConductor", "multaOrigenId"]) {
         if (!fields[key]) delete fields[key];
       }
@@ -398,6 +405,20 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
             A nombre de quien llego la multa: Gamonal Trasporti S.R.L. o la individual.
           </span>
           {err("titular") && <span className="mt-1.5 block text-[13px] text-danger-500">{err("titular")}</span>}
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink-300">Responsable que la gestiona</span>
+          <SegmentedControl
+            options={GESTOR_OPTIONS}
+            value={form.gestor}
+            onChange={(v) => setField("gestor", v === form.gestor ? "" : v)}
+            className="w-full sm:w-auto"
+          />
+          <span className="mt-1.5 block text-[12px] text-ink-400">
+            Quien de la oficina lleva esta multa (pago, datos del conductor, avisos al chofer).
+          </span>
+          {err("gestor") && <span className="mt-1.5 block text-[13px] text-danger-500">{err("gestor")}</span>}
         </div>
 
         <div className="sm:col-span-2">
