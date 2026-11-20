@@ -334,6 +334,8 @@ const AppShellContent = () => {
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   // Recursos Humanos: solo Choferes, Vehiculos y Busta paga.
   const isRrhh = user?.cargo === "RRHH";
+  // Con el interruptor que le activa el Owner, Recursos Humanos tambien ve Registros (solo lectura, sin importes).
+  const rrhhVeRegistros = isRrhh && Boolean(user?.rrhhVeServicios);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Menu lateral (desktop): fijado (empuja el contenido) o desplegable encima del contenido.
   const [sidebarPinned, setSidebarPinned] = useState(readPinned);
@@ -509,7 +511,10 @@ const AppShellContent = () => {
                   <SidebarNavTab to="/finanzas" label="Finanzas" icon={WalletIcon} compact={compact} />
                 </>
               ) : isRrhh ? (
-                <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} compact={compact} />
+                <>
+                  <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} compact={compact} />
+                  {rrhhVeRegistros && <SidebarNavTab to="/records" label="Registros" icon={ListIcon} compact={compact} />}
+                </>
               ) : (
                 <>
                   <SidebarNavTab to="/" label="Hoy" icon={HomeIcon} compact={compact} />
@@ -676,6 +681,7 @@ const AppShellContent = () => {
         ) : isRrhh ? (
           <>
             <BottomNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
+            {rrhhVeRegistros && <BottomNavTab to="/records" label="Registros" icon={ListIcon} />}
             <BottomNavTab to="/profile" label="Perfil" icon={UserIcon} />
           </>
         ) : (

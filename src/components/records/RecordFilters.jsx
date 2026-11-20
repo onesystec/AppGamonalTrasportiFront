@@ -46,7 +46,7 @@ const QUICK_RANGES = [
   { label: "Mes anterior", range: (t) => monthBounds(t, -1) },
 ];
 
-export const RecordFilters = ({ filters, onChange, total }) => {
+export const RecordFilters = ({ filters, onChange, total, sinImportes = false }) => {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState(null);
   const [error, setError] = useState("");
@@ -179,6 +179,7 @@ export const RecordFilters = ({ filters, onChange, total }) => {
               <TextField id="filtro-desde" label="Desde" type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => set({ from: e.target.value })} />
               <TextField id="filtro-hasta" label="Hasta" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => set({ to: e.target.value })} />
             </div>
+            {!sinImportes && (
             <div className="grid grid-cols-2 gap-3" title="Monto recibido del servicio, en euros">
               <TextField
                 id="filtro-monto-min"
@@ -201,6 +202,7 @@ export const RecordFilters = ({ filters, onChange, total }) => {
                 onChange={(e) => set({ montoMax: e.target.value })}
               />
             </div>
+            )}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-[12px] text-ink-400">Rango rapido:</span>

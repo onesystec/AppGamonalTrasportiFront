@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -205,10 +205,25 @@ const DisclosureHeader = ({ open, onClick, children, className }) => (
 // state: backgroundLocation - para que App.jsx renderice el detalle como overlay
 // sobre esta misma lista (que sigue montada) en vez de reemplazarla, evitando el
 // refetch innecesario de volver a esta pantalla (ver App.jsx).
+// Recursos Humanos (con el interruptor del Owner) ve esta misma lista pero solo para leer: las filas no abren el detalle (lleva importes y se edita ahi).
+const SoloLecturaContext = createContext(false);
+
+// Fila o tarjeta que abre el detalle; en solo lectura es un bloque normal, sin enlace.
+const FilaEnlace = ({ to, state, className, children }) => {
+  const soloLectura = useContext(SoloLecturaContext);
+  return soloLectura ? (
+    <div className={className}>{children}</div>
+  ) : (
+    <Link to={to} state={state} className={className}>
+      {children}
+    </Link>
+  );
+};
+
 const RecordCard = ({ record }) => {
   const location = useLocation();
   return (
-    <Link to={`/records/${record.id}`} state={{ backgroundLocation: location }}>
+    <FilaEnlace to={`/records/${record.id}`} state={{ backgroundLocation: location }}>
       <GlassCard className={`transition-colors hover:bg-line/[0.08] ${hasFaltantes(record) ? "!border-danger-500/50 !bg-danger-500/[0.08]" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -232,7 +247,7 @@ const RecordCard = ({ record }) => {
       <ViajeChip compactado={record.compactado} className="mt-3" />
       <DesvioChip recorridoEstado={record.recorridoEstado} className="mt-3 ml-2" />
       </GlassCard>
-    </Link>
+    </FilaEnlace>
   );
 };
 
@@ -258,7 +273,7 @@ const RecordRow = ({ record }) => {
   const location = useLocation();
   const area = AREAS_BY_KEY[classifyRecord(record)];
   return (
-    <Link
+    <FilaEnlace
       to={`/records/${record.id}`}
       state={{ backgroundLocation: location }}
       className={`${ROW_GRID} rounded-xl py-2.5 text-[12px] text-ink-200 transition-colors ${
@@ -304,7 +319,7 @@ const RecordRow = ({ record }) => {
           <span className="block truncate text-[11px] text-ink-400">{APLICATIVO_LABELS[record.aplicativo]}</span>
         )}
       </span>
-    </Link>
+    </FilaEnlace>
   );
 };
 
@@ -320,9 +335,10 @@ const CURRENT_VIEW_DATE = { year: now.getUTCFullYear(), month: now.getUTCMonth()
 // primero.
 const PendingRow = ({ record, closeTo, onChangeEstado, updating }) => {
   const location = useLocation();
+  const soloLectura = useContext(SoloLecturaContext);
   return (
   <div className={`rounded-xl border-l-4 ${URGENCY_STYLES[urgencyLevel(record.eta)]} glass-surface-sm text-[13px]`}>
-    <Link
+    <FilaEnlace
       to={`/records/${record.id}`}
       state={{ from: closeTo, backgroundLocation: location }}
       className="flex flex-col gap-1 px-3 pt-2.5 transition-colors hover:opacity-90"
@@ -339,17 +355,19 @@ const PendingRow = ({ record, closeTo, onChangeEstado, updating }) => {
         <ChoferCelda record={record} className="min-w-0 truncate" />
         <span className="shrink-0">{formatTimeRemaining(record.eta)}</span>
       </div>
-    </Link>
-    <div className="px-3 pb-2.5 pt-1.5">
-      <Select
-        id={`estado-${record.id}`}
-        options={RECORD_STATUS_OPTIONS}
-        value={record.estado}
-        disabled={updating}
-        onChange={(e) => onChangeEstado(record.id, e.target.value)}
-        className="!py-1.5 !text-[12px]"
-      />
-    </div>
+    </FilaEnlace>
+    {!soloLectura && (
+      <div className="px-3 pb-2.5 pt-1.5">
+        <Select
+          id={`estado-${record.id}`}
+          options={RECORD_STATUS_OPTIONS}
+          value={record.estado}
+          disabled={updating}
+          onChange={(e) => onChangeEstado(record.id, e.target.value)}
+          className="!py-1.5 !text-[12px]"
+        />
+      </div>
+    )}
   </div>
   );
 };
@@ -509,7 +527,9 @@ export const RecordsListPage = ({ section: sectionHint }) => {
     return () => window.removeEventListener(ASIGNAR_EVENT, onAsignar);
   }, []);
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  // Recursos Humanos con el interruptor del Owner ve esta pantalla como la oficina pero solo para leer y sin importes (el servidor tampoco le manda importes).
+  const soloLectura = user?.cargo === "RRHH" && Boolean(user?.rrhhVeServicios);
+  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN" || soloLectura;
   // Un Responsable solo ve las areas que el Admin le marco; las demas ni siquiera se le ofrecen (el
   // servidor tampoco le manda esos registros). null = todas.
   const allowedKeys = userAreaKeys(user);
@@ -885,12 +905,15 @@ export const RecordsListPage = ({ section: sectionHint }) => {
   const monthName = monthText.charAt(0).toUpperCase() + monthText.slice(1);
 
   return (
+    <SoloLecturaContext.Provider value={soloLectura}>
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Registros de Servicios</h1>
           <p className="mt-1 max-w-2xl text-[14px] text-ink-300">
-            {isPrivileged
+            {soloLectura
+              ? "Los servicios que se suben a la app, solo para consultar. Cada dia se carga solo al desplegarlo."
+              : isPrivileged
               ? `Gestiona y consulta los servicios de ${allowedKeys ? "tus areas" : "todas las areas"}. Cada dia se carga solo al desplegarlo.`
               : "Viajes asignados, ordenados por fecha."}
           </p>
@@ -899,8 +922,8 @@ export const RecordsListPage = ({ section: sectionHint }) => {
           {isPrivileged ? (
             <>
               <MonthPicker value={viewDate} onChange={setViewDate} />
-              <SolicitudesButton />
-              <CambiosButton />
+              {!soloLectura && <SolicitudesButton />}
+              {!soloLectura && <CambiosButton />}
               {asignando && (
                 <AsignarModal
                   record={asignando}
@@ -911,16 +934,20 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                   }}
                 />
               )}
-              <button
-                type="button"
-                onClick={() => setShowCompactar(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-line/25 px-5 py-2.5 text-[14px] font-semibold text-ink-50 transition hover:bg-line/10"
-              >
-                <RouteIcon className="h-4 w-4" />
-                Compactar
-              </button>
-              {availableAreas.some((a) => ["dhl-milano", "dhl-roma", "ab-service", "piazza-milano", "piazza-roma"].includes(a.key)) && <DesdeTextoButton />}
-              <NewServiceMenu areas={availableAreas} activeKey={areaKey} />
+              {!soloLectura && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowCompactar(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-line/25 px-5 py-2.5 text-[14px] font-semibold text-ink-50 transition hover:bg-line/10"
+                  >
+                    <RouteIcon className="h-4 w-4" />
+                    Compactar
+                  </button>
+                  {availableAreas.some((a) => ["dhl-milano", "dhl-roma", "ab-service", "piazza-milano", "piazza-roma"].includes(a.key)) && <DesdeTextoButton />}
+                  <NewServiceMenu areas={availableAreas} activeKey={areaKey} />
+                </>
+              )}
             </>
           ) : (
             // En proceso/Terminados solo tiene sentido para el chofer: no tiene el panel de
@@ -931,7 +958,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
       </div>
 
       {/* Servicios que faltan por asignar (de cualquier fecha): siempre arriba, solo para la oficina. */}
-      {isPrivileged && <PorAsignar />}
+      {isPrivileged && !soloLectura && <PorAsignar />}
 
       {/* Areas: cada una con su cantidad del mes. */}
       <div role="tablist" aria-label="Areas de servicio" className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
@@ -980,16 +1007,18 @@ export const RecordsListPage = ({ section: sectionHint }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-[240px] flex-1"
           />
-          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-200">
-            <input
-              type="checkbox"
-              checked={showUnpaidOnly}
-              onChange={(e) => setShowUnpaidOnly(e.target.checked)}
-              className="h-4 w-4 rounded border-line/20 bg-transparent accent-accent-500"
-            />
-            Solo sin cobrar
-          </label>
-          <RecordFilters filters={filters} onChange={setFilters} total={searchResults !== null ? searchTotal : null} />
+          {!soloLectura && (
+            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-200">
+              <input
+                type="checkbox"
+                checked={showUnpaidOnly}
+                onChange={(e) => setShowUnpaidOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-line/20 bg-transparent accent-accent-500"
+              />
+              Solo sin cobrar
+            </label>
+          )}
+          <RecordFilters filters={filters} onChange={setFilters} total={searchResults !== null ? searchTotal : null} sinImportes={soloLectura} />
         </div>
       )}
 
@@ -1197,6 +1226,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
               updatingId={updatingId}
             />
 
+            {!soloLectura && (
             <PanelShell icon={ClockIcon} title="Acciones rapidas">
               <div className="grid grid-cols-1 gap-2">
                 <button
@@ -1217,6 +1247,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
                 </button>
               </div>
             </PanelShell>
+            )}
           </aside>
         </div>
       ) : (
@@ -1227,7 +1258,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
         </div>
       )}
 
-      {isPrivileged && (
+      {isPrivileged && !soloLectura && (
         <AnularModal
           open={Boolean(anularTarget)}
           record={anularTarget}
@@ -1248,8 +1279,9 @@ export const RecordsListPage = ({ section: sectionHint }) => {
           }}
         />
       )}
-      {isPrivileged && <ExportRecordsModal open={showExportModal} onClose={() => setShowExportModal(false)} />}
-      {isPrivileged && <CompactarModal open={showCompactar} onClose={() => setShowCompactar(false)} onDone={refreshRecords} />}
+      {isPrivileged && !soloLectura && <ExportRecordsModal open={showExportModal} onClose={() => setShowExportModal(false)} />}
+      {isPrivileged && !soloLectura && <CompactarModal open={showCompactar} onClose={() => setShowCompactar(false)} onDone={refreshRecords} />}
     </div>
+    </SoloLecturaContext.Provider>
   );
 };

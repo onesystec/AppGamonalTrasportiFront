@@ -171,10 +171,13 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
 // Recursos Humanos (Busta paga + Memorandums) solo usa esa seccion, Choferes, Vehiculos y su perfil; cualquier otra direccion lo lleva a
 // Busta paga (el servidor ademas le niega todo lo demas).
 const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
+// Con el interruptor del Owner, tambien las listas de Registros (/records y las de cada area), nunca el detalle ni crear servicios.
+const RRHH_REGISTROS_PATHS = ["/records", "/records/extras-piazza", "/records/dhl-ab-service", "/records/extras-stefania"];
 const RrhhGuard = () => {
   const { user } = useAuth();
   const { pathname } = useLocation();
-  if (user?.cargo === "RRHH" && !RRHH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+  const permitidaPorInterruptor = Boolean(user?.rrhhVeServicios) && RRHH_REGISTROS_PATHS.includes(pathname.replace(/\/+$/, ""));
+  if (user?.cargo === "RRHH" && !permitidaPorInterruptor && !RRHH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return <Navigate to="/busta-paga" replace />;
   }
   return <Outlet />;

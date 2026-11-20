@@ -83,6 +83,7 @@ const toFormState = (driver) => ({
   responsableTipo: driver.responsableTipo ?? "",
   areasPermitidas: driver.areasPermitidas ?? [],
   nivelChofer: driver.nivelChofer ?? "",
+  rrhhVeServicios: Boolean(driver.rrhhVeServicios),
   estado: driver.estado ?? "",
   fechaNacimiento: toDateInputValue(driver.fechaNacimiento),
 });
@@ -266,6 +267,9 @@ export const DriverDetailPage = () => {
     );
     // El nivel se puede quitar (null). Sub-rol y areas del Responsable solo las define un Admin.
     if (!isRrhh) payload.nivelChofer = form.nivelChofer || null;
+    // El interruptor "ve la lista de servicios" solo lo define el Admin (Owner) y solo existe para Recursos Humanos.
+    if (user.cargo === "OWNER") payload.rrhhVeServicios = form.cargo === "RRHH" && Boolean(form.rrhhVeServicios);
+    else delete payload.rrhhVeServicios;
     if (user.cargo === "OWNER" && form.cargo === "ADMIN") {
       if (!form.responsableTipo && driver.cargo !== "ADMIN") {
         setSaving(false);
@@ -601,10 +605,21 @@ export const DriverDetailPage = () => {
                   <Switch
                     id="cargo-rrhh"
                     label="Recursos Humanos"
-                    description="Solo gestiona choferes y vehiculos y carga las busta paga. No ve servicios ni finanzas."
+                    description="Solo gestiona choferes y vehiculos y carga las busta paga. No ve finanzas; los servicios solo si activas el interruptor de abajo."
                     checked={form.cargo === "RRHH"}
                     onChange={(checked) => setField("cargo", checked ? "RRHH" : "CHOFER")}
                   />
+                  {form.cargo === "RRHH" && (
+                    <div className="rounded-2xl glass-surface-sm p-4">
+                      <Switch
+                        id="rrhh-ve-servicios"
+                        label="Ver la lista de servicios"
+                        description="Podrá ver, solo para leer y sin importes, los servicios que se suben a la app, para comprobar que se cargan todos."
+                        checked={Boolean(form.rrhhVeServicios)}
+                        onChange={(checked) => setField("rrhhVeServicios", checked)}
+                      />
+                    </div>
+                  )}
 
                   {form.cargo === "ADMIN" && (
                     <div className="flex flex-col gap-4 rounded-2xl glass-surface-sm p-4">
