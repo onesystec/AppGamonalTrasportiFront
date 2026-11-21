@@ -2,6 +2,7 @@ import { BackLink } from "../../components/ui/BackLink";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { AsistenciaCard } from "../../components/calendario/AsistenciaCard";
+import { CuentaChoferCard } from "../../components/drivers/CuentaChoferCard";
 import { FusionChoferModal } from "../../components/drivers/FusionChoferModal";
 import { Alert } from "../../components/ui/Alert";
 import { Avatar } from "../../components/ui/Avatar";
@@ -680,6 +681,15 @@ export const DriverDetailPage = () => {
           </form>
         )}
       </GlassCard>
+
+      <CuentaChoferCard
+        driver={driver}
+        isAdmin={user.cargo === "OWNER"}
+        onUpdated={(updated) => {
+          setDriver(updated);
+          refreshDrivers();
+        }}
+      />
 
       <GlassCard>
         <h2 className="text-[17px] font-medium text-ink-50">Documentos</h2>

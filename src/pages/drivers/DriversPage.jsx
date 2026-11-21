@@ -660,9 +660,12 @@ export const DriversPage = () => {
           <h1 className="text-[28px] font-semibold tracking-tight text-ink-50">Choferes</h1>
           <p className="mt-1 text-[14px] text-ink-300">Gestiona y monitorea a tu equipo en tiempo real.</p>
         </div>
-        <Link to="/choferes/new" state={{ backgroundLocation: location }}>
-          <Button className="!w-auto px-5">+ Nuevo chofer</Button>
-        </Link>
+        {/* Las cuentas las crea solo el Admin. */}
+        {user?.cargo === "OWNER" && (
+          <Link to="/choferes/new" state={{ backgroundLocation: location }}>
+            <Button className="!w-auto px-5">+ Nuevo chofer</Button>
+          </Link>
+        )}
       </div>
 
       <Alert>{error}</Alert>
