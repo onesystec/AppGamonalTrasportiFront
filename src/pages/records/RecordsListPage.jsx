@@ -287,6 +287,8 @@ const RecordRow = ({ record }) => {
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-semibold text-ink-50">{record.codigo}</span>
           <span className="block truncate text-[11px] text-ink-400">{area.label}</span>
+          {/* Llego por una app conectada (App Piazza): se reconoce en la lista del dia. */}
+          {record.origenApp && <span className="mt-0.5 inline-block max-w-full truncate rounded-full bg-accent-500/15 px-2 py-px text-[10px] font-medium text-accent-300">Da {record.origenApp}</span>}
         </span>
       </span>
       <span className="min-w-0">

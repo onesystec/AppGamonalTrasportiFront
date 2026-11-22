@@ -234,7 +234,7 @@ export const AppCollegatePage = () => {
       <div>
         <h1 className="text-[22px] font-semibold text-ink-50">App collegate</h1>
         <p className="mt-1 text-[13px] text-ink-300">
-          Conecta tu app con la de un cliente (por ejemplo App Piazza): los servicios que te asigne llegan a Solicitudes para que los aceptes, y ella ve el estado, el chofer y la targa. No puede ver ni cambiar nada mas.
+          Conecta tu app con la de un cliente (por ejemplo App Piazza): los servicios que te asigne entran directo al Registro del dia, sin chofer ni vehiculo, para que el Responsable los elija en "Por asignar"; ella ve el estado, el chofer y la targa. No puede ver ni cambiar nada mas.
         </p>
       </div>
       <Alert>{error}</Alert>
