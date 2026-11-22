@@ -48,6 +48,7 @@ import { DesvioChip } from "../../components/records/DesvioChip";
 import { CambiosButton } from "../../components/solicitudes/CambiosButton";
 import { SolicitudesButton } from "../../components/solicitudes/SolicitudesButton";
 import { AsignarModal } from "../../components/records/AsignarModal";
+import { CeldaAsignable } from "../../components/records/CeldaAsignable";
 import { PorAsignar } from "../../components/records/PorAsignar";
 import {
   listPendingRecordsRequest,
@@ -207,6 +208,8 @@ const DisclosureHeader = ({ open, onClick, children, className }) => (
 // refetch innecesario de volver a esta pantalla (ver App.jsx).
 // Recursos Humanos (con el interruptor del Owner) ve esta misma lista pero solo para leer: las filas no abren el detalle (lleva importes y se edita ahi).
 const SoloLecturaContext = createContext(false);
+// Refresca las listas despues de asignar chofer o vehiculo desde la propia fila.
+const RefrescarContext = createContext(() => {});
 
 // Fila o tarjeta que abre el detalle; en solo lectura es un bloque normal, sin enlace.
 const FilaEnlace = ({ to, state, className, children }) => {
@@ -254,7 +257,7 @@ const RecordCard = ({ record }) => {
 // Columnas de la tabla de servicios: Servicio (area + codigo) | Destino / cliente |
 // Vehiculo | Conductor | Estado | ETA. Misma grilla en el encabezado y en cada fila.
 const ROW_GRID =
-  "grid min-w-[780px] grid-cols-[minmax(150px,1.1fr)_minmax(120px,1.3fr)_100px_minmax(100px,0.9fr)_96px_minmax(110px,1fr)] items-center gap-3 px-4";
+  "grid min-w-[900px] grid-cols-[minmax(150px,1.1fr)_minmax(120px,1.3fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_96px_minmax(110px,1fr)_78px] items-center gap-3 px-4";
 
 const CompactRowHeader = () => (
   <div className={`${ROW_GRID} py-2 text-[11px] font-medium uppercase tracking-wide text-ink-500`}>
@@ -264,6 +267,7 @@ const CompactRowHeader = () => (
     <span>Conductor</span>
     <span>Estado</span>
     <span>ETA / restante</span>
+    <span />
   </div>
 );
 
@@ -271,11 +275,11 @@ const CompactRowHeader = () => (
 // vehiculo, conductor, estado y cuanto falta. Abre el detalle como overlay.
 const RecordRow = ({ record }) => {
   const location = useLocation();
+  const soloLectura = useContext(SoloLecturaContext);
+  const refrescar = useContext(RefrescarContext);
   const area = AREAS_BY_KEY[classifyRecord(record)];
   return (
-    <FilaEnlace
-      to={`/records/${record.id}`}
-      state={{ backgroundLocation: location }}
+    <div
       className={`${ROW_GRID} rounded-xl py-2.5 text-[12px] text-ink-200 transition-colors ${
         hasFaltantes(record)
           ? "border-l-4 border-danger-500 bg-danger-500/[0.09] hover:bg-danger-500/[0.15]"
@@ -303,11 +307,9 @@ const RecordRow = ({ record }) => {
         <ViajeChip compactado={record.compactado} className="mt-1" />
         <DesvioChip recorridoEstado={record.recorridoEstado} className="mt-1" />
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-ink-100">{record.vehicle?.targa ?? "-"}</span>
-        <span className="block truncate text-[11px] text-ink-400">{record.vehicle?.modelo ?? ""}</span>
-      </span>
-      <ChoferCelda record={record} className="truncate" />
+      {/* Vehiculo y chofer se asignan o se cambian aqui mismo (en rojo lo que falta asignar, menos en un servicio anulado). */}
+      <CeldaAsignable record={record} campo="vehicle" editable={!soloLectura} onSaved={refrescar} />
+      <CeldaAsignable record={record} campo="driver" editable={!soloLectura} onSaved={refrescar} />
       <span>
         <StatusBadge status={record.estado} className="px-2 py-0.5 text-[11px]" />
       </span>
@@ -321,7 +323,19 @@ const RecordRow = ({ record }) => {
           <span className="block truncate text-[11px] text-ink-400">{APLICATIVO_LABELS[record.aplicativo]}</span>
         )}
       </span>
-    </FilaEnlace>
+      {/* El detalle completo del servicio se abre solo desde aqui, no desde cualquier parte de la fila. Recursos Humanos no lo abre (lleva importes). */}
+      {soloLectura ? (
+        <span />
+      ) : (
+        <Link
+          to={`/records/${record.id}`}
+          state={{ backgroundLocation: location }}
+          className="justify-self-end whitespace-nowrap rounded-full border border-line/25 px-3 py-1 text-[12px] font-semibold text-ink-50 transition hover:bg-line/10"
+        >
+          Ver más
+        </Link>
+      )}
+    </div>
   );
 };
 
@@ -908,6 +922,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
 
   return (
     <SoloLecturaContext.Provider value={soloLectura}>
+    <RefrescarContext.Provider value={refreshRecords}>
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -1284,6 +1299,7 @@ export const RecordsListPage = ({ section: sectionHint }) => {
       {isPrivileged && !soloLectura && <ExportRecordsModal open={showExportModal} onClose={() => setShowExportModal(false)} />}
       {isPrivileged && !soloLectura && <CompactarModal open={showCompactar} onClose={() => setShowCompactar(false)} onDone={refreshRecords} />}
     </div>
+    </RefrescarContext.Provider>
     </SoloLecturaContext.Provider>
   );
 };
