@@ -13,6 +13,7 @@ import { useDataRefresh } from "../../context/DataRefreshContext";
 import { parseApiError } from "../../lib/api";
 import { AREA_OPTIONS, GRUPO_OPTIONS } from "../../lib/constants";
 import { createUserRequest } from "../../lib/users.api";
+import { APP_URL, enlaceWhatsapp, mensajeCuenta } from "../../lib/cuentaWhatsapp";
 
 const INITIAL_FORM = {
   nombre: "",
@@ -28,13 +29,16 @@ const INITIAL_FORM = {
 export const NewDriverPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN" || user?.cargo === "RRHH";
+  // Las cuentas las crea solo el Admin (el backend tambien lo exige).
+  const isAdmin = user?.cargo === "OWNER";
   const { refresh: refreshDrivers } = useDataRefresh("drivers");
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  // Cuenta recien creada: se muestra con el boton para mandarle el acceso por WhatsApp.
+  const [creado, setCreado] = useState(null);
 
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -53,9 +57,9 @@ export const NewDriverPage = () => {
       // user.validator.js) - se omite en vez de mandarlo vacio si no se eligio.
       const payload = { ...form, cargo: "CHOFER" };
       if (!payload.grupo) delete payload.grupo;
-      await createUserRequest(payload);
+      const nuevo = await createUserRequest(payload);
       refreshDrivers();
-      navigate("/choferes", { replace: true });
+      setCreado({ ...nuevo, password: form.password });
     } catch (err) {
       const parsed = parseApiError(err);
       setFormError(parsed.message);
@@ -65,7 +69,7 @@ export const NewDriverPage = () => {
     }
   };
 
-  if (!isPrivileged) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/choferes" replace />;
 
   return (
     <SlideOverPanel closeTo="/choferes">
@@ -83,6 +87,31 @@ export const NewDriverPage = () => {
         </p>
       </div>
 
+      {creado ? (
+      <GlassCard>
+        <div className="flex flex-col gap-4">
+          <Alert variant="success">Cuenta creada. Mándale ahora sus datos de acceso por WhatsApp.</Alert>
+          <div className="rounded-xl glass-surface-sm px-4 py-3 text-[14px] text-ink-100">
+            <p><span className="text-ink-400">Usuario:</span> {creado.correoElectronico}</p>
+            <p><span className="text-ink-400">Contraseña:</span> {creado.password}</p>
+            <p><span className="text-ink-400">App:</span> {APP_URL}</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a
+              href={enlaceWhatsapp(creado.numeroCelular, mensajeCuenta({ nombre: creado.nombre, correo: creado.correoElectronico, password: creado.password }))}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-[15px] font-semibold text-[#0b2e1a] transition hover:brightness-95 active:scale-[0.98]"
+            >
+              Enviar acceso por WhatsApp
+            </a>
+            <Button variant="ghost" className="sm:w-auto sm:px-6" onClick={() => navigate("/choferes", { replace: true })}>
+              Listo
+            </Button>
+          </div>
+        </div>
+      </GlassCard>
+      ) : (
       <GlassCard>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
           <Alert>{formError}</Alert>
@@ -165,6 +194,7 @@ export const NewDriverPage = () => {
           </Button>
         </form>
       </GlassCard>
+      )}
     </div>
     </SlideOverPanel>
   );

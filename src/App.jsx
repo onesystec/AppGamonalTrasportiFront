@@ -200,7 +200,7 @@ const OverlayRoutes = () => (
         <Route path="/records/desde-texto" element={<ServicioDesdeTextoPage />} />
         <Route path="/records/extras-stefania/new" element={<NewExtrasStefaniaRecordPage />} />
         <Route path="/records/:id" element={<RecordDetailPage />} />
-        <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
+        <Route path="/choferes/new" element={<RoleOnly privileged><NewDriverPage /></RoleOnly>} />
         <Route path="/choferes/:id" element={<RoleOnly privileged allowRrhh><DriverDetailPage /></RoleOnly>} />
         <Route path="/vehiculos/new" element={<RoleOnly privileged allowRrhh><NewVehiclePage /></RoleOnly>} />
         <Route path="/vehiculos/:id" element={<RoleOnly privileged allowRrhh><VehicleDetailPage /></RoleOnly>} />
@@ -339,7 +339,7 @@ function App() {
               <Route path="/acceso-clientes" element={<RoleOnly privileged><AccesoClientesPage /></RoleOnly>} />
               <Route path="/app-collegate" element={<RoleOnly privileged><AppCollegatePage /></RoleOnly>} />
               <Route path="/choferes" element={<RoleOnly privileged allowRrhh><DriversPage /></RoleOnly>} />
-              <Route path="/choferes/new" element={<RoleOnly privileged allowRrhh><NewDriverPage /></RoleOnly>} />
+              <Route path="/choferes/new" element={<RoleOnly privileged><NewDriverPage /></RoleOnly>} />
               <Route path="/choferes/:id" element={<RoleOnly privileged allowRrhh><DriverDetailPage /></RoleOnly>} />
               <Route path="/vehiculos" element={<RoleOnly privileged allowRrhh><VehiclesPage /></RoleOnly>} />
               <Route path="/vehiculos/new" element={<RoleOnly privileged allowRrhh><NewVehiclePage /></RoleOnly>} />
