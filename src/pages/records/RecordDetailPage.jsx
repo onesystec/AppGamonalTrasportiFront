@@ -64,6 +64,7 @@ import {
   anularRecordRequest,
   updateRecordRequest,
   uploadRecordFileRequest,
+  resendBollaRequest,
 } from "../../lib/records.api";
 import { formatHours, pagaPorKm } from "../../lib/horas";
 import { CambiosDelServicio } from "../../components/solicitudes/CambiosButton";
@@ -1133,6 +1134,35 @@ export const RecordDetailPage = () => {
   );
 };
 
+const ReenviarBolla = ({ recordId, fileId }) => {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  const reenviar = async () => {
+    setSending(true);
+    setError("");
+    try {
+      await resendBollaRequest(recordId, fileId);
+      setSent(true);
+    } catch (err) {
+      setError(parseApiError(err).message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) return <p role="status" className="mt-1 text-[12px] text-success-500">Foto recibida por la app conectada.</p>;
+  return (
+    <>
+      <button type="button" onClick={reenviar} disabled={sending} className="mt-1 px-2 py-1 text-[12px] text-accent-400 hover:underline disabled:opacity-50">
+        {sending ? "Reenviando foto…" : "Reenviar foto a la app conectada"}
+      </button>
+      <Alert>{error}</Alert>
+    </>
+  );
+};
+
 // Vista de solo lectura: resumen del servicio + archivos. Es la vista por defecto al
 // abrir un registro - el formulario de edicion (RecordEditForm) es una vista aparte,
 // no un bloque que se despliega debajo de esta (ver isEditing en RecordDetailPage).
@@ -1455,6 +1485,9 @@ const RecordSummaryView = ({
               <span>{TIPO_ARCHIVO_LABELS[file.tipoArchivo] ?? file.tipoArchivo}</span>
               <span className="text-[12px] text-ink-400">{formatDateTime(file.createdAt)}</span>
             </a>
+            {record.origenApp && file.esFotoBolla && (
+              <ReenviarBolla recordId={record.id} fileId={file.id} />
+            )}
           </li>
         ))}
       </ul>

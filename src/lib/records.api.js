@@ -78,6 +78,9 @@ export const listRecordFilesRequest = (id) =>
 export const getRecordLiveEtaRequest = (id) =>
   api.get(`/records/${id}/eta-en-vivo`).then((res) => res.data.data.eta);
 
+export const resendBollaRequest = (id, fileId) =>
+  api.post(`/records/${id}/files/${fileId}/reinvia-bolla`);
+
 export const uploadRecordFileRequest = (id, file, tipoArchivo) => {
   const formData = new FormData();
   formData.append("archivo", file);
