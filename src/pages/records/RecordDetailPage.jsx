@@ -1134,7 +1134,7 @@ export const RecordDetailPage = () => {
   );
 };
 
-const ReenviarBolla = ({ recordId, fileId }) => {
+const ReenviarAdjunto = ({ recordId, fileId }) => {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -1152,11 +1152,11 @@ const ReenviarBolla = ({ recordId, fileId }) => {
     }
   };
 
-  if (sent) return <p role="status" className="mt-1 text-[12px] text-success-500">Foto recibida por la app conectada.</p>;
+  if (sent) return <p role="status" className="mt-1 text-[12px] text-success-500">Archivo recibido por la app conectada.</p>;
   return (
     <>
       <button type="button" onClick={reenviar} disabled={sending} className="mt-1 px-2 py-1 text-[12px] text-accent-400 hover:underline disabled:opacity-50">
-        {sending ? "Reenviando foto…" : "Reenviar foto a la app conectada"}
+        {sending ? "Reenviando archivo…" : "Reenviar archivo a la app conectada"}
       </button>
       <Alert>{error}</Alert>
     </>
@@ -1485,8 +1485,8 @@ const RecordSummaryView = ({
               <span>{TIPO_ARCHIVO_LABELS[file.tipoArchivo] ?? file.tipoArchivo}</span>
               <span className="text-[12px] text-ink-400">{formatDateTime(file.createdAt)}</span>
             </a>
-            {record.origenApp && file.esFotoBolla && (
-              <ReenviarBolla recordId={record.id} fileId={file.id} />
+            {record.origenApp && (file.puedeReenviar ?? file.esFotoBolla) && (
+              <ReenviarAdjunto recordId={record.id} fileId={file.id} />
             )}
           </li>
         ))}
