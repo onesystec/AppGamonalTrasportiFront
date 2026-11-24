@@ -1,6 +1,6 @@
+import { FinanceRecordLink } from "../../components/finanzas/FinanceRecordLink";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { Alert } from "../../components/ui/Alert";
 import { PageLoader } from "../../components/ui/PageLoader";
@@ -180,9 +180,9 @@ export const ParadasPage = () => {
                   <div className="col-span-2 min-w-0 lg:col-span-1">
                     <span className="block truncate text-[13px] text-ink-50">{p.chofer ?? "Sin chofer"}</span>
                     {p.codigo && (
-                      <Link to={`/records/${p.recordId}`} className="block truncate text-[12px] text-accent-400 hover:text-accent-300">
+                      <FinanceRecordLink to={`/records/${p.recordId}`} className="block truncate text-[12px] text-accent-400 hover:text-accent-300">
                         {p.codigo}
-                      </Link>
+                      </FinanceRecordLink>
                     )}
                   </div>
                   <span className="text-[13px] text-ink-200">

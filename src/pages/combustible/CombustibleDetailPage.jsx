@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -46,7 +47,7 @@ export const CombustibleDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refresh } = useDataRefresh("combustible");
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [registro, setRegistro] = useState(null);
   const [loadError, setLoadError] = useState("");

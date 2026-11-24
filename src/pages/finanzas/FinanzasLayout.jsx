@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
@@ -71,7 +72,7 @@ const ChoferHeader = () => (
 
 export const FinanzasLayout = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   // Horas esperando aprobacion: se muestra como contador en la pestaña "Horas".
   const [pendingCount, setPendingCount] = useState(0);

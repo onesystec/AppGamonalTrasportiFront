@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -12,7 +13,7 @@ import { createMancatoRequest } from "../../lib/mancato.api";
 export const NewMancatoPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const location = useLocation();
   const { refresh } = useDataRefresh("mancato");
   const [submitting, setSubmitting] = useState(false);

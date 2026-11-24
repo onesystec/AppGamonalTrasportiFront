@@ -1,3 +1,4 @@
+import { canConfigureFinance, canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
@@ -204,7 +205,7 @@ const AreaCRow = ({ entry, onSaved, onDelete, canResend = false }) => {
 
 export const AreaCPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [entries, setEntries] = useState(null);
   const [error, setError] = useState("");
@@ -356,7 +357,7 @@ export const AreaCPage = () => {
                       // key con pagado/comprobante: la fila reinicia su estado local al guardar
                       key={`${entry.id}-${entry.pagado}-${entry.comprobanteUrl ?? ""}`}
                       entry={entry}
-                      canResend={user?.cargo === "OWNER"}
+                      canResend={canConfigureFinance(user)}
                       onSaved={handleSaved}
                       onDelete={(e) => {
                         setDeleteError("");

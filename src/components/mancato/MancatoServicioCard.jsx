@@ -1,6 +1,7 @@
+import { FinanceRecordLink } from "../finanzas/FinanceRecordLink";
 import clsx from "clsx";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { GlassCard } from "../ui/GlassCard";
@@ -67,7 +68,7 @@ export const MancatoServicioCard = ({ mancato, isPrivileged, busy, onChange }) =
       )}
 
       {servicio ? (
-        <Link
+        <FinanceRecordLink
           to={`/records/${servicio.id}`}
           state={{ backgroundLocation: location }}
           className="mt-3 flex flex-col gap-0.5 rounded-xl bg-line/[0.06] px-4 py-3 transition-colors hover:bg-line/10"
@@ -87,7 +88,7 @@ export const MancatoServicioCard = ({ mancato, isPrivileged, busy, onChange }) =
               La targa del mancato ({mancato.targa}) no coincide con la de este servicio. Corrige la targa o elige otro servicio.
             </span>
           )}
-        </Link>
+        </FinanceRecordLink>
       ) : (
         <p className="mt-3 text-[14px] text-ink-300">
           {!isPrivileged

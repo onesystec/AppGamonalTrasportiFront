@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { Alert } from "../ui/Alert";
@@ -27,7 +28,7 @@ const normalizeTarga = (value) => value.replace(/\s+/g, "").toUpperCase();
 // calcula el sistema (se muestran solo para que se vea que pasa con lo que se carga).
 export const MancatoForm = ({ mode, mancato, onSubmit, onCancel, submitting, error, fieldErrors = {} }) => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const isEdit = mode === "edit";
   // El chofer solo puede tocar estos campos y solo mientras no este pagado (ver backend).
   const lockedForChofer = !isPrivileged;

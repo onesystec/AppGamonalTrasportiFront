@@ -1,6 +1,7 @@
+import { FinanceRecordLink } from "../../components/finanzas/FinanceRecordLink";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useLocation, useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
@@ -353,13 +354,13 @@ const ReviewCard = ({ item, onReviewed, embedded = false }) => {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <span className="block text-[15px] font-semibold text-ink-50">{item.chofer ?? "Sin chofer"}</span>
-          <Link
+          <FinanceRecordLink
             to={`/records/${item.id}`}
             state={{ backgroundLocation: location }}
             className="block truncate text-[13px] text-accent-400 hover:text-accent-300"
           >
             {item.codigo} &middot; {[item.cliente, item.destinazione].filter(Boolean).join(" - ")}
-          </Link>
+          </FinanceRecordLink>
           <span className="block text-[12px] text-ink-400">
             {formatDate(item.fechaServicio)} {item.targa ? `- ${item.targa}` : ""}
           </span>
@@ -423,13 +424,13 @@ const ReviewCard = ({ item, onReviewed, embedded = false }) => {
       {item.viaje?.km && item.viaje.km.real != null && (
         <div className="mt-3 rounded-lg bg-accent-500/10 px-3 py-2">
           <KmViajeResumen km={item.viaje.km} servicios={item.viaje.servicios} />
-          <Link
+          <FinanceRecordLink
             to={`/records/${item.id}`}
             state={{ backgroundLocation: location }}
             className="mt-1 inline-block text-[12px] font-medium text-accent-400 hover:text-accent-300"
           >
             Ver o ajustar el reparto de km &rarr;
-          </Link>
+          </FinanceRecordLink>
         </div>
       )}
 
@@ -641,13 +642,13 @@ const EsperaCard = ({ item, onReviewed, embedded = false }) => {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <span className="block text-[15px] font-semibold text-ink-50">{item.chofer ?? "Sin chofer"}</span>
-          <Link
+          <FinanceRecordLink
             to={`/records/${item.id}`}
             state={{ backgroundLocation: location }}
             className="block truncate text-[13px] text-accent-400 hover:text-accent-300"
           >
             {item.codigo} &middot; {[item.cliente, item.destinazione].filter(Boolean).join(" - ")}
-          </Link>
+          </FinanceRecordLink>
           <span className="block text-[12px] text-ink-400">
             {formatDate(item.fechaServicio)} {item.targa ? `- ${item.targa}` : ""}
           </span>
@@ -759,14 +760,14 @@ const FilaHoras = ({ item, onReviewed }) => {
             {item.chofer ?? "Sin chofer"}
           </Celda>
           <Celda ancho="sm:min-w-[200px] sm:flex-1" title={[item.cliente, item.destinazione].filter(Boolean).join(" - ")}>
-            <Link
+            <FinanceRecordLink
               to={`/records/${item.id}`}
               state={{ backgroundLocation: location }}
               onClick={(e) => e.stopPropagation()}
               className="text-accent-400 hover:text-accent-300"
             >
               {item.codigo}
-            </Link>{" "}
+            </FinanceRecordLink>{" "}
             <span className="text-ink-300">{[item.cliente, item.destinazione].filter(Boolean).join(" - ")}</span>
           </Celda>
           <Celda ancho="sm:w-20" className="text-ink-300">

@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import { useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -17,7 +18,7 @@ export const NewCombustiblePage = () => {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   // Cuando el backend avisa de un posible duplicado (409), la oficina puede registrarla igual.
   const [duplicate, setDuplicate] = useState(false);
   const lastSubmit = useRef(null);

@@ -1,3 +1,4 @@
+import { canConfigureFinance, canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -50,7 +51,7 @@ const SectionTitle = ({ children, hint }) => (
 
 const ResumenOficinaPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const mancatoRefresh = useDataRefresh("mancato").version;
   const multasRefresh = useDataRefresh("multas").version;
   const combustibleRefresh = useDataRefresh("combustible").version;
@@ -252,7 +253,7 @@ const ResumenOficinaPage = () => {
         </PanelShell>
       </div>
 
-      <TarifasKmCard canEdit={user?.cargo === "OWNER"} />
+      <TarifasKmCard canEdit={canConfigureFinance(user)} />
     </div>
   );
 };
@@ -260,7 +261,7 @@ const ResumenOficinaPage = () => {
 // El chofer ve su propio resumen (sin el costo para la empresa); la oficina, el de Finanzas.
 export const FinanzasResumenPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   // El chofer no tiene "Resumen" en Mis cargos: entra directo a Combustible (y sin importes de pago).
   return isPrivileged ? <ResumenOficinaPage /> : <Navigate to="/finanzas/combustible" replace />;
 };

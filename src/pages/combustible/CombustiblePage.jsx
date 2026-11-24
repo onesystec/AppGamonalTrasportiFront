@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -369,7 +370,7 @@ const AreaAccordion = ({
 export const CombustiblePage = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const { version } = useDataRefresh("combustible");
 
   const [searchParams] = useSearchParams();

@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -701,7 +702,7 @@ const MultasExpandida = ({ estado, summary, params, version, showDriver, locatio
 const MultasOficinaPage = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const { version, refresh } = useDataRefresh("multas");
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -1086,6 +1087,6 @@ const MultasOficinaPage = () => {
 // El chofer ve sus multas de forma simple; la oficina, el panel de gestion.
 export const MultasPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   return isPrivileged ? <MultasOficinaPage /> : <MultasChoferPage />;
 };

@@ -1,5 +1,7 @@
+import { FinanceRecordLink } from "../../components/finanzas/FinanceRecordLink";
+import { canManageFinance } from "../../lib/financeAccess";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { DebtSummary } from "../../components/mancato/MancatoSidebar";
@@ -15,7 +17,7 @@ import { formatCurrency, formatDate } from "../../lib/format";
 export const GastosServiciosPage = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState(null);
@@ -99,7 +101,7 @@ export const GastosServiciosPage = () => {
               <ul className="mt-3 flex flex-col gap-1.5">
                 {data.combustibleRevisar.map((item) => (
                   <li key={item.id}>
-                    <Link
+                    <FinanceRecordLink
                       to={`/records/${item.id}`}
                       state={{ backgroundLocation: location }}
                       className="flex flex-wrap items-center gap-x-4 gap-y-0.5 rounded-lg bg-line/[0.06] px-3 py-2 text-[13px] transition-colors hover:bg-line/10"
@@ -120,7 +122,7 @@ export const GastosServiciosPage = () => {
                           </b>
                         </span>
                       </span>
-                    </Link>
+                    </FinanceRecordLink>
                   </li>
                 ))}
               </ul>
@@ -141,7 +143,7 @@ export const GastosServiciosPage = () => {
                     <span className="text-right">Total</span>
                   </div>
                   {data.items.map((item) => (
-                    <Link
+                    <FinanceRecordLink
                       key={item.id}
                       to={`/records/${item.id}`}
                       state={{ backgroundLocation: location }}
@@ -169,7 +171,7 @@ export const GastosServiciosPage = () => {
                       <span className="text-[14px] font-semibold text-ink-50 lg:text-right">
                         {formatCurrency(item.total)}
                       </span>
-                    </Link>
+                    </FinanceRecordLink>
                   ))}
                 </>
               )}

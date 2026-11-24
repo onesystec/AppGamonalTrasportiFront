@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -548,7 +549,7 @@ const MesAccordion = ({ mes, params, filters, ...rest }) => {
 const MancatoOficinaPage = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const { version, refresh } = useDataRefresh("mancato");
   const [reevaluar, setReevaluar] = useState(false);
   const [searchParams] = useSearchParams();
@@ -1013,6 +1014,6 @@ const MancatoOficinaPage = () => {
 // El chofer solo sube sus avisos; la oficina controla pagos, plazos y estados.
 export const MancatoPagamentoPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   return isPrivileged ? <MancatoOficinaPage /> : <MancatoChoferPage />;
 };

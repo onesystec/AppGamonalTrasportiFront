@@ -160,7 +160,7 @@ const LegacyRedirect = ({ from, to }) => {
 };
 
 // Pantallas de un solo perfil: el calendario es del chofer y los permisos de la oficina.
-// allowRrhh: Recursos Humanos tambien entra (Choferes y Vehiculos).
+// allowRrhh habilita las pantallas compartidas con Recursos Humanos.
 const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children }) => {
   const { user } = useAuth();
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
@@ -169,9 +169,8 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
   return isPrivileged === privileged ? children : <Navigate to={redirectTo} replace />;
 };
 
-// Recursos Humanos (Busta paga + Memorandums) solo usa esa seccion, Choferes, Vehiculos y su perfil; cualquier otra direccion lo lleva a
-// Busta paga (el servidor ademas le niega todo lo demas).
-const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile"];
+// Accesos de Recursos Humanos. Las rutas fuera de su perfil redirigen a Busta paga.
+const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile", "/finanzas", "/mancato-pagamento", "/multas", "/combustible"];
 // Con el interruptor del Owner, tambien las listas de Registros (/records y las de cada area), nunca el detalle ni crear servicios.
 const RRHH_REGISTROS_PATHS = ["/records", "/records/extras-piazza", "/records/dhl-ab-service", "/records/extras-stefania"];
 const RrhhGuard = () => {
@@ -207,8 +206,8 @@ const OverlayRoutes = () => (
         <Route path="/vehiculos/:id" element={<RoleOnly privileged allowRrhh><VehicleDetailPage /></RoleOnly>} />
         <Route path="/finanzas/mancato/new" element={<NewMancatoPage />} />
         <Route path="/finanzas/mancato/:id" element={<MancatoDetailPage />} />
-        <Route path="/finanzas/multas/new" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
-        <Route path="/finanzas/multas/:id" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultaDetailPage /></RoleOnly>} />
+        <Route path="/finanzas/multas/new" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
+        <Route path="/finanzas/multas/:id" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><MultaDetailPage /></RoleOnly>} />
         <Route path="/finanzas/combustible/new" element={<NewCombustiblePage />} />
         <Route path="/finanzas/combustible/:id" element={<CombustibleDetailPage />} />
       </Route>
@@ -347,20 +346,20 @@ function App() {
               <Route path="/vehiculos/:id" element={<RoleOnly privileged allowRrhh><VehicleDetailPage /></RoleOnly>} />
               <Route path="/finanzas" element={<FinanzasLayout />}>
                 <Route index element={<FinanzasResumenPage />} />
-                <Route path="pagos" element={<RoleOnly privileged><PagosChoferesPage /></RoleOnly>} />
-                <Route path="horas" element={<RoleOnly privileged><HorasAprobacionPage /></RoleOnly>} />
-                <Route path="paradas" element={<RoleOnly privileged><ParadasPage /></RoleOnly>} />
-                <Route path="gastos" element={<RoleOnly privileged><GastosServiciosPage /></RoleOnly>} />
-                <Route path="area-c" element={<RoleOnly privileged><AreaCPage /></RoleOnly>} />
+                <Route path="pagos" element={<RoleOnly privileged allowRrhh><PagosChoferesPage /></RoleOnly>} />
+                <Route path="horas" element={<RoleOnly privileged allowRrhh><HorasAprobacionPage /></RoleOnly>} />
+                <Route path="paradas" element={<RoleOnly privileged allowRrhh><ParadasPage /></RoleOnly>} />
+                <Route path="gastos" element={<RoleOnly privileged allowRrhh><GastosServiciosPage /></RoleOnly>} />
+                <Route path="area-c" element={<RoleOnly privileged allowRrhh><AreaCPage /></RoleOnly>} />
                 <Route path="mancato" element={<MancatoPagamentoPage />} />
                 <Route path="mancato/new" element={<NewMancatoPage />} />
                 <Route path="mancato/:id" element={<MancatoDetailPage />} />
-                <Route path="sollecitos" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><SollecitiPage /></RoleOnly>} />
+                <Route path="sollecitos" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><SollecitiPage /></RoleOnly>} />
                 <Route path="solicitos" element={<Navigate to="/finanzas/sollecitos" replace />} />
                 {/* Las multas son de la oficina: el chofer solo ve Combustible y Mancato Pagamento. */}
-                <Route path="multas" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultasPage /></RoleOnly>} />
-                <Route path="multas/new" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
-                <Route path="multas/:id" element={<RoleOnly privileged redirectTo="/finanzas/combustible"><MultaDetailPage /></RoleOnly>} />
+                <Route path="multas" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><MultasPage /></RoleOnly>} />
+                <Route path="multas/new" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><NewMultaPage /></RoleOnly>} />
+                <Route path="multas/:id" element={<RoleOnly privileged allowRrhh redirectTo="/finanzas/combustible"><MultaDetailPage /></RoleOnly>} />
                 <Route path="otros-gastos" element={<OtrosGastosPage />} />
                 <Route path="combustible" element={<CombustiblePage />} />
                 <Route path="combustible/new" element={<NewCombustiblePage />} />

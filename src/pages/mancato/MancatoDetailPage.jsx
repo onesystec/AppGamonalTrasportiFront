@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -90,7 +91,7 @@ export const MancatoDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refresh } = useDataRefresh("mancato");
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [mancato, setMancato] = useState(null);
   const [loadError, setLoadError] = useState("");

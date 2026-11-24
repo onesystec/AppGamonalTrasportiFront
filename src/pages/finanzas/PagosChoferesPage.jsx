@@ -1,6 +1,8 @@
+import { FinanceRecordLink } from "../../components/finanzas/FinanceRecordLink";
+import { canConfigureFinance, canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
 import { MancatoKpi } from "../../components/mancato/MancatoKpi";
 import { Alert } from "../../components/ui/Alert";
@@ -85,7 +87,7 @@ const ServiceList = ({ servicios, reglas, location, marcarAparte = false }) =>
         <span className="text-right">Pago</span>
       </div>
       {servicios.map((s) => (
-        <Link
+        <FinanceRecordLink
           key={s.id}
           to={`/records/${s.id}`}
           state={{ backgroundLocation: location }}
@@ -122,7 +124,7 @@ const ServiceList = ({ servicios, reglas, location, marcarAparte = false }) =>
             )}
           </div>
           <span className="text-[14px] font-semibold text-ink-50 lg:text-right">{formatCurrency(s.total)}</span>
-        </Link>
+        </FinanceRecordLink>
       ))}
     </div>
   );
@@ -133,9 +135,9 @@ const KmRevisarList = ({ items }) => (
   <ul className="flex flex-col gap-1">
     {items.map((item) => (
       <li key={item.id} className="text-[12px] text-ink-200">
-        <Link to={`/records/${item.id}`} className="font-semibold text-accent-400 hover:text-accent-300">
+        <FinanceRecordLink to={`/records/${item.id}`} className="font-semibold text-accent-400 hover:text-accent-300">
           {item.codigo}
-        </Link>{" "}
+        </FinanceRecordLink>{" "}
         {item.chofer && <span className="text-ink-400">({item.chofer}) </span>}
         a {item.destino}: circuito de <b className="text-ink-50">{formatKm(item.km)}</b> contra {formatKm(item.kmPlan)} planificados
       </li>
@@ -469,7 +471,7 @@ const DriverRow = ({ driver, month, reglas, location, velocidades, onVelocidad, 
 export const PagosChoferesPage = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [month, setMonth] = useState(currentMonth);
   const [data, setData] = useState(null);
@@ -676,7 +678,7 @@ export const PagosChoferesPage = () => {
                   velocidades={data.velocidadesPago ?? []}
                   onVelocidad={changeVelocidad}
                   savingVelocidad={savingVelocidad === driver.driverId}
-                  canEditAparte={user?.cargo === "OWNER"}
+                  canEditAparte={canConfigureFinance(user)}
                   onPagoAparte={changePagoAparte}
                   savingAparte={savingAparte === driver.driverId}
                 />

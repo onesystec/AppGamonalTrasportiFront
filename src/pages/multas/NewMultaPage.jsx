@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -19,7 +20,7 @@ export const NewMultaPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Cargar multas es solo de la oficina; el chofer solo las consulta.
-  if (user?.cargo !== "OWNER" && user?.cargo !== "ADMIN") return <Navigate to="/finanzas/multas" replace />;
+  if (!canManageFinance(user)) return <Navigate to="/finanzas/multas" replace />;
 
   const handleSubmit = async (fields, files) => {
     setSubmitting(true);

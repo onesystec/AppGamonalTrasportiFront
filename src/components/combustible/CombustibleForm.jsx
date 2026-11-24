@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { useEffect, useState } from "react";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
@@ -29,7 +30,7 @@ export const CombustibleForm = ({
   fieldErrors = {},
 }) => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   const isEdit = mode === "edit";
 
   const [vehicles, setVehicles] = useState([]);

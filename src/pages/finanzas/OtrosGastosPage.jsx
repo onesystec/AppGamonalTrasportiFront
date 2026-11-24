@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MonthSelector } from "../../components/finanzas/MonthSelector";
@@ -387,6 +388,6 @@ const OficinaView = () => {
 
 export const OtrosGastosPage = () => {
   const { user } = useAuth();
-  const office = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const office = canManageFinance(user);
   return office ? <OficinaView /> : <ChoferView />;
 };

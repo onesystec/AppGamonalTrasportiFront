@@ -298,8 +298,9 @@ const BottomNavTab = ({ to, label, icon: Icon, match }) => {
 // Secciones que en mobile viven en el nav deslizable (MobileNavDrawer) en vez del
 // nav inferior, para no saturarlo de iconos - se activa tocando el logo GT del
 // header. En desktop siguen en el sidebar fijo de siempre, sin cambios.
+const FINANCE_NAV_ITEM = { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon };
 const DRAWER_NAV_ITEMS = [
-  { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon },
+  FINANCE_NAV_ITEM,
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
   { to: "/disponibilidad", label: "Disponibilitá", icon: ClockIcon },
@@ -513,6 +514,7 @@ const AppShellContent = () => {
               ) : isRrhh ? (
                 <>
                   <SidebarNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} compact={compact} />
+                  <SidebarNavTab {...FINANCE_NAV_ITEM} compact={compact} />
                   {rrhhVeRegistros && <SidebarNavTab to="/records" label="Registros" icon={ListIcon} compact={compact} />}
                 </>
               ) : (
@@ -681,6 +683,7 @@ const AppShellContent = () => {
         ) : isRrhh ? (
           <>
             <BottomNavTab to="/rrhh" label="Recursos Humanos" icon={UsersIcon} match={RRHH_PATHS} />
+            <BottomNavTab {...FINANCE_NAV_ITEM} />
             {rrhhVeRegistros && <BottomNavTab to="/records" label="Registros" icon={ListIcon} />}
             <BottomNavTab to="/profile" label="Perfil" icon={UserIcon} />
           </>
@@ -701,7 +704,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }, { to: "/app-collegate", label: "App collegate", icon: ExternalLinkIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }, { to: "/app-collegate", label: "App collegate", icon: ExternalLinkIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM, FINANCE_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}

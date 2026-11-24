@@ -1,3 +1,4 @@
+import { canManageFinance } from "../../lib/financeAccess";
 import { BackLink } from "../../components/ui/BackLink";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -93,7 +94,7 @@ const MultaOficinaDetail = () => {
   const linkState = { backgroundLocation: location.state?.backgroundLocation };
   const { user } = useAuth();
   const { refresh } = useDataRefresh("multas");
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
 
   const [multa, setMulta] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -500,6 +501,6 @@ const MultaChoferDetail = () => {
 
 export const MultaDetailPage = () => {
   const { user } = useAuth();
-  const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
+  const isPrivileged = canManageFinance(user);
   return isPrivileged ? <MultaOficinaDetail /> : <MultaChoferDetail />;
 };
