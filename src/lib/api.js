@@ -10,7 +10,7 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Modo chofer del Admin/Owner: cada pedido lo avisa al servidor, que entonces responde como si fuera un chofer (solo sus
+// Modo chofer de oficina: cada pedido lo avisa al servidor, que entonces responde como si fuera un chofer (solo sus
 // servicios, horas y cargos). Para cualquier otro cargo el servidor ignora el aviso.
 let driverModeOn = false;
 export const setApiDriverMode = (on) => {
@@ -42,7 +42,8 @@ api.interceptors.response.use(
       const { mensaje, motivo } = error.response.data;
       window.dispatchEvent(new CustomEvent(APP_SUSPENDIDA_EVENT, { detail: { mensaje: String(mensaje || ""), motivo: String(motivo || "") } }));
     }
-    if (error.response?.status === 401) {
+    const currentToken = getToken();
+    if (error.response?.status === 401 && currentToken && error.config?.headers?.Authorization === `Bearer ${currentToken}`) {
       clearToken();
       window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
     }

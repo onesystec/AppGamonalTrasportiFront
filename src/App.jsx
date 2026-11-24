@@ -1,3 +1,4 @@
+import { ConfirmacionVehiculo } from "./components/layout/ConfirmacionVehiculo";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
@@ -170,7 +171,7 @@ const RoleOnly = ({ privileged, allowRrhh = false, redirectTo = "/", children })
 };
 
 // Accesos de Recursos Humanos. Las rutas fuera de su perfil redirigen a Busta paga.
-const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile", "/finanzas", "/mancato-pagamento", "/multas", "/combustible"];
+const RRHH_PATHS = ["/rrhh", "/busta-paga", "/memorandums", "/choferes", "/vehiculos", "/vencimientos", "/profile", "/finanzas", "/mancato-pagamento", "/multas", "/combustible", "/cronologia-vehicular"];
 // Con el interruptor del Owner, tambien las listas de Registros (/records y las de cada area), nunca el detalle ni crear servicios.
 const RRHH_REGISTROS_PATHS = ["/records", "/records/extras-piazza", "/records/dhl-ab-service", "/records/extras-stefania"];
 const RrhhGuard = () => {
@@ -251,6 +252,10 @@ const RoleChangeNotice = () => {
   );
 };
 
+const CronologiaVehicularPage = lazy(() =>
+  import("./pages/vehiculos/CronologiaVehicularPage").then((m) => ({ default: m.CronologiaVehicularPage })),
+);
+
 function App() {
   const location = useLocation();
   const { user: sessionUser } = useAuth();
@@ -267,6 +272,7 @@ function App() {
   if (isCliente) return <Suspense fallback={<PageLoader />}><ClienteApp /></Suspense>;
 
   return (
+    <ConfirmacionVehiculo>
     <DataRefreshProvider>
       <RoleChangeNotice />
       <Suspense fallback={<PageLoader />}>
@@ -282,6 +288,7 @@ function App() {
             <Route element={<AppShell />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/resumen" element={<RoleOnly privileged><DailySummaryPage /></RoleOnly>} />
+              <Route path="/cronologia-vehicular" element={<CronologiaVehicularPage />} />
               <Route path="/mis-horas" element={<MisHorasPage />} />
               <Route path="/trabajos-adicionales" element={<TrabajosAdicionalesPage />} />
               <Route
@@ -396,6 +403,7 @@ function App() {
 
       {backgroundLocation && <OverlayRoutes />}
     </DataRefreshProvider>
+    </ConfirmacionVehiculo>
   );
 }
 

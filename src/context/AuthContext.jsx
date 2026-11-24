@@ -1,9 +1,10 @@
+import { clearConfirmacionVehiculo } from "../lib/confirmacionVehiculo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AUTH_LOGOUT_EVENT, parseApiError, setApiDriverMode } from "../lib/api";
 import { loginRequest, meRequest, ssoLoginRequest } from "../lib/auth.api";
 import { rememberChoferView } from "../lib/choferTips";
 import { startVisibleInterval } from "../lib/polling";
-import { clearToken, getToken, setToken } from "../lib/token";
+import { clearToken, getToken, sessionExpiresAt, setToken } from "../lib/token";
 
 const AuthContext = createContext(null);
 
@@ -22,7 +23,7 @@ const readDriverModePref = () => {
     return false;
   }
 };
-// Antes del primer pedido: el servidor ya responde en modo chofer desde la primera carga (si no es Admin/Owner lo ignora).
+// Antes del primer pedido se restablece la preferencia del modo chofer.
 setApiDriverMode(readDriverModePref());
 
 export const AuthProvider = ({ children }) => {
@@ -77,13 +78,16 @@ export const AuthProvider = ({ children }) => {
   // la vista (menu, inicio, permisos) se rearma sola porque todo sale de este usuario.
   const lastRefreshRef = useRef(0);
   const refreshUser = useCallback(async ({ force = false } = {}) => {
-    if (!getToken()) return;
+    const token = getToken();
+    if (!token) return;
     const now = Date.now();
     if (!force && now - lastRefreshRef.current < REFRESH_MIN_GAP_MS) return;
     lastRefreshRef.current = now;
     try {
       const me = await meRequest();
-      setUser((prev) => (prev && prev.id === me.id && !accessChanged(prev, me) ? prev : me));
+      if (getToken() === token) {
+        setUser((prev) => (prev && prev.id === me.id && !accessChanged(prev, me) ? prev : me));
+      }
     } catch {
       // Sin red o servidor dormido: se reintenta en la siguiente vuelta. Un 401 ya cierra la sesion en api.js.
     }
@@ -127,14 +131,36 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  // Modo chofer: solo OWNER y ADMIN. Con el switch activo ven la app exactamente como un chofer (menu, inicio,
+  useEffect(() => {
+    if (!realUser?.id) return undefined;
+    let timer;
+    const checkExpiration = () => {
+      window.clearTimeout(timer);
+      const expiresAt = sessionExpiresAt(getToken(), realUser.cargo);
+      if (expiresAt === null) return;
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) logout();
+      else timer = window.setTimeout(checkExpiration, Math.min(remaining, 2 ** 31 - 1));
+    };
+    checkExpiration();
+    document.addEventListener("visibilitychange", checkExpiration);
+    window.addEventListener("focus", checkExpiration);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", checkExpiration);
+      window.removeEventListener("focus", checkExpiration);
+    };
+  }, [realUser?.id, realUser?.cargo, logout]);
+
+  // Modo chofer para la oficina. Con el switch activo ven la app como un chofer (menu, inicio,
   // permisos). El cambio es siempre manual y se recuerda en este dispositivo. El usuario real no se toca: el
   // servidor sigue viendo su cargo de siempre.
-  const canUseDriverMode = realUser?.cargo === "OWNER" || realUser?.cargo === "ADMIN";
+  const canUseDriverMode = ["OWNER", "ADMIN", "RRHH"].includes(realUser?.cargo);
   const [driverModePref, setDriverModePref] = useState(readDriverModePref);
   const driverMode = canUseDriverMode && driverModePref;
 
   const setDriverMode = useCallback((next) => {
+    clearConfirmacionVehiculo();
     setApiDriverMode(next);
     setDriverModePref(Boolean(next));
     try {

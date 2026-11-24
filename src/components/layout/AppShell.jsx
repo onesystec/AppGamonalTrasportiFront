@@ -299,8 +299,10 @@ const BottomNavTab = ({ to, label, icon: Icon, match }) => {
 // nav inferior, para no saturarlo de iconos - se activa tocando el logo GT del
 // header. En desktop siguen en el sidebar fijo de siempre, sin cambios.
 const FINANCE_NAV_ITEM = { to: "/finanzas", label: "Finanzas Operativas", icon: WalletIcon };
+const CRONOLOGIA_NAV_ITEM = { to: "/cronologia-vehicular", label: "Cronología vehicular", icon: TruckIcon };
 const DRAWER_NAV_ITEMS = [
   FINANCE_NAV_ITEM,
+  CRONOLOGIA_NAV_ITEM,
   { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon },
   { to: "/permisos", label: "Permisos", icon: CalendarIcon },
   { to: "/disponibilidad", label: "Disponibilitá", icon: ClockIcon },
@@ -313,7 +315,7 @@ const DRAWER_NAV_ITEMS = [
 // Lo mismo para el chofer (y el Admin/Owner en su modo chofer): lo que no entra en su nav inferior.
 const MEMORANDUMS_NAV_ITEM = { to: "/memorandums", label: "Memorándums", icon: FileTextIcon };
 const RRHH_NAV_ITEM = { to: "/rrhh", label: "Recursos Humanos", icon: UsersIcon, match: RRHH_PATHS };
-const CHOFER_DRAWER_NAV_ITEMS = [{ to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }, MEMORANDUMS_NAV_ITEM];
+const CHOFER_DRAWER_NAV_ITEMS = [CRONOLOGIA_NAV_ITEM, { to: "/trabajos-adicionales", label: "Trabajos adicionales", icon: BriefcaseIcon }, MEMORANDUMS_NAV_ITEM];
 
 // Placeholder de la barra superior en las paginas de lista donde filtra en vivo.
 const LIST_SEARCH_PLACEHOLDERS = {
@@ -331,7 +333,7 @@ const AppShellContent = () => {
   const { user, logout, canUseDriverMode, driverMode } = useAuth();
   const { theme, toggleTheme } = useTheme();
   // En modo chofer el Admin/Owner ve la vista de chofer, pero conserva arriba el switch para volver.
-  const showDriverBar = canUseDriverMode && driverMode;
+  const showDriverBar = canUseDriverMode && (driverMode || user?.cargo === "RRHH");
   const isPrivileged = user?.cargo === "OWNER" || user?.cargo === "ADMIN";
   // Recursos Humanos: solo Choferes, Vehiculos y Busta paga.
   const isRrhh = user?.cargo === "RRHH";
@@ -536,6 +538,7 @@ const AppShellContent = () => {
               {isPrivileged && <SidebarNavTab to="/trabajos-adicionales" label="Trabajos adicionales" icon={BriefcaseIcon} compact={compact} />}
               {isPrivileged && <SidebarNavTab to="/permisos" label="Permisos" icon={CalendarIcon} compact={compact} />}
               {isPrivileged && <SidebarNavTab to="/disponibilidad" label="Disponibilitá" icon={ClockIcon} compact={compact} />}
+              <SidebarNavTab {...CRONOLOGIA_NAV_ITEM} compact={compact} />
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vehiculos" label="Vehículos" icon={TruckIcon} compact={compact} />}
               {(isPrivileged || isRrhh) && <SidebarNavTab to="/vencimientos" label="Vencimientos" icon={ShieldIcon} compact={compact} />}
               {user?.cargo === "OWNER" && <SidebarNavTab to="/acceso-clientes" label="Acceso clientes" icon={UsersIcon} compact={compact} />}
@@ -704,7 +707,7 @@ const AppShellContent = () => {
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
-        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }, { to: "/app-collegate", label: "App collegate", icon: ExternalLinkIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM, FINANCE_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
+        items={isPrivileged ? (user?.cargo === "OWNER" ? [...DRAWER_NAV_ITEMS, { to: "/acceso-clientes", label: "Acceso clientes", icon: UsersIcon }, { to: "/app-collegate", label: "App collegate", icon: ExternalLinkIcon }] : DRAWER_NAV_ITEMS) : isRrhh ? [RRHH_NAV_ITEM, FINANCE_NAV_ITEM, CRONOLOGIA_NAV_ITEM] : CHOFER_DRAWER_NAV_ITEMS}
         theme={theme}
         updateDot={<UpdateDot />}
         onToggleTheme={toggleTheme}
