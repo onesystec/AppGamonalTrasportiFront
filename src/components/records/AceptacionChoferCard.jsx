@@ -3,12 +3,14 @@ import { createPortal } from "react-dom";
 import { parseApiError } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { confirmarVehiculoAsignacionRequest, listVehiculosAsignacionRequest } from "../../lib/records.api";
+import { vehiculoSinAsignar } from "./CeldaAsignable";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { GlassCard } from "../ui/GlassCard";
 import { SearchableSelect } from "../ui/SearchableSelect";
 
 export const AceptacionChoferCard = ({ record, onChanged }) => {
+  const preasignado = Boolean(record.vehicle?.targa) && !vehiculoSinAsignar(record);
   const [open, setOpen] = useState(false);
   const [vehicles, setVehicles] = useState(null);
   const [vehicleId, setVehicleId] = useState("");
@@ -26,11 +28,11 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
     return () => { active = false; };
   }, [open, record.id]);
 
-  const confirmar = async () => {
+  const confirmar = async (idVehiculo) => {
     setSaving(true);
     setError("");
     try {
-      onChanged(await confirmarVehiculoAsignacionRequest(record.id, vehicleId));
+      onChanged(await confirmarVehiculoAsignacionRequest(record.id, idVehiculo));
     } catch (err) {
       setError(parseApiError(err).message);
     } finally {
@@ -44,7 +46,11 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
         <h1 className="text-lg font-semibold text-ink-50">{record.codigo}</h1>
         <p className="text-sm text-ink-200">{record.destinazione} · ETA {formatDateTime(record.eta)}</p>
         <Alert>{!open && error}</Alert>
-        <Button className="sm:w-auto" onClick={() => { setError(""); setVehicleId(""); setOpen(true); }}>
+        {preasignado && <p className="text-sm text-ink-200">Vehículo asignado: {record.vehicle.targa} · {record.vehicle.modelo}</p>}
+        <Button className="sm:w-auto" loading={!open && saving} onClick={() => {
+          if (preasignado) void confirmar();
+          else { setError(""); setVehicleId(""); setOpen(true); }
+        }}>
           Aceptar servicio
         </Button>
       </GlassCard>
@@ -61,7 +67,7 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
             <Alert>{error}</Alert>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="ghost" className="!w-auto" disabled={saving} onClick={() => { setOpen(false); setError(""); }}>Volver sin aceptar</Button>
-              <Button className="!w-auto" disabled={!vehicleId} loading={saving} onClick={confirmar}>Aceptar con este vehículo</Button>
+              <Button className="!w-auto" disabled={!vehicleId} loading={saving} onClick={() => confirmar(vehicleId)}>Aceptar con este vehículo</Button>
             </div>
           </div>
         </div>,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CerrarServicioModal } from "../components/horas/CerrarServicioModal";
 import { parseApiError } from "../lib/api";
 import { getRecordRequest, uploadRecordFileRequest } from "../lib/records.api";
@@ -6,6 +7,7 @@ import { getRecordRequest, uploadRecordFileRequest } from "../lib/records.api";
 // Acciones del chofer sobre un servicio desde una lista: abrir el formulario de "Terminar servicio" / cargar horas
 // y subir evidencia. `reload` vuelve a pedir la lista cuando algo cambia. Devuelve tambien el `modal` a renderizar.
 export const useCerrarServicio = (reload) => {
+  const navigate = useNavigate();
   const [closing, setClosing] = useState(null);
   const [openingId, setOpeningId] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
@@ -18,7 +20,12 @@ export const useCerrarServicio = (reload) => {
     setOpeningId(recordId);
     setError(recordId, "");
     try {
-      setClosing(await getRecordRequest(recordId));
+      const record = await getRecordRequest(recordId);
+      if (["PENDIENTE", "VEHICULO_PENDIENTE"].includes(record.aceptacionChofer) && ["IN_SOSPESO", "IN_CONSEGNA", "RITIRATO"].includes(record.estado)) {
+        navigate(`/records/${recordId}`);
+      } else {
+        setClosing(record);
+      }
     } catch (err) {
       setError(recordId, parseApiError(err).message);
     } finally {
