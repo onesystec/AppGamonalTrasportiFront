@@ -21,6 +21,7 @@ export const SearchableSelect = ({
   placeholder = "Escribe para buscar...",
   error,
   maxSuggestions = DEFAULT_MAX_SUGGESTIONS,
+  autoFocus = false,
 }) => {
   const [query, setQuery] = useState("");
   // Separado de "query": mientras no se escriba nada nuevo desde que se abrio el
@@ -122,6 +123,7 @@ export const SearchableSelect = ({
           }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          autoFocus={autoFocus}
           placeholder={placeholder}
           className={clsx(
             "glass-input w-full rounded-xl px-4 py-3 pr-9 text-[15px] text-ink-50",

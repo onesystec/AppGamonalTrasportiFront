@@ -146,3 +146,12 @@ export const anularRecordRequest = (id, payload) =>
 // Fijar los km que se le pagan al chofer en un servicio o viaje compacto (solo Admin/Responsable). km null = volver al calculo normal.
 export const fijarKmPagoRequest = (id, payload) =>
   api.put(`/records/${id}/km-pago`, payload).then((res) => res.data.data.record);
+
+export const aceptarAsignacionRequest = (id) =>
+  api.post(`/records/${id}/asignacion/aceptar`).then((res) => res.data.data.record);
+
+export const listVehiculosAsignacionRequest = (id) =>
+  api.get(`/records/${id}/asignacion/vehiculos`).then((res) => res.data.data.vehicles);
+
+export const confirmarVehiculoAsignacionRequest = (id, vehicleId) =>
+  api.post(`/records/${id}/asignacion/vehiculo`, { vehicleId }).then((res) => res.data.data.record);

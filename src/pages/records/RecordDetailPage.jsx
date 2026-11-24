@@ -6,6 +6,7 @@ import { ViajeCompactoCard } from "../../components/records/ViajeCompactoCard";
 import { BackLink } from "../../components/ui/BackLink";
 import { useCloseOverlay } from "../../hooks/useCloseOverlay";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { AceptacionChoferCard } from "../../components/records/AceptacionChoferCard";
 import { CerrarServicioModal } from "../../components/horas/CerrarServicioModal";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { Alert } from "../../components/ui/Alert";
@@ -1027,7 +1028,17 @@ export const RecordDetailPage = () => {
         </BackLink>
       </div>
 
-      {isEditing ? (
+      {isChofer && OPEN_STATUSES.includes(record.estado) && ["PENDIENTE", "VEHICULO_PENDIENTE"].includes(record.aceptacionChofer) ? (
+        <AceptacionChoferCard
+          key={record.id}
+          record={record}
+          onChanged={(updated) => {
+            setRecord(updated);
+            setForm(toFormState(updated));
+            refreshRecords();
+          }}
+        />
+      ) : isEditing ? (
         <RecordEditForm
           record={record}
           form={form}
