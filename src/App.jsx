@@ -22,6 +22,7 @@ const MisServiciosPage = lazy(() =>
 const MemorandumsPage = lazy(() => import("./pages/memorandums/MemorandumsPage").then((m) => ({ default: m.MemorandumsPage })));
 const EmitirMemorandumPage = lazy(() => import("./pages/memorandums/EmitirMemorandumPage").then((m) => ({ default: m.EmitirMemorandumPage })));
 const MemorandumDetailPage = lazy(() => import("./pages/memorandums/MemorandumDetailPage").then((m) => ({ default: m.MemorandumDetailPage })));
+const DocumentosRrhhPage = lazy(() => import("./pages/rrhh/DocumentosRrhhPage").then((m) => ({ default: m.DocumentosRrhhPage })));
 const RrhhLayout = lazy(() => import("./pages/rrhh/RrhhLayout").then((m) => ({ default: m.RrhhLayout })));
 const RrhhIndex = lazy(() => import("./pages/rrhh/RrhhLayout").then((m) => ({ default: m.RrhhIndex })));
 const BustaPagaRrhhPage = lazy(() =>
@@ -379,6 +380,7 @@ function App() {
               <Route path="/mecanica" element={<RoleOnly privileged><MecanicaPage /></RoleOnly>} />
               <Route path="/rrhh" element={<RrhhIndex />} />
               <Route element={<RrhhLayout />}>
+                <Route path="/rrhh/documentos" element={<DocumentosRrhhPage />} />
                 <Route path="/busta-paga" element={<BustaPagaRrhhPage />} />
                 <Route path="/memorandums" element={<MemorandumsPage />} />
                 <Route path="/memorandums/nuevo" element={<EmitirMemorandumPage />} />

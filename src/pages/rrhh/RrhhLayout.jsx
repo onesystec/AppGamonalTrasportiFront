@@ -42,6 +42,7 @@ export const RrhhLayout = () => {
         <NavLink to="/memorandums" className={tabClass}>
           Memorándums
         </NavLink>
+        {cargo === "RRHH" && <NavLink to="/rrhh/documentos" className={tabClass}>Documentos</NavLink>}
       </nav>
 
       <Outlet />

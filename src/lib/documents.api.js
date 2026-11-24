@@ -18,3 +18,5 @@ export const updateDocumentRequest = (id, { file, fechaScadenza } = {}) => {
   if (fechaScadenza) formData.append("fechaScadenza", fechaScadenza);
   return api.patch(`/documents/${id}`, formData).then((res) => res.data.data.document);
 };
+
+export const listPersonalParaDocumentosRequest = () => api.get("/documents/personal").then((res) => res.data.data.personal);
