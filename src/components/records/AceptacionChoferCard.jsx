@@ -71,7 +71,7 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
             {vehicles?.length === 0 && <p className="text-sm text-ink-300">No hay vehículos disponibles.</p>}
             {options.length > 0 && (
               <SearchableSelect id="asignacion-vehiculo" label="Vehículo" placeholder="Busca por matrícula o modelo"
-                options={options} value={vehicleId} onChange={setVehicleId} maxSuggestions={5} autoFocus />
+                options={options} value={vehicleId} onChange={setVehicleId} maxSuggestions={5} autoFocus selectSingleMatch />
             )}
             <Alert>{error}</Alert>
             <div className="flex flex-wrap justify-end gap-2">

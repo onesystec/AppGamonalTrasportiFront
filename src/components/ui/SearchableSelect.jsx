@@ -22,6 +22,7 @@ export const SearchableSelect = ({
   error,
   maxSuggestions = DEFAULT_MAX_SUGGESTIONS,
   autoFocus = false,
+  selectSingleMatch = false,
 }) => {
   const [query, setQuery] = useState("");
   // Separado de "query": mientras no se escriba nada nuevo desde que se abrio el
@@ -88,8 +89,12 @@ export const SearchableSelect = ({
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      setOpen(false);
-      commitQuery();
+      if (selectSingleMatch && open && filterQuery.trim() && filtered.length === 1) {
+        handleSelect(filtered[0]);
+      } else {
+        setOpen(false);
+        commitQuery();
+      }
     }
   };
 
