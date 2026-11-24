@@ -235,7 +235,7 @@ const RecordCard = ({ record }) => {
         </div>
         {["PENDIENTE", "VEHICULO_PENDIENTE"].includes(record.aceptacionChofer) ? (
           <span className="rounded bg-warning-500/15 px-2 py-1 text-[11px] font-semibold text-warning-500">
-            {record.aceptacionChofer === "PENDIENTE" ? "Por aceptar" : "Elegir vehículo"}
+            Por aceptar
           </span>
         ) : <StatusBadge status={record.estado} />}
       </div>

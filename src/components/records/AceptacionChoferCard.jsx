@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { parseApiError } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
-import { aceptarAsignacionRequest, confirmarVehiculoAsignacionRequest, listVehiculosAsignacionRequest } from "../../lib/records.api";
+import { confirmarVehiculoAsignacionRequest, listVehiculosAsignacionRequest } from "../../lib/records.api";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { GlassCard } from "../ui/GlassCard";
 import { SearchableSelect } from "../ui/SearchableSelect";
 
 export const AceptacionChoferCard = ({ record, onChanged }) => {
-  const pendiente = record.aceptacionChofer === "PENDIENTE";
-  const [open, setOpen] = useState(!pendiente);
+  const [open, setOpen] = useState(false);
   const [vehicles, setVehicles] = useState(null);
   const [vehicleId, setVehicleId] = useState("");
   const [error, setError] = useState("");
@@ -26,20 +25,6 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
       .catch((err) => { if (active) setError(parseApiError(err).message); });
     return () => { active = false; };
   }, [open, record.id]);
-
-  const aceptar = async () => {
-    setSaving(true);
-    setError("");
-    try {
-      const updated = await aceptarAsignacionRequest(record.id);
-      onChanged(updated);
-      setOpen(true);
-    } catch (err) {
-      setError(parseApiError(err).message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const confirmar = async () => {
     setSaving(true);
@@ -59,8 +44,8 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
         <h1 className="text-lg font-semibold text-ink-50">{record.codigo}</h1>
         <p className="text-sm text-ink-200">{record.destinazione} · ETA {formatDateTime(record.eta)}</p>
         <Alert>{!open && error}</Alert>
-        <Button className="sm:w-auto" loading={!open && saving} onClick={pendiente ? aceptar : () => { setError(""); setOpen(true); }}>
-          {pendiente ? "Aceptar servicio" : "Elegir vehículo"}
+        <Button className="sm:w-auto" onClick={() => { setError(""); setVehicleId(""); setOpen(true); }}>
+          Aceptar servicio
         </Button>
       </GlassCard>
       {open && createPortal(
@@ -75,8 +60,8 @@ export const AceptacionChoferCard = ({ record, onChanged }) => {
             )}
             <Alert>{error}</Alert>
             <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="ghost" className="!w-auto" disabled={saving} onClick={() => { setOpen(false); setError(""); }}>Elegir más tarde</Button>
-              <Button className="!w-auto" disabled={!vehicleId} loading={saving} onClick={confirmar}>Confirmar vehículo</Button>
+              <Button variant="ghost" className="!w-auto" disabled={saving} onClick={() => { setOpen(false); setError(""); }}>Volver sin aceptar</Button>
+              <Button className="!w-auto" disabled={!vehicleId} loading={saving} onClick={confirmar}>Aceptar con este vehículo</Button>
             </div>
           </div>
         </div>,

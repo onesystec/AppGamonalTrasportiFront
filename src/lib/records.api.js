@@ -147,9 +147,6 @@ export const anularRecordRequest = (id, payload) =>
 export const fijarKmPagoRequest = (id, payload) =>
   api.put(`/records/${id}/km-pago`, payload).then((res) => res.data.data.record);
 
-export const aceptarAsignacionRequest = (id) =>
-  api.post(`/records/${id}/asignacion/aceptar`).then((res) => res.data.data.record);
-
 export const listVehiculosAsignacionRequest = (id) =>
   api.get(`/records/${id}/asignacion/vehiculos`).then((res) => res.data.data.vehicles);
 
