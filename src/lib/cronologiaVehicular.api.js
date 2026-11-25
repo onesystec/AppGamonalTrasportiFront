@@ -14,3 +14,9 @@ const romeDateTime = new Intl.DateTimeFormat("es", {
 });
 
 export const formatCronologiaDate = (value) => romeDateTime.format(new Date(value));
+
+const romeDay = new Intl.DateTimeFormat("es", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" });
+const romeTime = new Intl.DateTimeFormat("es", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/Rome" });
+
+export const formatCronologiaDay = (value) => romeDay.format(new Date(value));
+export const formatCronologiaTime = (value) => romeTime.format(new Date(value));
