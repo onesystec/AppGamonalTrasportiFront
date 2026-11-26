@@ -328,11 +328,12 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
             Sancion datos de #{multa.multaOrigen.numeroVerbale}
           </span>
         )}
-        {multa.sancionesDati?.length > 0 && (
-          <span className="block text-[10.5px] text-ink-500">
-            Con sancion por datos ({multa.sancionesDati.length})
+        {/* Sanciones por datos del conductor de esta multa: van en la misma fila (un solo registro a la vista) */}
+        {multa.sancionesDati?.map((s) => (
+          <span key={s.id} className="block truncate text-[10.5px] text-ink-500" title={`Sancion por datos del conductor #${s.numeroVerbale}`}>
+            + Sancion datos #{s.numeroVerbale} · {euro(s.costo)}
           </span>
-        )}
+        ))}
       </div>
 
       {/* Costo */}
@@ -502,7 +503,10 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
               </div>
 
               <div className="flex flex-col gap-2 lg:gap-0">
-                {list.items.map((multa) => (
+                {list.items
+                  // La sancion por datos del conductor se muestra dentro de su multa original si esa esta en la lista.
+                  .filter((multa) => !(multa.multaOrigen && list.items.some((o) => o.id === multa.multaOrigen.id)))
+                  .map((multa) => (
                   <MultaRow
                     key={multa.id}
                     multa={multa}
