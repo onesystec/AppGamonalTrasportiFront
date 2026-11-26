@@ -138,8 +138,8 @@ const useDebounced = (value, ms) => {
 // Columnas de la tabla (escritorio), en este orden: Estado, Chofer responsable, Titular (SRL / Individual), Targa, Recepcion, Vencimiento, Costo, N. verbale,
 // ¿Chofer pago?, Foto o PDF y el menu. Anchos fijos: si la pantalla no alcanza, la tabla se desliza de costado en vez de apretar
 // los datos unos contra otros.
-const TABLE_COLS = "lg:grid-cols-[130px_210px_96px_100px_110px_140px_105px_180px_140px_72px_40px]";
-const TABLE_MIN_WIDTH = "lg:min-w-[1500px]";
+const TABLE_COLS = "lg:grid-cols-[130px_250px_96px_100px_110px_140px_105px_180px_140px_72px_40px]";
+const TABLE_MIN_WIDTH = "lg:min-w-[1540px]";
 
 const plazoParts = (m) => {
   if (m.estado === "PAGADO") {
@@ -289,7 +289,7 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
   const plazo = plazoParts(multa);
   const quien = quienPagaLabel(multa);
   const dati = datiConducenteInfo(multa);
-  const driverName = multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "Sin chofer";
+  const driverName = multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "Sin asignar";
   const openDetail = () => navigate(`/finanzas/multas/${multa.id}`, { state: { backgroundLocation: location } });
 
   return (
@@ -315,17 +315,27 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
       {/* Chofer responsable */}
       {showDriver && (
         <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-            style={{ backgroundColor: avatarColor(driverName) }}
-          >
-            {initials(driverName)}
-          </span>
-          <div className="min-w-0">
-            <span className="block truncate text-[13px] font-medium text-ink-50" title={driverName}>
+          {multa.driver ? (
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+              style={{ backgroundColor: avatarColor(driverName) }}
+            >
+              {initials(driverName)}
+            </span>
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-line/30 text-[13px] font-semibold text-ink-500">
+              ?
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <span
+              className={clsx("block truncate text-[13px] font-medium", multa.driver ? "text-ink-50" : "text-ink-400")}
+              title={driverName}
+            >
               {driverName}
             </span>
-            {!multa.driver && <SugerenciaChip sugerencia={sugerencia} className="lg:hidden" />}
+            {/* Sin chofer: debajo va el posible infractor, el motivo y la coincidencia (alta / media / baja) */}
+            {!multa.driver && <SugerenciaChip sugerencia={sugerencia} />}
           </div>
         </div>
       )}
@@ -413,12 +423,6 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
         <RowMenu multa={multa} isPrivileged={isPrivileged} location={location} onChanged={onChanged} />
       </div>
 
-      {/* Escritorio: la sugerencia va en una linea propia, porque la columna del chofer es angosta */}
-      {showDriver && !multa.driver && sugerencia?.candidatos?.length > 0 && (
-        <div className="hidden min-w-0 lg:col-span-full lg:block">
-          <SugerenciaChip sugerencia={sugerencia} wide />
-        </div>
-      )}
     </div>
   );
 };
@@ -857,7 +861,7 @@ const MultasOficinaPage = () => {
         <div className="flex min-w-0 flex-col gap-4">
           {exportError && <Alert>{exportError}</Alert>}
           {/* Una sola barra: buscador + boton "Filtros" (abre un panel con el resto), como en Mancato Pagamento */}
-          <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2">
+          <div ref={filtersRef} className="relative flex flex-wrap items-center gap-2 lg:flex-nowrap">
             <TextField
               id="filtro-q"
               icon={SearchIcon}
@@ -865,14 +869,14 @@ const MultasOficinaPage = () => {
               aria-label="Buscar"
               value={filters.q}
               onChange={(e) => setFilter("q", e.target.value)}
-              className="min-w-[220px] flex-1"
+              className="min-w-[200px] flex-1"
             />
             <button
               type="button"
               onClick={() => setFiltersOpen((prev) => !prev)}
               aria-expanded={filtersOpen}
               className={clsx(
-                "flex items-center gap-2 rounded-xl glass-input px-4 py-3 text-[14px] font-medium transition-colors hover:bg-line/10",
+                "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl glass-input px-4 py-3 text-[14px] font-medium transition-colors hover:bg-line/10",
                 filtersOpen || activeFilterCount > 0 ? "text-ink-50" : "text-ink-300"
               )}
             >
@@ -885,24 +889,46 @@ const MultasOficinaPage = () => {
               )}
               <ChevronDownIcon className={clsx("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
             </button>
+            {/* Responsable de la oficina, a la vista al lado de Filtros */}
+            <label
+              className={clsx(
+                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl glass-input py-1.5 pl-3 pr-1.5 text-[13px] font-medium",
+                filters.gestor ? "text-ink-50" : "text-ink-300"
+              )}
+              title="Responsable de la oficina que gestiona la multa"
+            >
+              Responsable
+              <select
+                aria-label="Responsable"
+                value={filters.gestor}
+                onChange={(e) => setFilter("gestor", e.target.value)}
+                className="cursor-pointer rounded-lg bg-line/10 px-2 py-1.5 text-[13px] font-semibold text-ink-50 outline-none focus:ring-1 focus:ring-accent-500/50"
+              >
+                {GESTOR_FILTER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-background text-ink-50">
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={toggleDati}
               aria-pressed={datiOn}
               title="Multas que quitan puntos y todavia no se mandaron los datos del conductor (art. 126-bis)"
               className={clsx(
-                "flex items-center gap-2 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors",
+                "flex shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-3 text-[12px] font-medium transition-colors",
                 datiOn ? "bg-warning-500/20 text-warning-500 ring-1 ring-warning-500/40" : "glass-input text-ink-300 hover:bg-line/10"
               )}
             >
-              Faltan datos del conductor
+              Faltan datos cond.
             </button>
             <button
               type="button"
               onClick={() => exportar("xlsx")}
               disabled={Boolean(exporting)}
               title="Descargar el informe en Excel con los filtros actuales"
-              className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
             >
               {exporting === "xlsx" ? <Spinner className="h-4 w-4" /> : null}
               Excel
@@ -912,7 +938,7 @@ const MultasOficinaPage = () => {
               onClick={() => exportar("pdf")}
               disabled={Boolean(exporting)}
               title="Descargar el informe en PDF con los filtros actuales"
-              className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10 disabled:opacity-50"
             >
               {exporting === "pdf" ? <Spinner className="h-4 w-4" /> : null}
               PDF
@@ -922,10 +948,10 @@ const MultasOficinaPage = () => {
                 type="button"
                 onClick={clearFilters}
                 title="Limpiar filtros"
-                className="flex items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl glass-input px-3 py-3 text-[13px] font-medium text-ink-50 hover:bg-line/10"
               >
                 <RefreshIcon className="h-4 w-4" />
-                <span className="hidden md:inline">Limpiar</span>
+                <span className="hidden xl:inline">Limpiar</span>
               </button>
             )}
 
@@ -956,15 +982,6 @@ const MultasOficinaPage = () => {
                     options={TITULAR_FILTER_OPTIONS}
                     value={filters.titular}
                     onChange={(e) => setFilter("titular", e.target.value)}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <Select
-                    id="filtro-gestor"
-                    label="Responsable"
-                    options={GESTOR_FILTER_OPTIONS}
-                    value={filters.gestor}
-                    onChange={(e) => setFilter("gestor", e.target.value)}
                   />
                 </div>
                 {isPrivileged && (

@@ -12,22 +12,39 @@ export const CONFIANZA = {
 
 const fullName = (c) => `${c.nombre} ${c.apellido}`;
 
-// Etiqueta corta para la fila de un acordeon: "Sugerido: Nombre Apellido (Alta)". `wide` (escritorio): una linea propia debajo
-// de la fila, con el motivo; si no, cabe en la celda del chofer.
-export const SugerenciaChip = ({ sugerencia, wide = false, className }) => {
-  const top = sugerencia?.candidatos?.[0];
-  if (!top) return null;
-  const confianza = CONFIANZA[top.confianza] ?? CONFIANZA.BAJA;
+// Pildora de coincidencia (Alta / Media / Baja) con un punto de color.
+export const ConfianzaPill = ({ confianza, className }) => {
+  const info = CONFIANZA[confianza] ?? CONFIANZA.BAJA;
   return (
     <span
-      className={clsx("mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-ink-400", wide && "pl-[116px] pt-0.5", className)}
-      title={`Confianza ${confianza.label.toLowerCase()}. ${top.motivos.join(". ")}`}
+      className={clsx("inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-semibold", info.tone, className)}
+      title={`Coincidencia ${info.label.toLowerCase()}`}
     >
-      <span className="min-w-0 truncate">
-        Sugerido: <span className="font-medium text-ink-300">{fullName(top)}</span>
-        {wide && top.motivos[0] && <span> - {top.motivos[0]}</span>}
+      <span className={clsx("h-1.5 w-1.5 rounded-full", info.dot)} />
+      {info.label}
+    </span>
+  );
+};
+
+// Posible infractor debajo de "Sin chofer" en la fila: nombre + coincidencia y, abajo, el motivo principal.
+export const SugerenciaChip = ({ sugerencia, className }) => {
+  if (!sugerencia) return null;
+  const top = sugerencia.candidatos?.[0];
+  if (!top) {
+    return <span className={clsx("mt-0.5 block truncate text-[11px] text-ink-500", className)}>Sin datos para sugerir</span>;
+  }
+  return (
+    <span
+      className={clsx("mt-0.5 block min-w-0 text-[11px] text-ink-400", className)}
+      title={`Posible infractor: ${fullName(top)} (coincidencia ${(CONFIANZA[top.confianza] ?? CONFIANZA.BAJA).label.toLowerCase()}). ${top.motivos.join(". ")}`}
+    >
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="min-w-0 truncate">
+          Posible: <span className="font-medium text-ink-200">{fullName(top)}</span>
+        </span>
+        <ConfianzaPill confianza={top.confianza} />
       </span>
-      <span className={clsx("shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold", confianza.tone)}>{confianza.label}</span>
+      {top.motivos[0] && <span className="block truncate text-[10.5px] text-ink-500">{top.motivos[0]}</span>}
     </span>
   );
 };

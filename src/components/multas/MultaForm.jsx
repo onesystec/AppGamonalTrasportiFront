@@ -24,61 +24,71 @@ import {
 import { listMultasRequest, suggestMultaDriverRequest } from "../../lib/multas.api";
 import { addDaysToDay, parseCosto, romeToday } from "../../lib/mancato";
 import { listUsersRequest } from "../../lib/users.api";
+import { ConfianzaPill } from "./MultaSugerencia";
 import { listVehiclesRequest } from "../../lib/vehicles.api";
 
 const normalizeTarga = (value) => value.replace(/\s+/g, "").toUpperCase();
 
-// Quien llevaba la unidad el dia de la infraccion, segun Registros (ver suggestDriversForActor
-// en el backend): botones para elegir al chofer con un toque.
-const DriverSuggestion = ({ suggestion, selectedId, autoPicked, onPick }) => {
+// Posible infractor segun Registros (quien llevaba la unidad el dia de la infraccion, ver suggestDriversForActor en el
+// backend). NO se asigna solo: el chofer responsable queda vacio hasta que la oficina toque a alguien.
+// Coincidencia: unico chofer ese dia = alta; dos = media; tres o mas, o solo el chofer habitual = baja.
+const DriverSuggestion = ({ suggestion, selectedId, onPick }) => {
   if (!suggestion) return null;
   if (suggestion.loading) {
-    return <p className="mt-1.5 text-[12px] text-ink-400">Buscando quien llevaba esa unidad...</p>;
+    return <p className="mt-1.5 text-[12px] text-ink-400">Buscando el posible infractor...</p>;
   }
   const { candidatos, asignados, vehiculoEncontrado } = suggestion.data;
 
   if (!vehiculoEncontrado) {
-    return <p className="mt-1.5 text-[12px] text-ink-400">Esa targa no esta en la flota: elige el chofer a mano.</p>;
+    return <p className="mt-1.5 text-[12px] text-ink-400">Esa targa no esta en la flota: no se puede sugerir un infractor.</p>;
   }
 
+  const confianzaDia = candidatos.length === 1 ? "ALTA" : candidatos.length === 2 ? "MEDIA" : "BAJA";
   const options =
     candidatos.length > 0
       ? candidatos.map((c) => ({
           id: c.id,
           label: `${c.nombre} ${c.apellido}`,
-          detail: `${c.servicios} ${c.servicios === 1 ? "servicio" : "servicios"} (${c.desde}-${c.hasta})`,
+          confianza: confianzaDia,
+          motivo:
+            candidatos.length === 1
+              ? `Unico chofer de esa unidad ese dia: ${c.servicios} ${c.servicios === 1 ? "servicio" : "servicios"} (${c.desde}-${c.hasta})`
+              : `Llevo la unidad ese dia: ${c.servicios} ${c.servicios === 1 ? "servicio" : "servicios"} (${c.desde}-${c.hasta})`,
         }))
-      : asignados.map((c) => ({ id: c.id, label: `${c.nombre} ${c.apellido}`, detail: "chofer habitual" }));
+      : asignados.map((c) => ({
+          id: c.id,
+          label: `${c.nombre} ${c.apellido}`,
+          confianza: "BAJA",
+          motivo: "Sin servicios ese dia: es el chofer habitual de la unidad",
+        }));
 
   return (
     <div className="mt-2 rounded-xl bg-accent-500/10 px-3 py-2.5">
       <p className="text-[12px] font-medium text-ink-300">
-        {candidatos.length > 0
-          ? "Ese dia llevaron la unidad (segun Registros):"
-          : "Ese dia no hay servicios de esa unidad en Registros."}
-        {candidatos.length === 0 && asignados.length === 0 && " Elige el chofer a mano."}
+        {options.length > 0 ? "Posible infractor (toca para asignarlo):" : "Esa unidad no tiene servicios ese dia en Registros."}
       </p>
       {options.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-2">
+        <div className="mt-1.5 flex flex-col gap-1.5">
           {options.map((option) => (
             <button
               key={option.id}
               type="button"
-              onClick={() => onPick(option.id)}
+              onClick={() => onPick(selectedId === option.id ? "" : option.id)}
               className={clsx(
-                "rounded-full px-3 py-1 text-left text-[12px] font-medium transition-colors",
+                "flex flex-col items-start rounded-lg px-3 py-1.5 text-left transition-colors",
                 selectedId === option.id
-                  ? "bg-success-500/20 text-success-500 ring-1 ring-success-500/40"
-                  : "glass-input text-ink-50 hover:bg-line/10"
+                  ? "bg-success-500/20 ring-1 ring-success-500/40"
+                  : "glass-input hover:bg-line/10"
               )}
             >
-              {option.label} <span className="font-normal text-ink-400">- {option.detail}</span>
+              <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink-50">
+                {option.label}
+                <ConfianzaPill confianza={option.confianza} />
+              </span>
+              <span className="text-[11px] text-ink-400">{option.motivo}</span>
             </button>
           ))}
         </div>
-      )}
-      {autoPicked && selectedId && (
-        <p className="mt-1.5 text-[12px] text-success-500">Se eligio solo: fue el unico chofer de esa unidad ese dia.</p>
       )}
     </div>
   );
@@ -167,7 +177,6 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
   // Con la targa y el dia de la infraccion se busca en Registros quien llevaba esa unidad.
   // Si fue un unico chofer y todavia no se eligio ninguno, se elige solo.
   const [suggestion, setSuggestion] = useState(null);
-  const [autoPicked, setAutoPicked] = useState(false);
   useEffect(() => {
     const targa = normalizeTarga(form.targa);
     if (targa.length < 5 || !form.fechaInfraccion) {
@@ -181,13 +190,6 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
         .then((data) => {
           if (cancelled) return;
           setSuggestion({ loading: false, data });
-          if (data.candidatos.length === 1) {
-            setForm((prev) => {
-              if (prev.driverId) return prev;
-              setAutoPicked(true);
-              return { ...prev, driverId: data.candidatos[0].id };
-            });
-          }
         })
         .catch(() => {
           if (!cancelled) setSuggestion(null);
@@ -199,22 +201,15 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     };
   }, [form.targa, form.fechaInfraccion]);
 
-  const pickDriver = (id) => {
-    setField("driverId", id);
-    setAutoPicked(false);
-  };
+  const pickDriver = (id) => setField("driverId", id);
 
   const suggestedVencimiento = addDaysToDay(form.fechaRecepcion || romeToday(), MULTA_PLAZO_POR_DEFECTO_DIAS);
   const vencimiento = vencimientoTouched ? form.fechaVencimiento : suggestedVencimiento;
 
-  // Al elegir una targa, si el vehiculo tiene un unico chofer asignado y todavia no se
-  // eligio chofer, se sugiere ese.
+  // Al salir de la targa se normaliza (el chofer no se elige solo: queda vacio hasta que la oficina lo confirme).
   const handleTargaBlur = () => {
     const targa = normalizeTarga(form.targa);
     setField("targa", targa);
-    if (form.driverId || !targa) return;
-    const vehicle = vehicles.find((v) => normalizeTarga(v.targa) === targa);
-    if (vehicle?.conductores?.length === 1) setField("driverId", vehicle.conductores[0].id);
   };
 
   // Limite para mandar los datos del conductor: el cargado o, si no, recepcion + 60 dias.
@@ -234,7 +229,6 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     e.preventDefault();
     const next = {};
     if (!form.numeroVerbale.trim()) next.numeroVerbale = "El numero de verbale es obligatorio";
-    if (!form.driverId && !isEdit) next.driverId = "Elige el chofer responsable";
     if (!normalizeTarga(form.targa)) next.targa = "La targa es obligatoria";
     // Algunas multas importadas no traian el monto (quedaron en 0): se pueden guardar sin tocarlo.
     const costoSinDato = isEdit && Number(multa?.costo) === 0 && (form.costo === "0" || form.costo === "");
@@ -284,6 +278,7 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
       fields.pagado = String(form.pagado);
       if (form.quienPaga === "A_DESCONTAR") fields.descontado = String(form.descontado);
     } else {
+      if (!fields.driverId) delete fields.driverId;
       if (!fields.comentarios) delete fields.comentarios;
       if (!fields.fechaInfraccion) delete fields.fechaInfraccion;
       if (!fields.horaInfraccion) delete fields.horaInfraccion;
@@ -331,8 +326,8 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
         <div>
           <SearchableSelect
             id="driverId"
-            label="Chofer responsable"
-            placeholder="Escribe para buscar un chofer"
+            label={isEdit ? "Chofer responsable" : "Chofer responsable (opcional)"}
+            placeholder={isEdit ? "Escribe para buscar un chofer" : "Vacio hasta confirmar quien fue"}
             options={driverOptions}
             value={form.driverId}
             onChange={pickDriver}
@@ -341,7 +336,6 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
           <DriverSuggestion
             suggestion={suggestion}
             selectedId={form.driverId}
-            autoPicked={autoPicked}
             onPick={pickDriver}
           />
         </div>
