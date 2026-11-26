@@ -34,16 +34,16 @@ export const SugerenciaChip = ({ sugerencia, className }) => {
     const farmacia = /farmacia/i.test(sugerencia.resumen ?? "");
     return (
       <span
-        className={clsx("mt-0.5 block truncate text-[11px]", farmacia ? "text-warning-500" : "text-ink-500", className)}
+        className={clsx("block truncate text-[10.5px] text-ink-500", className)}
         title={sugerencia.resumen ?? undefined}
       >
-        {farmacia ? "Sin servicios: revisar en Farmacia" : "Sin datos para sugerir"}
+        {farmacia ? "Ver Farmacia" : "Sin sugerencia"}
       </span>
     );
   }
   return (
     <span
-      className={clsx("mt-0.5 block min-w-0 text-[11px] text-ink-400", className)}
+      className={clsx("block min-w-0 text-[10.5px] leading-tight text-ink-400", className)}
       title={`Posible infractor: ${fullName(top)} (coincidencia ${(CONFIANZA[top.confianza] ?? CONFIANZA.BAJA).label.toLowerCase()}). ${top.motivos.join(". ")}`}
     >
       <span className="flex min-w-0 items-center gap-1.5">
@@ -52,7 +52,7 @@ export const SugerenciaChip = ({ sugerencia, className }) => {
         </span>
         <ConfianzaPill confianza={top.confianza} />
       </span>
-      {top.motivos[0] && <span className="block truncate text-[10.5px] text-ink-500">{top.motivos[0]}</span>}
+      {top.motivos[0] && <span className="block truncate text-[10px] text-ink-500">{top.motivos[0]}</span>}
     </span>
   );
 };

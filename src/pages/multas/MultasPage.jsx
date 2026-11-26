@@ -129,8 +129,11 @@ const useDebounced = (value, ms) => {
 // Columnas de la tabla (escritorio), en este orden: Estado, N. verbale + tipo de multa, Costo, Chofer responsable, Targa, Vencimiento (y recepcion),
 // ¿Chofer pago?, Titular / responsable de la oficina (discreto), Foto o PDF y el menu. Anchos fijos: si la pantalla no alcanza, la tabla se desliza de costado en vez de apretar
 // los datos unos contra otros.
-const TABLE_COLS = "lg:grid-cols-[118px_230px_100px_240px_96px_140px_140px_110px_60px_40px]";
-const TABLE_MIN_WIDTH = "lg:min-w-[1420px]";
+const TABLE_COLS = "lg:grid-cols-[104px_190px_76px_210px_80px_118px_120px_84px_40px_32px]";
+const TABLE_MIN_WIDTH = "lg:min-w-[1160px]";
+
+// Importe compacto: "€ 101,00".
+const euro = (value) => `€ ${Number(value ?? 0).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const plazoParts = (m) => {
   if (m.estado === "PAGADO") {
@@ -267,9 +270,9 @@ const ArchivoLink = ({ archivo }) => {
       title={title}
       aria-label={title}
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg glass-surface-sm text-accent-400 transition-colors hover:bg-accent-500/15 hover:text-accent-300"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-md glass-surface-sm text-accent-400 transition-colors hover:bg-accent-500/15 hover:text-accent-300"
     >
-      <Icon className="h-[18px] w-[18px]" />
+      <Icon className="h-4 w-4" />
     </a>
   );
 };
@@ -291,7 +294,7 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
       onClick={openDetail}
       onKeyDown={(e) => e.key === "Enter" && openDetail()}
       className={clsx(
-        "relative grid cursor-pointer grid-cols-1 gap-2 rounded-xl border-l-4 px-4 py-3 pr-14 transition-colors hover:bg-line/[0.07] focus:outline-none focus-visible:bg-line/[0.07] lg:items-center lg:gap-x-4 lg:rounded-lg lg:border-l-0 lg:border-b lg:border-b-line/10 lg:py-3 lg:pr-4",
+        "relative grid cursor-pointer grid-cols-1 gap-2 rounded-xl border-l-4 px-4 py-3 pr-14 transition-colors hover:bg-line/[0.07] focus:outline-none focus-visible:bg-line/[0.07] lg:items-center lg:gap-x-3 lg:rounded-lg lg:border-l-0 lg:border-b lg:border-b-line/10 lg:px-3 lg:py-2 lg:pr-3",
         estado.edge,
         TABLE_COLS
       )}
@@ -306,56 +309,47 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
 
       {/* N. verbale y tipo de multa (lo primero que se busca) */}
       <div className="min-w-0">
-        <span className="block truncate text-[14px] font-semibold text-ink-50" title={multa.numeroVerbale}>
+        <span className="block truncate text-[13px] font-semibold text-ink-50" title={multa.numeroVerbale}>
           {multa.numeroVerbale}
         </span>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {tipo ? (
-            <span className={clsx("inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold", tipo.tone)}>
-              {tipo.label}
-            </span>
-          ) : (
-            <span className="text-[11px] text-ink-500">Tipo sin indicar</span>
-          )}
-          {dati && (
-            <span
-              className={clsx("inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", dati.tone)}
-              title={multa.datiLimite ? `Limite legal (art. 126-bis): ${formatDateOnly(multa.datiLimite)}` : undefined}
-            >
-              {dati.text}
-            </span>
-          )}
-        </div>
+        {/* Tipo y datos del conductor: texto chico, sin colores */}
+        <span
+          className="block truncate text-[11px] text-ink-400"
+          title={multa.datiLimite ? `Datos del conductor: limite ${formatDateOnly(multa.datiLimite)}` : undefined}
+        >
+          {tipo?.label ?? "-"}
+          {dati && ` · ${dati.text}`}
+        </span>
         {multa.multaOrigen && (
           <span
-            className="mt-1 block truncate text-[11px] font-medium text-ink-400"
+            className="block truncate text-[10.5px] text-ink-500"
             title={`Sancion por no comunicar los datos del conductor de #${multa.multaOrigen.numeroVerbale}`}
           >
             Sancion datos de #{multa.multaOrigen.numeroVerbale}
           </span>
         )}
         {multa.sancionesDati?.length > 0 && (
-          <span className="mt-1 block text-[11px] font-medium text-danger-500">
+          <span className="block text-[10.5px] text-ink-500">
             Con sancion por datos ({multa.sancionesDati.length})
           </span>
         )}
       </div>
 
       {/* Costo */}
-      <span className="whitespace-nowrap text-[15px] font-bold text-ink-50 lg:text-right">{formatCurrency(multa.costo)}</span>
+      <span className="whitespace-nowrap text-[13px] font-semibold text-ink-50 lg:text-right">{euro(multa.costo)}</span>
 
       {/* Chofer responsable */}
       {showDriver && (
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2">
           {multa.driver ? (
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
               style={{ backgroundColor: avatarColor(driverName) }}
             >
               {initials(driverName)}
             </span>
           ) : (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-line/30 text-[13px] font-semibold text-ink-500">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-line/30 text-[12px] font-semibold text-ink-500">
               ?
             </span>
           )}
@@ -377,16 +371,16 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
 
       {/* Vencimiento (y, mas chico, cuando llego) */}
       <div className="min-w-0 whitespace-nowrap">
-        <span className="block text-[13px] text-ink-50">{plazo.top}</span>
-        <span className={clsx("block text-[12px] font-medium", plazo.tone)}>{plazo.bottom}</span>
-        <span className="block text-[11px] text-ink-500">Recibida {formatDateOnly(multa.fechaRecepcion)}</span>
+        <span className="block text-[12px] text-ink-50">{plazo.top.replace("Vence ", "")}</span>
+        <span className={clsx("block text-[11px] font-medium", plazo.tone)}>{plazo.bottom}</span>
+        <span className="block text-[10.5px] text-ink-500" title="Fecha de recepcion">Rec. {formatDateOnly(multa.fechaRecepcion)}</span>
       </div>
 
       {/* ¿Chofer pago? */}
       <div>
         <span
           className={clsx(
-            "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium",
+            "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
             QUIEN_PAGA_TONE[quien.tone]
           )}
         >
@@ -395,7 +389,7 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
       </div>
 
       {/* Titular y responsable de la oficina: dato de gestion, discreto */}
-      <div className="min-w-0 text-[11px] leading-tight text-ink-500">
+      <div className="min-w-0 text-[10.5px] leading-tight text-ink-500">
         <span className="block truncate" title="Titular del verbale">
           {titularLabel(multa.titular)}
         </span>
@@ -471,7 +465,7 @@ const useMultaList = ({ estado, params, version, active, pageSize }) => {
 const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, isPrivileged, onChanged }) => {
   const suggestions = useRowSuggestions(list.items, isPrivileged && showDriver);
   const remaining = list.items ? list.total - list.items.length : 0;
-  const headerClass = "text-[11px] font-medium uppercase tracking-wide text-ink-400 whitespace-nowrap";
+  const headerClass = "text-[10.5px] font-medium uppercase tracking-wide text-ink-400 whitespace-nowrap";
 
   return (
     <div className={clsx(expanded && "flex min-h-0 flex-1 flex-col")}>
@@ -491,7 +485,7 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
             <div className={TABLE_MIN_WIDTH}>
               <div
                 className={clsx(
-                  "hidden gap-x-4 px-4 py-2 lg:sticky lg:top-0 lg:z-10 lg:grid lg:border-b lg:border-line/10 lg:bg-background",
+                  "hidden gap-x-3 px-3 py-2 lg:sticky lg:top-0 lg:z-10 lg:grid lg:border-b lg:border-line/10 lg:bg-background",
                   TABLE_COLS
                 )}
               >
@@ -502,7 +496,7 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
                 <span className={headerClass}>Targa</span>
                 <span className={headerClass}>Vencimiento</span>
                 <span className={headerClass}>¿Chofer pago?</span>
-                <span className={headerClass}>Titular / Resp.</span>
+                <span className={headerClass}>Titular</span>
                 <span className={clsx(headerClass, "text-center")}>PDF</span>
                 <span />
               </div>
