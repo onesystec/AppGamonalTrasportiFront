@@ -233,7 +233,7 @@ const RecordCard = ({ record }) => {
           <span className="text-[13px] font-medium text-ink-400">{record.codigo}</span>
           <h2 className="mt-0.5 text-[17px] font-medium text-ink-50">{record.destinazione}</h2>
         </div>
-        {["PENDIENTE", "VEHICULO_PENDIENTE"].includes(record.aceptacionChofer) ? (
+        {["PENDIENTE", "VEHICULO_PENDIENTE"].includes(record.aceptacionChofer) && ["IN_SOSPESO", "IN_CONSEGNA", "RITIRATO"].includes(record.estado) ? (
           <span className="rounded bg-warning-500/15 px-2 py-1 text-[11px] font-semibold text-warning-500">
             Por aceptar
           </span>
