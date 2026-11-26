@@ -540,84 +540,61 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
 const ESTADO_LABEL = { VENCIDO: "vencidas", PENDIENTE: "pendientes", PAGADO: "pagadas" };
 const EXPANDED_PAGE_SIZE = 50; // el maximo que acepta el servidor por pagina
 
-// Acordeon de un estado: el encabezado muestra cantidad y total (viene del resumen, sin
-// traer filas); la tabla se pide recien al abrirlo y de a PAGE_SIZE.
-const EstadoAccordion = ({
-  estado,
-  summary,
-  params,
-  version,
-  defaultOpen,
-  showDriver,
-  location,
-  isPrivileged,
-  onChanged,
-  onExpand,
-}) => {
-  const info = MULTA_ESTADOS.find((e) => e.value === estado);
-  // Mientras el usuario no lo toque, abre o cierra solo segun haya resultados; si lo toca,
-  // se respeta su eleccion.
-  const [userOpen, setUserOpen] = useState(null);
-  const open = userOpen ?? defaultOpen;
-  const [list, loadMore] = useMultaList({ estado, params, version, active: open, pageSize: PAGE_SIZE });
-  const label = ESTADO_LABEL[estado];
-
-  // focus-within: la seccion con un menu abierto sube por encima de las de abajo.
+// Pestañas por estado en una sola fila (Vencidas / Pendientes / Pagadas): cada una con cantidad y total; abajo solo la lista
+// del estado elegido.
+const EstadoTabs = ({ estados, selected, onSelect, summary, params, version, showDriver, location, isPrivileged, onChanged, onExpand }) => {
+  const [list, loadMore] = useMultaList({ estado: selected, params, version, active: true, pageSize: PAGE_SIZE });
+  const info = MULTA_ESTADOS.find((e) => e.value === selected);
   return (
-    <section className={clsx("glass-surface relative rounded-2xl border-l-4 focus-within:z-20", info.edge)}>
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={() => setUserOpen(!open)}
-          aria-expanded={open}
-          className={clsx(
-            "flex min-w-0 flex-1 items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-line/[0.05]",
-            open ? "rounded-tl-2xl" : "rounded-l-2xl"
-          )}
-        >
-          <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", info.dot)} />
-          <span className="text-[16px] font-semibold capitalize text-ink-50">{label}</span>
-          <span className={clsx("rounded-full px-2.5 py-0.5 text-[12px] font-semibold", info.pill)}>
-            {summary.count}
-          </span>
-          <span className="ml-auto text-[15px] font-semibold text-ink-50">{formatCurrency(summary.total)}</span>
-        </button>
+    <section className={clsx("glass-surface relative rounded-2xl border-t-4 focus-within:z-20", info.edge.replace("border-l-", "border-t-"))}>
+      <div className="flex items-stretch gap-1 overflow-x-auto border-b border-line/10 p-1.5" role="tablist">
+        {estados.map((e) => {
+          const active = e.value === selected;
+          return (
+            <button
+              key={e.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onSelect(e.value)}
+              className={clsx(
+                "flex min-w-[150px] flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors",
+                active ? "bg-line/10" : "hover:bg-line/[0.05]"
+              )}
+            >
+              <span className={clsx("h-2 w-2 shrink-0 rounded-full", e.dot)} />
+              <span className={clsx("text-[14px] font-semibold capitalize", active ? "text-ink-50" : "text-ink-300")}>
+                {ESTADO_LABEL[e.value]}
+              </span>
+              <span className={clsx("rounded-full px-2 py-px text-[11px] font-semibold", e.pill)}>{summary[e.value].count}</span>
+              <span className={clsx("ml-auto whitespace-nowrap text-[13px] font-semibold", active ? "text-ink-50" : "text-ink-400")}>
+                {euro(summary[e.value].total)}
+              </span>
+            </button>
+          );
+        })}
         <button
           type="button"
           onClick={onExpand}
           title="Ver en pantalla completa"
-          aria-label={`Expandir ${label} a pantalla completa`}
-          className="mx-1 flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink-300 transition-colors hover:bg-line/10 hover:text-ink-50"
+          aria-label="Expandir a pantalla completa"
+          className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-ink-300 transition-colors hover:bg-line/10 hover:text-ink-50"
         >
           <ExpandIcon className="h-4 w-4" />
           <span className="hidden sm:inline">Expandir</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setUserOpen(!open)}
-          aria-label={open ? "Cerrar" : "Abrir"}
-          className={clsx(
-            "flex shrink-0 items-center px-4 py-4 transition-colors hover:bg-line/[0.05]",
-            open ? "rounded-tr-2xl" : "rounded-r-2xl"
-          )}
-        >
-          <ChevronDownIcon className={clsx("h-5 w-5 shrink-0 text-ink-300 transition-transform", open && "rotate-180")} />
-        </button>
       </div>
-
-      {open && (
-        <div className="border-t border-line/10 px-2 pb-3 pt-1 sm:px-3">
-          <MultasTable
-            list={list}
-            onLoadMore={loadMore}
-            label={label}
-            showDriver={showDriver}
-            location={location}
-            isPrivileged={isPrivileged}
-            onChanged={onChanged}
-          />
-        </div>
-      )}
+      <div className="px-2 pb-3 pt-1 sm:px-3">
+        <MultasTable
+          list={list}
+          onLoadMore={loadMore}
+          label={ESTADO_LABEL[selected]}
+          showDriver={showDriver}
+          location={location}
+          isPrivileged={isPrivileged}
+          onChanged={onChanged}
+        />
+      </div>
     </section>
   );
 };
@@ -719,6 +696,8 @@ const MultasOficinaPage = () => {
   const [error, setError] = useState("");
   // Estado que se esta viendo en pantalla completa (null = la pantalla de siempre).
   const [expandedEstado, setExpandedEstado] = useState(null);
+  // Estado que se ve en las pestañas (Vencidas / Pendientes / Pagadas).
+  const [tabEstado, setTabEstado] = useState("VENCIDO");
 
   useEffect(() => {
     listVehiclesRequest().then(setVehicles).catch(() => {});
@@ -814,6 +793,8 @@ const MultasOficinaPage = () => {
   };
 
   const visibleEstados = MULTA_ESTADOS.filter((e) => !filters.estado || e.value === filters.estado);
+  // Pestaña elegida; si el filtro de estado deja solo una, esa. Al entrar: Vencidas.
+  const selectedEstado = visibleEstados.some((e) => e.value === tabEstado) ? tabEstado : visibleEstados[0].value;
   const driverOptions = [
     { value: "", label: "Todos" },
     ...drivers.map((d) => ({ value: d.id, label: `${d.nombre} ${d.apellido}` })),
@@ -1048,25 +1029,20 @@ const MultasOficinaPage = () => {
             )}
           </div>
 
-          {/* Acordeones por estado */}
-          <div className="flex flex-col gap-4">
-            {visibleEstados.map((estado) => (
-              <EstadoAccordion
-                // Al activar/desactivar filtros se reinicia la eleccion manual del usuario.
-                key={`${estado.value}-${hasActiveFilters ? "f" : "n"}`}
-                estado={estado.value}
-                summary={summary[estado.value]}
-                params={listParams}
-                version={version}
-                defaultOpen={summary[estado.value].count > 0 && (hasActiveFilters || estado.value !== "PAGADO")}
-                showDriver={isPrivileged}
-                location={location}
-                isPrivileged={isPrivileged}
-                onChanged={refresh}
-                onExpand={() => setExpandedEstado(estado.value)}
-              />
-            ))}
-          </div>
+          {/* Estados en pestañas: una sola fila para pasar de Vencidas a Pendientes o Pagadas */}
+          <EstadoTabs
+            estados={visibleEstados}
+            selected={selectedEstado}
+            onSelect={setTabEstado}
+            summary={summary}
+            params={listParams}
+            version={version}
+            showDriver={isPrivileged}
+            location={location}
+            isPrivileged={isPrivileged}
+            onChanged={refresh}
+            onExpand={() => setExpandedEstado(selectedEstado)}
+          />
         </div>
       )}
 
