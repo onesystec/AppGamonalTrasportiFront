@@ -70,3 +70,21 @@ const formatDay = (value) => {
   const [y, m, d] = String(value).slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
 };
+
+// Tipo de multa para la lista, sacado del texto de la multa (comentarios). No hay un campo propio: si no se reconoce, null.
+const TIPOS_MULTA = [
+  { test: /126-?bis|datos del conductor|dati del conducente/i, label: "Datos del conductor", tone: "bg-danger-500/15 text-danger-500" },
+  { test: /area\s*c\b/i, label: "Area C", tone: "bg-[#22d3ee]/15 text-[#22d3ee]" },
+  { test: /\bztl\b|traffico limitato|quadrilatero/i, label: "ZTL", tone: "bg-[#22d3ee]/15 text-[#22d3ee]" },
+  { test: /velocidad|velocit|km\/h|art\.?\s*142/i, label: "Velocidad", tone: "bg-warning-500/20 text-warning-500" },
+  { test: /pedagg|peaje|casello|176\/21/i, label: "Peaje", tone: "bg-accent-500/15 text-accent-300" },
+  { test: /sosta|estacion|parcheggi|aparcad|art\.?\s*157|art\.?\s*158/i, label: "Estacionamiento", tone: "bg-[#a78bfa]/15 text-[#a78bfa]" },
+  { test: /semaforo|rosso/i, label: "Semaforo", tone: "bg-danger-500/15 text-danger-500" },
+  { test: /cellular|penna|telefono|art\.?\s*173|169\/10/i, label: "Conduccion", tone: "bg-warning-500/20 text-warning-500" },
+  { test: /suiza|alemania|austria|francia|svizzera|germania|kanton|mahnung|extranjero/i, label: "Extranjero", tone: "bg-ink-500/15 text-ink-300" },
+];
+export const tipoMulta = (multa) => {
+  const text = multa?.comentarios ?? "";
+  if (!text) return null;
+  return TIPOS_MULTA.find((t) => t.test.test(text)) ?? null;
+};

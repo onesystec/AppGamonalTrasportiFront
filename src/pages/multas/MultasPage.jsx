@@ -36,6 +36,7 @@ import {
   GESTOR_OPTIONS,
   datiConducenteInfo,
   quienPagaLabel,
+  tipoMulta,
   titularLabel,
   gestorLabel,
 } from "../../lib/multas";
@@ -89,16 +90,6 @@ const GESTOR_FILTER_OPTIONS = [
   { value: "SIN", label: "Sin responsable" },
 ];
 
-const GESTOR_TONE = {
-  Yan: "text-accent-300",
-  Claudia: "text-[#22d3ee]",
-};
-
-const TITULAR_TONE = {
-  SRL: "bg-accent-500/15 text-accent-300",
-  INDIVIDUAL: "bg-[#a78bfa]/15 text-[#a78bfa]",
-};
-
 const ORDEN_OPTIONS = [
   { value: "", label: "Mas urgentes" },
   { value: "recientes", label: "Mas recientes" },
@@ -135,11 +126,11 @@ const useDebounced = (value, ms) => {
   return debounced;
 };
 
-// Columnas de la tabla (escritorio), en este orden: Estado, Chofer responsable, Titular (SRL / Individual), Targa, Recepcion, Vencimiento, Costo, N. verbale,
-// ¿Chofer pago?, Foto o PDF y el menu. Anchos fijos: si la pantalla no alcanza, la tabla se desliza de costado en vez de apretar
+// Columnas de la tabla (escritorio), en este orden: Estado, N. verbale + tipo de multa, Costo, Chofer responsable, Targa, Vencimiento (y recepcion),
+// ¿Chofer pago?, Titular / responsable de la oficina (discreto), Foto o PDF y el menu. Anchos fijos: si la pantalla no alcanza, la tabla se desliza de costado en vez de apretar
 // los datos unos contra otros.
-const TABLE_COLS = "lg:grid-cols-[130px_250px_96px_100px_110px_140px_105px_180px_140px_72px_40px]";
-const TABLE_MIN_WIDTH = "lg:min-w-[1540px]";
+const TABLE_COLS = "lg:grid-cols-[118px_230px_100px_240px_96px_140px_140px_110px_60px_40px]";
+const TABLE_MIN_WIDTH = "lg:min-w-[1420px]";
 
 const plazoParts = (m) => {
   if (m.estado === "PAGADO") {
@@ -289,6 +280,7 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
   const plazo = plazoParts(multa);
   const quien = quienPagaLabel(multa);
   const dati = datiConducenteInfo(multa);
+  const tipo = tipoMulta(multa);
   const driverName = multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "Sin asignar";
   const openDetail = () => navigate(`/finanzas/multas/${multa.id}`, { state: { backgroundLocation: location } });
 
@@ -311,6 +303,46 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
           <span className="mt-1 block text-[11px] font-medium text-accent-300">Comprobante por confirmar</span>
         )}
       </div>
+
+      {/* N. verbale y tipo de multa (lo primero que se busca) */}
+      <div className="min-w-0">
+        <span className="block truncate text-[14px] font-semibold text-ink-50" title={multa.numeroVerbale}>
+          {multa.numeroVerbale}
+        </span>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {tipo ? (
+            <span className={clsx("inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold", tipo.tone)}>
+              {tipo.label}
+            </span>
+          ) : (
+            <span className="text-[11px] text-ink-500">Tipo sin indicar</span>
+          )}
+          {dati && (
+            <span
+              className={clsx("inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", dati.tone)}
+              title={multa.datiLimite ? `Limite legal (art. 126-bis): ${formatDateOnly(multa.datiLimite)}` : undefined}
+            >
+              {dati.text}
+            </span>
+          )}
+        </div>
+        {multa.multaOrigen && (
+          <span
+            className="mt-1 block truncate text-[11px] font-medium text-ink-400"
+            title={`Sancion por no comunicar los datos del conductor de #${multa.multaOrigen.numeroVerbale}`}
+          >
+            Sancion datos de #{multa.multaOrigen.numeroVerbale}
+          </span>
+        )}
+        {multa.sancionesDati?.length > 0 && (
+          <span className="mt-1 block text-[11px] font-medium text-danger-500">
+            Con sancion por datos ({multa.sancionesDati.length})
+          </span>
+        )}
+      </div>
+
+      {/* Costo */}
+      <span className="whitespace-nowrap text-[15px] font-bold text-ink-50 lg:text-right">{formatCurrency(multa.costo)}</span>
 
       {/* Chofer responsable */}
       {showDriver && (
@@ -340,66 +372,14 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
         </div>
       )}
 
-      {/* Titular del verbale */}
-      <div>
-        <span
-          className={clsx(
-            "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium",
-            TITULAR_TONE[multa.titular] ?? "bg-line/10 text-ink-400"
-          )}
-        >
-          {titularLabel(multa.titular)}
-        </span>
-        {/* Responsable de la oficina que la gestiona */}
-        <span
-          className={clsx("mt-1 block truncate text-[11px] font-medium", GESTOR_TONE[multa.gestor] ?? "text-ink-400")}
-          title="Responsable que gestiona la multa"
-        >
-          {gestorLabel(multa.gestor)}
-        </span>
-      </div>
-
       {/* Targa */}
-      <span className="whitespace-nowrap text-[13px] font-medium tracking-wide text-ink-50">{multa.targa}</span>
+      <span className="whitespace-nowrap text-[13px] font-medium tracking-wide text-ink-200">{multa.targa}</span>
 
-      {/* Fecha de recepcion */}
-      <span className="whitespace-nowrap text-[13px] text-ink-50">{formatDateOnly(multa.fechaRecepcion)}</span>
-
-      {/* Fecha de vencimiento */}
+      {/* Vencimiento (y, mas chico, cuando llego) */}
       <div className="min-w-0 whitespace-nowrap">
         <span className="block text-[13px] text-ink-50">{plazo.top}</span>
         <span className={clsx("block text-[12px] font-medium", plazo.tone)}>{plazo.bottom}</span>
-      </div>
-
-      {/* Costo */}
-      <span className="whitespace-nowrap text-[14px] font-semibold text-ink-50 lg:text-right">{formatCurrency(multa.costo)}</span>
-
-      {/* N. verbale (y, si quita puntos, el contador para mandar los datos del conductor) */}
-      <div className="min-w-0">
-        <span className="block whitespace-nowrap text-[13px] text-ink-200" title={multa.numeroVerbale}>
-          #{multa.numeroVerbale}
-        </span>
-        {multa.multaOrigen && (
-          <span
-            className="mt-1 block truncate text-[11px] font-medium text-ink-400"
-            title={`Sancion por no comunicar los datos del conductor de #${multa.multaOrigen.numeroVerbale}`}
-          >
-            Sancion datos de #{multa.multaOrigen.numeroVerbale}
-          </span>
-        )}
-        {multa.sancionesDati?.length > 0 && (
-          <span className="mt-1 block text-[11px] font-medium text-danger-500">
-            Con sancion por datos ({multa.sancionesDati.length})
-          </span>
-        )}
-        {dati && (
-          <span
-            className={clsx("mt-1 inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium", dati.tone)}
-            title={multa.datiLimite ? `Limite legal (art. 126-bis): ${formatDateOnly(multa.datiLimite)}` : undefined}
-          >
-            {dati.text}
-          </span>
-        )}
+        <span className="block text-[11px] text-ink-500">Recibida {formatDateOnly(multa.fechaRecepcion)}</span>
       </div>
 
       {/* ¿Chofer pago? */}
@@ -411,6 +391,16 @@ const MultaRow = ({ multa, showDriver, location, isPrivileged, onChanged, sugere
           )}
         >
           {quien.text}
+        </span>
+      </div>
+
+      {/* Titular y responsable de la oficina: dato de gestion, discreto */}
+      <div className="min-w-0 text-[11px] leading-tight text-ink-500">
+        <span className="block truncate" title="Titular del verbale">
+          {titularLabel(multa.titular)}
+        </span>
+        <span className="block truncate" title="Responsable que gestiona la multa">
+          {gestorLabel(multa.gestor)}
         </span>
       </div>
 
@@ -506,15 +496,14 @@ const MultasTable = ({ list, onLoadMore, label, expanded, showDriver, location, 
                 )}
               >
                 <span className={headerClass}>Estado</span>
-                {showDriver && <span className={headerClass}>Chofer responsable</span>}
-                <span className={headerClass}>Titular / Resp.</span>
-                <span className={headerClass}>Targa</span>
-                <span className={headerClass}>Recepcion</span>
-                <span className={headerClass}>Vencimiento</span>
+                <span className={headerClass}>N. verbale / Tipo</span>
                 <span className={clsx(headerClass, "text-right")}>Costo</span>
-                <span className={headerClass}>N. verbale</span>
+                {showDriver && <span className={headerClass}>Chofer responsable</span>}
+                <span className={headerClass}>Targa</span>
+                <span className={headerClass}>Vencimiento</span>
                 <span className={headerClass}>¿Chofer pago?</span>
-                <span className={clsx(headerClass, "text-center")}>Foto / PDF</span>
+                <span className={headerClass}>Titular / Resp.</span>
+                <span className={clsx(headerClass, "text-center")}>PDF</span>
                 <span />
               </div>
 
