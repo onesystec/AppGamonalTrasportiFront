@@ -64,8 +64,10 @@ const EMPTY_FILTERS = {
   gestor: "",
   datiEstado: "",
   q: "",
-  orden: "",
+  orden: "recientes",
 };
+// Orden por defecto de la lista: las mas recientes primero.
+const DEFAULT_ORDEN = "recientes";
 
 // Filtro de "datos del conductor" (art. 126-bis): las que faltan enviar (todas, con el plazo vencido o que vencen
 // en 7 dias), enviadas o que no lo requieren.
@@ -558,7 +560,7 @@ const EstadoTabs = ({ estados, selected, onSelect, summary, params, version, sho
               aria-selected={active}
               onClick={() => onSelect(e.value)}
               className={clsx(
-                "flex min-w-[150px] flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors",
+                "flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-left transition-colors",
                 active ? "bg-line/10" : "hover:bg-line/[0.05]"
               )}
             >
@@ -567,9 +569,6 @@ const EstadoTabs = ({ estados, selected, onSelect, summary, params, version, sho
                 {ESTADO_LABEL[e.value]}
               </span>
               <span className={clsx("rounded-full px-2 py-px text-[11px] font-semibold", e.pill)}>{summary[e.value].count}</span>
-              <span className={clsx("ml-auto whitespace-nowrap text-[13px] font-semibold", active ? "text-ink-50" : "text-ink-400")}>
-                {euro(summary[e.value].total)}
-              </span>
             </button>
           );
         })}
@@ -743,7 +742,7 @@ const MultasOficinaPage = () => {
   const listParams = useMemo(() => ({ ...params, orden: filters.orden || undefined }), [params, filters.orden]);
 
   const activeFilterCount =
-    Object.values(params).filter(Boolean).length + (filters.estado ? 1 : 0) + (filters.orden ? 1 : 0);
+    Object.values(params).filter(Boolean).length + (filters.estado ? 1 : 0) + (filters.orden && filters.orden !== DEFAULT_ORDEN ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
   useEffect(() => {
@@ -771,7 +770,7 @@ const MultasOficinaPage = () => {
   const toggleDati = () =>
     setFilters((prev) =>
       DATI_PENDIENTES.includes(prev.datiEstado)
-        ? { ...prev, datiEstado: "", orden: prev.orden === "datiLimite" ? "" : prev.orden }
+        ? { ...prev, datiEstado: "", orden: prev.orden === "datiLimite" ? DEFAULT_ORDEN : prev.orden }
         : { ...prev, datiEstado: "PENDIENTE", orden: "datiLimite" }
     );
 
