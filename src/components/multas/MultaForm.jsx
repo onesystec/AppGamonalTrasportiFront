@@ -65,7 +65,9 @@ const DriverSuggestion = ({ suggestion, selectedId, onPick }) => {
   return (
     <div className="mt-2 rounded-xl bg-accent-500/10 px-3 py-2.5">
       <p className="text-[12px] font-medium text-ink-300">
-        {options.length > 0 ? "Posible infractor (toca para asignarlo):" : "Esa unidad no tiene servicios ese dia en Registros."}
+        {options.length > 0
+          ? "Posible infractor (toca para asignarlo):"
+          : "Esa unidad no tiene servicios ese dia en Registros: revisa en la app de Farmacia quien la llevaba."}
       </p>
       {options.length > 0 && (
         <div className="mt-1.5 flex flex-col gap-1.5">
@@ -275,6 +277,8 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
     };
     if (costoSinDato) delete fields.costo;
     if (isEdit) {
+      // Si se borro el chofer, se le avisa al servidor que la deje sin chofer ("" significa "no tocar").
+      if (!form.driverId && multa?.driver) fields.driverId = "NINGUNO";
       fields.pagado = String(form.pagado);
       if (form.quienPaga === "A_DESCONTAR") fields.descontado = String(form.descontado);
     } else {
@@ -333,6 +337,15 @@ export const MultaForm = ({ mode, multa, onSubmit, onCancel, submitting, error, 
             onChange={pickDriver}
             error={err("driverId")}
           />
+          {isEdit && form.driverId && (
+            <button
+              type="button"
+              onClick={() => pickDriver("")}
+              className="mt-1.5 text-[12px] font-medium text-ink-400 underline-offset-2 hover:text-danger-500 hover:underline"
+            >
+              Quitar chofer (dejar sin asignar)
+            </button>
+          )}
           <DriverSuggestion
             suggestion={suggestion}
             selectedId={form.driverId}

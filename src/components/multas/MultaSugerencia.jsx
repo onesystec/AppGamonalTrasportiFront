@@ -31,7 +31,15 @@ export const SugerenciaChip = ({ sugerencia, className }) => {
   if (!sugerencia) return null;
   const top = sugerencia.candidatos?.[0];
   if (!top) {
-    return <span className={clsx("mt-0.5 block truncate text-[11px] text-ink-500", className)}>Sin datos para sugerir</span>;
+    const farmacia = /farmacia/i.test(sugerencia.resumen ?? "");
+    return (
+      <span
+        className={clsx("mt-0.5 block truncate text-[11px]", farmacia ? "text-warning-500" : "text-ink-500", className)}
+        title={sugerencia.resumen ?? undefined}
+      >
+        {farmacia ? "Sin servicios: revisar en Farmacia" : "Sin datos para sugerir"}
+      </span>
+    );
   }
   return (
     <span

@@ -271,7 +271,18 @@ const MultaOficinaDetail = () => {
                 <Fact label="Responsable">{gestorLabel(multa.gestor)}</Fact>
                 <Fact label="Area">{AREA_LABEL_BY_KEY[multa.area] ?? "Sin area (solo Admin)"}</Fact>
                 <Fact label="Chofer responsable">
-                  {multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "-"}
+                  {multa.driver ? `${multa.driver.nombre} ${multa.driver.apellido}` : "Sin asignar"}
+                  {multa.driver && isPrivileged && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => quickUpdate({ driverId: "NINGUNO" })}
+                      title="Dejar la multa sin chofer (se muestra el posible infractor)"
+                      className="ml-2 rounded-full bg-line/10 px-2 py-0.5 text-[11px] font-semibold text-ink-300 transition-colors hover:bg-danger-500/15 hover:text-danger-500 disabled:opacity-50"
+                    >
+                      Quitar
+                    </button>
+                  )}
                 </Fact>
                 <Fact label="¿Chofer pago?">
                   <span
