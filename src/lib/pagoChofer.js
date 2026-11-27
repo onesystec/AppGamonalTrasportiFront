@@ -114,3 +114,10 @@ export const buildDesglose = (driver) => {
 
   return { filas, resumen, avisos };
 };
+
+// Km de la entrega y horas de manejo de un servicio, para mostrarlos en columnas propias ("-" si no hay dato).
+export const servicioKmTexto = (s) => (Number(s.km) > 0 ? formatKm(s.km) : "-");
+export const servicioHorasTexto = (s) => {
+  const horas = s.modo === "HORAS" ? (Number(s.horasDia) || 0) + (Number(s.horasNoche) || 0) : Number(s.horasManejo) || 0;
+  return horas > 0 ? formatHours(horas) : "-";
+};

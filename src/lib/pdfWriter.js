@@ -51,15 +51,29 @@ export const wrapText = (text, width, size, bold = false) => {
       words.push(word);
       continue;
     }
+    // Primero se corta despues de cada guion (FARM-2026-10- / 100003-PIAZZA); solo si un pedazo sigue sin entrar, por letras.
+    const parts = word.split(/(?<=-)/);
     let piece = "";
-    for (const ch of word) {
-      if (piece && textWidth(piece + ch, size, bold) > width) {
-        words.push(piece);
-        piece = "";
+    const flush = () => {
+      if (piece) words.push(piece);
+      piece = "";
+    };
+    for (const part of parts) {
+      if (textWidth(piece + part, size, bold) <= width) {
+        piece += part;
+        continue;
       }
-      piece += ch;
+      flush();
+      if (textWidth(part, size, bold) <= width) {
+        piece = part;
+        continue;
+      }
+      for (const ch of part) {
+        if (piece && textWidth(piece + ch, size, bold) > width) flush();
+        piece += ch;
+      }
     }
-    if (piece) words.push(piece);
+    flush();
   }
   const lines = [];
   let line = "";
@@ -118,6 +132,25 @@ export class PdfDoc {
     if (fill) parts.push(`${rgb(fill)} rg`);
     if (stroke) parts.push(`${rgb(stroke)} RG ${n(lineWidth)} w`);
     parts.push(`${n(x)} ${n(PAGE_H - y - h)} ${n(w)} ${n(h)} re ${fill && stroke ? "B" : fill ? "f" : "S"}`);
+    this.ops.push(parts.join(" "));
+    return this;
+  }
+
+  // Circulo relleno con centro (cx, cy) y radio r.
+  circle(cx, cy, r, { fill, stroke, lineWidth = 0.8 } = {}) {
+    const k = 0.5523 * r;
+    const Y = PAGE_H - cy;
+    const path = [
+      `${n(cx + r)} ${n(Y)} m`,
+      `${n(cx + r)} ${n(Y + k)} ${n(cx + k)} ${n(Y + r)} ${n(cx)} ${n(Y + r)} c`,
+      `${n(cx - k)} ${n(Y + r)} ${n(cx - r)} ${n(Y + k)} ${n(cx - r)} ${n(Y)} c`,
+      `${n(cx - r)} ${n(Y - k)} ${n(cx - k)} ${n(Y - r)} ${n(cx)} ${n(Y - r)} c`,
+      `${n(cx + k)} ${n(Y - r)} ${n(cx + r)} ${n(Y - k)} ${n(cx + r)} ${n(Y)} c`,
+    ].join(" ");
+    const parts = [];
+    if (fill) parts.push(`${rgb(fill)} rg`);
+    if (stroke) parts.push(`${rgb(stroke)} RG ${n(lineWidth)} w`);
+    parts.push(`${path} ${fill && stroke ? "B" : fill ? "f" : "S"}`);
     this.ops.push(parts.join(" "));
     return this;
   }
