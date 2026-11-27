@@ -342,6 +342,13 @@ export const DotsIcon = (props) => (
   </Svg>
 );
 
+export const InfoIcon = (props) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </Svg>
+);
+
 export const BulbIcon = (props) => (
   <Svg {...props}>
     <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z" />
