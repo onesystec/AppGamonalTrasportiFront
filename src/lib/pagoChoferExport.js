@@ -282,7 +282,7 @@ const COLORES_DIA = {
   LIBRE_FIN_DE_SEMANA: { fill: "#e5e7eb", text: "#6b7280" },
 };
 const LEYENDA_DIAS = [
-  ["TRABAJADO", "Trabajó (n.º de entregas)"],
+  ["TRABAJADO", "Trabajó (n.º de entregas y km del día)"],
   ["NO_TRABAJADO", "Falta sin justificar"],
   ["JUSTIFICADO", "Permiso justificado"],
   ["DESCANSO", "Descanso / libre"],
@@ -407,12 +407,19 @@ const drawDriverPdf = (doc, logo, params, opciones, nuevaPagina) => {
     const dias = params.calendario;
     section("Asistencia del mes");
     const cellW = CONTENT_W / 7;
-    const cellH = 36;
-    ensure(18 + cellH * 6 + 40);
+    const cellH = 31;
+    // Km hechos cada dia (suma de los km de sus entregas, por la fecha del servicio en hora de Italia).
+    const kmPorDia = new Map();
+    for (const sv of params.servicios ?? []) {
+      if (!sv.fecha || !(Number(sv.km) > 0)) continue;
+      const dia = new Date(sv.fecha).toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+      kmPorDia.set(dia, (kmPorDia.get(dia) ?? 0) + Number(sv.km));
+    }
+    ensure(16 + cellH * 6 + 36);
     ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].forEach((d, i) =>
       doc.text(MARGIN + cellW * i + cellW / 2, y, d, { size: 7.5, bold: true, color: MUTED, align: "center" })
     );
-    y += 14;
+    y += 11;
     const [yy, mm] = dias[0].fecha.split("-").map(Number);
     const offset = (new Date(Date.UTC(yy, mm - 1, 1)).getUTCDay() + 6) % 7;
     let filas = 0;
@@ -422,26 +429,28 @@ const drawDriverPdf = (doc, logo, params, opciones, nuevaPagina) => {
       const row = Math.floor(pos / 7);
       filas = Math.max(filas, row + 1);
       const cx = MARGIN + cellW * col + cellW / 2;
-      const cy = y + row * cellH + 16;
+      const cy = y + row * cellH + 10;
       const dia = Number(d.fecha.slice(8, 10));
       const color = COLORES_DIA[d.estado];
-      doc.text(cx - 16, cy - 15, String(dia), { size: 6.5, color: MUTED, align: "right" });
+      doc.text(cx - 12, cy - 9, String(dia), { size: 6, color: MUTED, align: "right" });
       if (color) {
-        doc.circle(cx, cy, 11, { fill: color.fill });
+        doc.circle(cx, cy, 8.5, { fill: color.fill });
         const label = d.estado === "TRABAJADO" ? String(d.servicios ?? "") : d.estado === "NO_TRABAJADO" ? "F" : "";
-        if (label) doc.text(cx, cy - 4.2, label, { size: 8.5, bold: true, color: color.text, align: "center" });
-      } else doc.circle(cx, cy, 11, { stroke: "#d1d5db" });
+        if (label) doc.text(cx, cy - 3.4, label, { size: 7.5, bold: true, color: color.text, align: "center" });
+      } else doc.circle(cx, cy, 8.5, { stroke: "#d1d5db" });
+      const km = kmPorDia.get(d.fecha);
+      if (km) doc.text(cx, cy + 10.5, formatKm(km), { size: 6, color: "#374151", align: "center" });
     });
-    y += filas * cellH + 4;
+    y += filas * cellH + 2;
     const cuenta = (estado) => dias.filter((d) => d.estado === estado).length;
     const entregas = dias.reduce((s, d) => s + (d.estado === "TRABAJADO" ? Number(d.servicios) || 0 : 0), 0);
     let lx = MARGIN;
     for (const [estado, label] of LEYENDA_DIAS) {
       doc.circle(lx + 4, y + 4, 4, { fill: COLORES_DIA[estado].fill });
       doc.text(lx + 12, y + 0.5, label, { size: 7.5, color: "#374151" });
-      lx += 128;
+      lx += estado === "TRABAJADO" ? 175 : 112;
     }
-    y += 16;
+    y += 14;
     doc.text(
       MARGIN,
       y,

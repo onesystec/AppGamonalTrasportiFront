@@ -675,7 +675,7 @@ export const PagosChoferesPage = () => {
         setReporte({ descargando: true, progreso: `Chofer ${i + 1} de ${data.porChofer.length}...` });
         const kmh = driver.kmhPago?.valor ?? data.reglas.kmBloque;
         const [pago, calendario] = await Promise.all([
-          opciones.entregas ? getPagosChoferesRequest({ month, driverId: driver.driverId }) : Promise.resolve(null),
+          opciones.entregas || opciones.asistencia ? getPagosChoferesRequest({ month, driverId: driver.driverId }) : Promise.resolve(null),
           opciones.asistencia ? getCalendarioRequest({ month, driverId: driver.driverId }).catch(() => null) : Promise.resolve(null),
         ]);
         choferes.push({
