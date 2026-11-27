@@ -110,8 +110,8 @@ export const calcularCategoria = (driver, manual = {}) => {
       editable: true,
     },
     { clave: "actividad", concepto: "Actividad", meta: eur(meta.actividad), real: "Conducción + reperibilità + esperas", valorMeta: meta.actividad, valor: actividad, subtotal: true },
-    { clave: "disponibilidad", concepto: "Disponibilidad", meta: eur(meta.disponibilidad), real: editado("disponibilidad") ? "Ajustado a mano" : `Bono de ${eur(T.bonoDisponibilidad)} con ${T.salidasMeta} salidas y sin faltas injustificadas`, valorMeta: meta.disponibilidad, valor: v.disponibilidad, editable: true },
-    { clave: "productividad", concepto: "Productividad", meta: eur(meta.productividad), real: editado("productividad") ? "Ajustado a mano" : `Bono de ${eur(T.bonoProductividad)} al llegar a la meta de km de la categoría`, valorMeta: meta.productividad, valor: v.productividad, editable: true },
+    { clave: "disponibilidad", concepto: "Disponibilidad", meta: eur(meta.disponibilidad), real: editado("disponibilidad") ? "Según la actividad del mes" : `Bono de ${eur(T.bonoDisponibilidad)} con ${T.salidasMeta} salidas y sin faltas injustificadas`, valorMeta: meta.disponibilidad, valor: v.disponibilidad, editable: true },
+    { clave: "productividad", concepto: "Productividad", meta: eur(meta.productividad), real: editado("productividad") ? "Según la actividad del mes" : `Bono de ${eur(T.bonoProductividad)} al llegar a la meta de km de la categoría`, valorMeta: meta.productividad, valor: v.productividad, editable: true },
   ];
   if (v.ajuste !== 0)
     filas.push({ clave: "ajuste", concepto: "Ajuste manual", meta: "-", real: manual.nota || "Ajuste a mano", valorMeta: 0, valor: v.ajuste, editable: true });
