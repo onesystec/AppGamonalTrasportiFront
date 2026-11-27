@@ -10,7 +10,7 @@ const minusMinute = (hhmm) => {
 
 // Reglas de pago vigentes (vienen del servidor, ver config/payRates.js), siempre a la vista para que
 // nadie tenga que adivinar como se calcula.
-export const PayRulesCard = ({ reglas, title = "Como se calcula" }) => {
+export const PayRulesCard = ({ reglas, title = "Como se calcula", variant = "card" }) => {
   const day = `${reglas.banda.diaInicio}-${minusMinute(reglas.banda.nocheInicio)}`;
   const night = `${reglas.banda.nocheInicio}-${minusMinute(reglas.banda.diaInicio)}`;
   const km =
@@ -24,8 +24,14 @@ export const PayRulesCard = ({ reglas, title = "Como se calcula" }) => {
     );
 
   return (
-    <div className="glass-surface-sm flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl px-5 py-3 text-[13px] text-ink-300">
-      <span className="font-semibold text-ink-50">{title}</span>
+    <div
+      className={
+        variant === "stacked"
+          ? "flex flex-col gap-2.5 text-[13.5px] text-ink-300 [&>span]:rounded-xl [&>span]:bg-line/[0.06] [&>span]:px-3.5 [&>span]:py-2.5"
+          : "glass-surface-sm flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl px-5 py-3 text-[13px] text-ink-300"
+      }
+    >
+      {variant !== "stacked" && <span className="font-semibold text-ink-50">{title}</span>}
       <span>
         Dia ({day}): <b className="text-ink-50">{formatCurrency(reglas.horaDiaEur)}</b>/h
       </span>
