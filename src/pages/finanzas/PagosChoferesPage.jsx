@@ -34,7 +34,8 @@ import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
 import { formatHours, pagaPorKm } from "../../lib/horas";
 import { buildDesglose, servicioHorasTexto, servicioKmTexto } from "../../lib/pagoChofer";
-import { downloadPagoChoferPdf, downloadPagoChoferXlsx } from "../../lib/pagoChoferExport";
+import { PDF_PARTES, downloadPagoChoferPdf, downloadPagoChoferXlsx, downloadReporteMesPdf } from "../../lib/pagoChoferExport";
+import { getCalendarioRequest } from "../../lib/permisos.api";
 import { calcularCategoria } from "../../lib/categoriaPago";
 import { CategoriaPagoCard, CategoriasInfo } from "../../components/finanzas/CategoriaPagoCard";
 
@@ -188,6 +189,40 @@ const InfoModal = ({ open, title, onClose, children }) => {
   );
 };
 
+// Ventana para elegir que partes lleva el PDF (asistencia, calculo del pago, entregas) antes de descargarlo.
+const PdfOpcionesModal = ({ open, title, descargando, progreso, onClose, onDescargar }) => {
+  const [opciones, setOpciones] = useState({ asistencia: true, calculo: true, entregas: true });
+  const ninguna = !Object.values(opciones).some(Boolean);
+  return (
+    <InfoModal open={open} title={title} onClose={() => !descargando && onClose()}>
+      <p className="mb-3 text-[13px] text-ink-300">Elige qué partes salen en el PDF.</p>
+      <div className="flex flex-col gap-2">
+        {PDF_PARTES.map((parte) => (
+          <label key={parte.value} className="flex cursor-pointer items-center gap-3 rounded-xl bg-line/[0.05] px-4 py-3 text-[14px] text-ink-50 hover:bg-line/[0.08]">
+            <input
+              type="checkbox"
+              checked={opciones[parte.value]}
+              onChange={(e) => setOpciones((prev) => ({ ...prev, [parte.value]: e.target.checked }))}
+              className="h-4 w-4 accent-[var(--color-accent-500)]"
+            />
+            {parte.label}
+          </label>
+        ))}
+      </div>
+      {ninguna && <p className="mt-2 text-[12px] text-warning-500">Elige al menos una parte.</p>}
+      <div className="mt-5 flex items-center justify-end gap-3">
+        {descargando && progreso && <span className="text-[12px] text-ink-400">{progreso}</span>}
+        <Button variant="ghost" className="w-auto! px-4!" disabled={descargando} onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button className="w-auto! px-5!" loading={descargando} disabled={ninguna} onClick={() => onDescargar(opciones)}>
+          Descargar PDF
+        </Button>
+      </div>
+    </InfoModal>
+  );
+};
+
 // Desglose exacto de lo que se paga a un chofer en el mes: cada concepto con su cantidad y su pago (el "como se calcula" de cada uno
 // esta en el boton informativo). La suma de los pagos es el total a pagar. Todo sale del mismo calculo que el pago de cada servicio.
 const DesglosePago = ({ driver, onVerCalculo }) => {
@@ -299,6 +334,7 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
   const [detail, setDetail] = useState({ servicios: null, loading: false, error: "" });
   const [exporting, setExporting] = useState("");
   const [exportError, setExportError] = useState("");
+  const [pdfModal, setPdfModal] = useState(false);
   // Km/h con los que se calcula su pago: al cambiarlos, los servicios se vuelven a pedir.
   const kmh = driver.kmhPago?.valor ?? reglas.kmBloque;
   const [lastKmh, setLastKmh] = useState(kmh);
@@ -323,16 +359,20 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
     };
   }, [month, driver.driverId, detail.servicios]);
 
-  const exportar = async (formato) => {
+  const exportar = async (formato, opciones) => {
     setExporting(formato);
     setExportError("");
     try {
       const servicios = detail.servicios ?? (await getPagosChoferesRequest({ month, driverId: driver.driverId })).servicios ?? [];
       const params = { driver, servicios, reglas, month, kmh, categoria: calcularCategoria(driver, categoriaManual ?? {}) };
-      if (formato === "pdf") await downloadPagoChoferPdf(params);
-      else await downloadPagoChoferXlsx(params);
+      if (formato === "pdf") {
+        if (opciones?.asistencia) params.calendario = (await getCalendarioRequest({ month, driverId: driver.driverId }).catch(() => null))?.days ?? null;
+        await downloadPagoChoferPdf(params, opciones);
+        setPdfModal(false);
+      } else await downloadPagoChoferXlsx(params);
     } catch (err) {
       setExportError(parseApiError(err).message || "No se pudo generar el archivo");
+      setPdfModal(false);
     } finally {
       setExporting("");
     }
@@ -379,13 +419,21 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
               {exporting !== "xlsx" && <DownloadIcon className="h-4 w-4" />}
               Excel
             </Button>
-            <Button variant="ghost" className="w-auto! px-3! py-1.5! text-[12.5px]!" loading={exporting === "pdf"} disabled={Boolean(exporting)} onClick={() => exportar("pdf")}>
+            <Button variant="ghost" className="w-auto! px-3! py-1.5! text-[12.5px]!" loading={exporting === "pdf"} disabled={Boolean(exporting)} onClick={() => setPdfModal(true)}>
               {exporting !== "pdf" && <FileTextIcon className="h-4 w-4" />}
               PDF
             </Button>
           </div>
         </div>
       </div>
+
+      <PdfOpcionesModal
+        open={pdfModal}
+        title={`PDF de ${driver.nombre}`}
+        descargando={exporting === "pdf"}
+        onClose={() => setPdfModal(false)}
+        onDescargar={(opciones) => exportar("pdf", opciones)}
+      />
 
       <div className="flex flex-col gap-4 px-5 py-4">
         <Alert>{exportError}</Alert>
@@ -521,6 +569,8 @@ export const PagosChoferesPage = () => {
   const [savingVelocidad, setSavingVelocidad] = useState(null);
   const [savingAparte, setSavingAparte] = useState(null);
   const [busqueda, setBusqueda] = useState("");
+  const [reporteModal, setReporteModal] = useState(false);
+  const [reporte, setReporte] = useState({ descargando: false, progreso: "" });
   const [selectedId, setSelectedId] = useState(null);
   // Ventana informativa: las reglas de pago ("reglas") o el calculo de cada concepto de un chofer ("chofer").
   const [info, setInfo] = useState(null);
@@ -614,6 +664,40 @@ export const PagosChoferesPage = () => {
     };
   }, [month, isPrivileged]);
 
+  // Reporte del mes de todos los choferes: se piden sus entregas (y su asistencia si va) uno por uno y se arma un solo PDF.
+  const descargarReporteMes = async (opciones) => {
+    if (!data) return;
+    setReporte({ descargando: true, progreso: "" });
+    setError("");
+    try {
+      const choferes = [];
+      for (const [i, driver] of data.porChofer.entries()) {
+        setReporte({ descargando: true, progreso: `Chofer ${i + 1} de ${data.porChofer.length}...` });
+        const kmh = driver.kmhPago?.valor ?? data.reglas.kmBloque;
+        const [pago, calendario] = await Promise.all([
+          opciones.entregas ? getPagosChoferesRequest({ month, driverId: driver.driverId }) : Promise.resolve(null),
+          opciones.asistencia ? getCalendarioRequest({ month, driverId: driver.driverId }).catch(() => null) : Promise.resolve(null),
+        ]);
+        choferes.push({
+          driver,
+          servicios: pago?.servicios ?? [],
+          reglas: data.reglas,
+          month,
+          kmh,
+          categoria: calcularCategoria(driver, categorias[driver.driverId] ?? {}),
+          calendario: calendario?.days ?? null,
+        });
+      }
+      await downloadReporteMesPdf({ month, choferes, opciones });
+      setReporteModal(false);
+    } catch (err) {
+      setError(parseApiError(err).message || "No se pudo generar el reporte");
+      setReporteModal(false);
+    } finally {
+      setReporte({ descargando: false, progreso: "" });
+    }
+  };
+
   const onCategoriaSaved = (driverId, row) => setCategorias((prev) => ({ ...prev, [driverId]: row }));
 
   // El chofer ve su pago dentro de "Mis horas".
@@ -653,7 +737,7 @@ export const PagosChoferesPage = () => {
           <div className="min-w-0 max-w-xl">
             <p className="text-[14px] font-medium text-ink-50">Planilla de presencias</p>
             <p className="text-[13px] text-ink-300">
-              Excel del mes elegido con las horas de cada chofer por dia, en el formato del comercialista.
+              Excel del mes elegido con las horas de cada chofer por dia, en el formato del comercialista, y el reporte en PDF de todos los choferes.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -661,6 +745,10 @@ export const PagosChoferesPage = () => {
             <Button variant="ghost" className="w-auto!" loading={downloading} onClick={downloadPresencias}>
               {!downloading && <DownloadIcon className="h-4 w-4" />}
               Descargar presencias
+            </Button>
+            <Button variant="ghost" className="w-auto!" disabled={!data?.porChofer.length} onClick={() => setReporteModal(true)}>
+              <FileTextIcon className="h-4 w-4" />
+              Reporte del mes (PDF)
             </Button>
           </div>
         </div>
@@ -823,6 +911,15 @@ export const PagosChoferesPage = () => {
               </div>
             )
           )}
+
+          <PdfOpcionesModal
+            open={reporteModal}
+            title="Reporte del mes de todos los choferes"
+            descargando={reporte.descargando}
+            progreso={reporte.progreso}
+            onClose={() => setReporteModal(false)}
+            onDescargar={descargarReporteMes}
+          />
 
           <InfoModal
             open={Boolean(info)}
