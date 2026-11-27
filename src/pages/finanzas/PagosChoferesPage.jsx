@@ -13,6 +13,7 @@ import { PageLoader } from "../../components/ui/PageLoader";
 import { Spinner } from "../../components/ui/Spinner";
 import {
   AlertTriangleIcon,
+  ChevronDownIcon,
   ClockIcon,
   CloseIcon,
   DownloadIcon,
@@ -382,8 +383,6 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
       <div className="flex flex-col gap-4 px-5 py-4">
         <Alert>{exportError}</Alert>
 
-        <DesglosePago driver={driver} onVerCalculo={(filas) => onVerCalculo(driver, filas)} />
-
         <CategoriaPagoCard key={JSON.stringify(categoriaManual ?? null)} driver={driver} month={month} manual={categoriaManual} onSaved={onCategoriaSaved} />
 
         {driver.kmRevisar?.length > 0 && (
@@ -396,69 +395,83 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
           </div>
         )}
 
-        {reglas.reperibilidad && driver.pagoAparte && (
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            <div className="rounded-xl border border-line/10 bg-line/[0.04] px-3.5 py-3">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Básico (horario laboral)</span>
-              <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.basico)}</span>
-              <span className="block text-[11.5px] text-ink-400">Servicios de lunes a viernes de día, más la espera</span>
-            </div>
-            <div className="rounded-xl border border-accent-500/20 bg-accent-500/10 px-3.5 py-3">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-accent-300">Aparte del básico</span>
-              <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.aparte?.total ?? 0)}</span>
-              <span className="block text-[11.5px] text-ink-300">
-                {driver.aparte?.servicios > 0
-                  ? `${driver.aparte.servicios} ${driver.aparte.servicios === 1 ? "servicio" : "servicios"} fuera de horario: ${formatCurrency(driver.aparte.base)} de trabajo + ${formatCurrency(driver.aparte.reperibilidad)} de reperibilita${driver.aparte.espera > 0 ? ` + ${formatCurrency(driver.aparte.espera)} de espera` : ""}`
-                  : "Sin servicios fuera de horario este mes"}
-              </span>
-            </div>
-            <div className="rounded-xl border border-line/10 bg-line/[0.04] px-3.5 py-3">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Total a pagar</span>
-              <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.total)}</span>
-              <span className="block text-[11.5px] text-ink-400">Básico + aparte</span>
-            </div>
-          </div>
-        )}
+        {/* Calculo antiguo (por servicio): queda oculto, se abre solo para consultarlo. */}
+        <details className="group overflow-hidden rounded-xl border border-line/10">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-line/[0.05] px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-300 hover:text-ink-100">
+            <span>
+              Cálculo antiguo <span className="ml-1 normal-case tracking-normal text-ink-400">(desglose por servicio · {formatCurrency(driver.total)})</span>
+            </span>
+            <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="flex flex-col gap-4 p-4">
+          <DesglosePago driver={driver} onVerCalculo={(filas) => onVerCalculo(driver, filas)} />
 
-        {/* Ajustes del pago */}
-        {(velocidades.length > 0 || reglas.reperibilidad) && (
-          <div className="flex flex-col divide-y divide-line/10 rounded-xl border border-line/10">
-            {velocidades.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
-                <span className="text-[13px] font-medium text-ink-100">Velocidad de pago (km/h)</span>
-                <SegmentedControl
-                  options={velocidades.map((v) => ({ value: v, label: String(v) }))}
-                  value={kmh}
-                  onChange={(value) => value !== kmh && onVelocidad(driver.driverId, value)}
-                  className={clsx(savingVelocidad && "pointer-events-none opacity-60")}
-                />
-                <span className="text-[12px] text-ink-400">
-                  {savingVelocidad
-                    ? "Guardando..."
-                    : driver.kmhPago?.propio
-                      ? "Elegida para este mes; rige también los siguientes"
-                      : "Heredada: rige desde un mes anterior (o la normal de 85)"}
+          {reglas.reperibilidad && driver.pagoAparte && (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <div className="rounded-xl border border-line/10 bg-line/[0.04] px-3.5 py-3">
+                <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Básico (horario laboral)</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.basico)}</span>
+                <span className="block text-[11.5px] text-ink-400">Servicios de lunes a viernes de día, más la espera</span>
+              </div>
+              <div className="rounded-xl border border-accent-500/20 bg-accent-500/10 px-3.5 py-3">
+                <span className="block text-[11px] font-medium uppercase tracking-wide text-accent-300">Aparte del básico</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.aparte?.total ?? 0)}</span>
+                <span className="block text-[11.5px] text-ink-300">
+                  {driver.aparte?.servicios > 0
+                    ? `${driver.aparte.servicios} ${driver.aparte.servicios === 1 ? "servicio" : "servicios"} fuera de horario: ${formatCurrency(driver.aparte.base)} de trabajo + ${formatCurrency(driver.aparte.reperibilidad)} de reperibilita${driver.aparte.espera > 0 ? ` + ${formatCurrency(driver.aparte.espera)} de espera` : ""}`
+                    : "Sin servicios fuera de horario este mes"}
                 </span>
               </div>
-            )}
-            {reglas.reperibilidad && (
-              <div className="px-4 py-3">
-                <Switch
-                  id={`aparte-${driver.driverId}`}
-                  label="Pago aparte del básico"
-                  description={
-                    canEditAparte
-                      ? "Activado: el trabajo fuera del horario laboral (noche, fin de semana y festivo) y la reperibilita se muestran y se pagan aparte. Apagado: todo va junto en un solo total."
-                      : "Solo un Admin puede cambiarlo. Activado: lo de fuera de horario y la reperibilita se pagan aparte; apagado: todo va junto."
-                  }
-                  checked={Boolean(driver.pagoAparte)}
-                  onChange={(activo) => onPagoAparte(driver.driverId, activo)}
-                  disabled={!canEditAparte || savingAparte}
-                />
+              <div className="rounded-xl border border-line/10 bg-line/[0.04] px-3.5 py-3">
+                <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-400">Total a pagar</span>
+                <span className="block text-[16px] font-semibold text-ink-50">{formatCurrency(driver.total)}</span>
+                <span className="block text-[11.5px] text-ink-400">Básico + aparte</span>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Ajustes del pago */}
+          {(velocidades.length > 0 || reglas.reperibilidad) && (
+            <div className="flex flex-col divide-y divide-line/10 rounded-xl border border-line/10">
+              {velocidades.length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
+                  <span className="text-[13px] font-medium text-ink-100">Velocidad de pago (km/h)</span>
+                  <SegmentedControl
+                    options={velocidades.map((v) => ({ value: v, label: String(v) }))}
+                    value={kmh}
+                    onChange={(value) => value !== kmh && onVelocidad(driver.driverId, value)}
+                    className={clsx(savingVelocidad && "pointer-events-none opacity-60")}
+                  />
+                  <span className="text-[12px] text-ink-400">
+                    {savingVelocidad
+                      ? "Guardando..."
+                      : driver.kmhPago?.propio
+                        ? "Elegida para este mes; rige también los siguientes"
+                        : "Heredada: rige desde un mes anterior (o la normal de 85)"}
+                  </span>
+                </div>
+              )}
+              {reglas.reperibilidad && (
+                <div className="px-4 py-3">
+                  <Switch
+                    id={`aparte-${driver.driverId}`}
+                    label="Pago aparte del básico"
+                    description={
+                      canEditAparte
+                        ? "Activado: el trabajo fuera del horario laboral (noche, fin de semana y festivo) y la reperibilita se muestran y se pagan aparte. Apagado: todo va junto en un solo total."
+                        : "Solo un Admin puede cambiarlo. Activado: lo de fuera de horario y la reperibilita se pagan aparte; apagado: todo va junto."
+                    }
+                    checked={Boolean(driver.pagoAparte)}
+                    onChange={(activo) => onPagoAparte(driver.driverId, activo)}
+                    disabled={!canEditAparte || savingAparte}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           </div>
-        )}
+        </details>
 
         {/* Servicios del mes */}
         <div className="overflow-hidden rounded-xl border border-line/10">
