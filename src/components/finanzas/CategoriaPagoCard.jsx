@@ -6,7 +6,8 @@ import { setCategoriaPagoRequest } from "../../lib/finanzas.api";
 import { formatCurrency } from "../../lib/format";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
-import { CheckCircleIcon, AlertTriangleIcon, PencilIcon } from "../ui/icons";
+import { PencilIcon } from "../ui/icons";
+import { SegmentedControl } from "../ui/SegmentedControl";
 
 const CAMPOS = [
   { campo: "conduccion", label: "Conducción" },
@@ -79,6 +80,18 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
     save({ categoria: form.categoria || null, factor: form.factor ? Number(form.factor) : null, ...montos, nota: form.nota.trim() || null });
   };
 
+  // Lo guardado hoy (para cambiar solo el factor sin tocar lo demas).
+  const guardado = () => ({
+    categoria: manual?.categoria ?? null,
+    factor: manual?.factor ?? null,
+    ...Object.fromEntries(CAMPOS.map(({ campo }) => [campo, manual?.[campo] ?? null])),
+    nota: manual?.nota ?? null,
+  });
+  const cambiarFactor = (factor) => {
+    if (editing) setForm((prev) => ({ ...prev, factor: String(factor) }));
+    else if (factor !== c.factor) save({ ...guardado(), factor });
+  };
+
   const restablecer = () =>
     save({ categoria: null, factor: null, ...Object.fromEntries(CAMPOS.map(({ campo }) => [campo, null])), nota: null });
 
@@ -90,17 +103,16 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[12px] font-semibold uppercase tracking-wide text-ink-300">Cálculo por categoría</span>
           <span className="rounded-md bg-accent-500/15 px-2 py-0.5 text-[12px] font-semibold text-accent-300">{c.categoria.label}</span>
-          <span
-            className={clsx(
-              "flex items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-medium",
-              c.cumple ? "bg-success-500/15 text-success-500" : "bg-warning-500/15 text-warning-500"
-            )}
-          >
-            {c.cumple ? <CheckCircleIcon className="h-3.5 w-3.5" /> : <AlertTriangleIcon className="h-3.5 w-3.5" />}
-            {c.cumple ? "Cumple" : "No cumple"}
-          </span>
           {c.editadoAMano && !editing && <span className="text-[11px] text-ink-400">· con ajustes manuales</span>}
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-ink-300">Factor</span>
+          <SegmentedControl
+            options={FACTORES.map((f) => ({ value: f, label: String(f) }))}
+            value={c.factor}
+            onChange={cambiarFactor}
+            className={clsx(saving && "pointer-events-none opacity-60")}
+          />
         {!editing && (
           <button
             type="button"
@@ -111,26 +123,15 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
             Editar
           </button>
         )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-3">
         <p className="text-[12.5px] text-ink-400">
           Meta {c.categoria.label}: <b className="text-ink-100">{c.categoria.metaKm.toLocaleString("es-AR")} km</b> · referencia neta{" "}
-          <b className="text-ink-100">{formatCurrency(c.categoria.referencia)}/mes</b> · factor <b className="text-ink-100">{c.factor}</b>
+          <b className="text-ink-100">{formatCurrency(c.categoria.referencia)}/mes</b>
           {!c.categoriaManual && " · categoría según los km del mes"}
         </p>
-
-        <div className="flex flex-wrap gap-1.5">
-          {c.objetivos.map((o) => (
-            <span
-              key={o.clave}
-              className={clsx("rounded-lg px-2.5 py-1 text-[11.5px]", o.ok ? "bg-success-500/10 text-success-500" : "bg-warning-500/10 text-warning-500")}
-              title={`Meta: ${o.meta}`}
-            >
-              {o.label}: {o.real}
-            </span>
-          ))}
-        </div>
 
         {editing && (
           <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-line/[0.04] p-3 sm:grid-cols-3">
@@ -141,17 +142,6 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
                 {CATEGORIAS.map((x) => (
                   <option key={x.value} value={x.value}>
                     {x.label} ({x.metaKm.toLocaleString("es-AR")} km)
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[11.5px] text-ink-400">
-              Factor
-              <select value={form.factor} onChange={set("factor")} className={fieldClass}>
-                <option value="">Automático ({c.factorAuto})</option>
-                {FACTORES.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
                   </option>
                 ))}
               </select>
@@ -178,44 +168,32 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
         )}
 
         <div className="overflow-hidden rounded-lg border border-line/10">
-          <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] gap-3 bg-line/[0.04] px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
+          <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,2fr)_110px] gap-3 bg-line/[0.04] px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
             <span>Concepto</span>
-            <span>Si cumple la meta</span>
-            <span>Resultado del mes</span>
+            <span>Cálculo</span>
+            <span className="text-right">Importe</span>
           </div>
           {c.filas.map((f) => (
             <div
               key={f.clave}
               className={clsx(
-                "grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] items-center gap-3 border-t border-line/10 px-3 py-2 text-[12.5px]",
+                "grid grid-cols-[minmax(0,0.8fr)_minmax(0,2fr)_110px] items-center gap-3 border-t border-line/10 px-3 py-2 text-[12.5px]",
                 f.subtotal && "bg-line/[0.03] font-semibold"
               )}
             >
               <span className="font-medium text-ink-50">{f.concepto}</span>
-              <span className="text-ink-300">{f.meta}</span>
-              <span className="text-ink-50">{f.real}</span>
+              <span className="text-ink-300">{f.real}</span>
+              <span className="text-right font-semibold text-ink-50">{formatCurrency(f.valor)}</span>
             </div>
           ))}
-          <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] items-center gap-3 border-t border-line/20 bg-line/[0.06] px-3 py-2.5 text-[13.5px] font-bold text-ink-50">
-            <span>Resultado</span>
-            <span>{formatCurrency(c.meta.resultado)}</span>
-            <span>{formatCurrency(c.resultado)}</span>
+          <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,2fr)_110px] items-center gap-3 border-t border-line/20 bg-line/[0.06] px-3 py-2.5 text-[13.5px] font-bold text-ink-50">
+            <span>Resultado del mes</span>
+            <span />
+            <span className="text-right">{formatCurrency(c.resultado)}</span>
           </div>
         </div>
 
-        <p className="text-[13px] font-semibold text-accent-300">
-          {c.diferencia > 0
-            ? `Le faltan ${formatCurrency(c.diferencia)} para el resultado de cumplir la meta.`
-            : c.diferencia < 0
-              ? `Supera en ${formatCurrency(-c.diferencia)} el resultado de cumplir la meta.`
-              : "Resultado igual al de cumplir la meta."}
-        </p>
         {c.nota && !editing && <p className="text-[12px] text-ink-300">Nota: {c.nota}</p>}
-        <p className="text-[11px] text-ink-400">
-          Conducción = km ÷ factor × {TARIFAS_CATEGORIA.conduccionEur} € · Reperibilità = salidas × {TARIFAS_CATEGORIA.reperibilidadEur} € · Esperas = horas ×{" "}
-          {TARIFAS_CATEGORIA.esperaEur} €. Propuesta ilustrativa: no cambia el total a pagar de arriba.
-        </p>
-
         <Alert>{error}</Alert>
         {editing && (
           <div className="flex flex-wrap justify-end gap-2">
@@ -233,6 +211,61 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// Resumen de como se calcula por categoria (Junior, Senior, Master): va en la ventana "¿Como se calcula?".
+export const CategoriasInfo = () => {
+  const T = TARIFAS_CATEGORIA;
+  return (
+    <div className="flex flex-col gap-3 text-[13px] text-ink-300">
+      <div className="overflow-hidden rounded-xl border border-line/10">
+        <div className="grid grid-cols-3 gap-3 bg-line/[0.05] px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
+          <span>Categoría</span>
+          <span>Meta mensual</span>
+          <span>Referencia neta</span>
+        </div>
+        {CATEGORIAS.map((cat) => (
+          <div key={cat.value} className="grid grid-cols-3 gap-3 border-t border-line/10 px-4 py-2">
+            <span className="font-medium text-ink-50">{cat.label}</span>
+            <span>{cat.metaKm.toLocaleString("es-AR")} km</span>
+            <span>{formatCurrency(cat.referencia)}/mes</span>
+          </div>
+        ))}
+      </div>
+      <ul className="flex flex-col gap-1.5 [&>li]:rounded-xl [&>li]:bg-line/[0.06] [&>li]:px-3.5 [&>li]:py-2.5">
+        <li>
+          <b className="text-ink-50">Categoría:</b> la más alta cuya meta de km alcanza el chofer en el mes (por debajo de {CATEGORIAS[1].metaKm.toLocaleString("es-AR")} km es
+          Junior). Se puede elegir a mano con Editar.
+        </li>
+        <li>
+          <b className="text-ink-50">Conducción</b> = km del mes ÷ factor × {formatCurrency(T.conduccionEur)}. El factor (85, 90 o 95) se elige arriba en cada chofer; si no se
+          elige, es 85 cuando cumple los objetivos y 95 cuando no.
+        </li>
+        <li>
+          <b className="text-ink-50">Reperibilità</b> = salidas efectivas × {formatCurrency(T.reperibilidadEur)}.
+        </li>
+        <li>
+          <b className="text-ink-50">Esperas</b> = horas de espera aprobadas × {formatCurrency(T.esperaEur)}. Las horas por aprobar se muestran pero no suman.
+        </li>
+        <li>
+          <b className="text-ink-50">Actividad</b> = conducción + reperibilità + esperas.
+        </li>
+        <li>
+          <b className="text-ink-50">Disponibilidad:</b> {formatCurrency(T.bonoDisponibilidad)} con {T.salidasMeta} salidas efectivas y sin faltas injustificadas.{" "}
+          <b className="text-ink-50">Productividad:</b> {formatCurrency(T.bonoProductividad)} al llegar a la meta de km de su categoría.
+        </li>
+        <li>
+          <b className="text-ink-50">Resultado del mes</b> = actividad + disponibilidad + productividad + ajuste manual. Cualquier valor se puede corregir con Editar y queda
+          guardado para ese chofer y mes.
+        </li>
+        <li>
+          <b className="text-ink-50">Objetivos comunes:</b> {T.salidasMeta} salidas de reperibilità al mes, 95 % de entregas puntuales y 100 % documentadas, asistencia y
+          guardias cumplidas, checklist y limpieza del vehículo al día, conducción segura.
+        </li>
+      </ul>
+      <p className="text-[11.5px] text-ink-400">Propuesta ilustrativa. Pago definitivo sujeto a jornada remunerable y revisión en nómina.</p>
     </div>
   );
 };

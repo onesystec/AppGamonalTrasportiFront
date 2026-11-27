@@ -35,7 +35,7 @@ import { formatHours, pagaPorKm } from "../../lib/horas";
 import { buildDesglose } from "../../lib/pagoChofer";
 import { downloadPagoChoferPdf, downloadPagoChoferXlsx } from "../../lib/pagoChoferExport";
 import { calcularCategoria } from "../../lib/categoriaPago";
-import { CategoriaPagoCard } from "../../components/finanzas/CategoriaPagoCard";
+import { CategoriaPagoCard, CategoriasInfo } from "../../components/finanzas/CategoriaPagoCard";
 
 const FORMATO_KEY = "gamonal-presencias-formato";
 const FORMATOS = [
@@ -826,6 +826,14 @@ export const PagosChoferesPage = () => {
                   <span className="text-[15px] font-bold text-ink-50">{formatCurrency(info.driver.total)}</span>
                 </div>
               </div>
+            )}
+            {info?.tipo !== "chofer" && (
+              <>
+                <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Cálculo por categoría</p>
+                <div className="mb-6">
+                  <CategoriasInfo />
+                </div>
+              </>
             )}
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Reglas de pago vigentes</p>
             <PayRulesCard reglas={data.reglas} variant="stacked" />

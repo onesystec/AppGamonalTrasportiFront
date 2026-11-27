@@ -6,7 +6,7 @@ import { payCalcText } from "./finanzas";
 import { formatCurrency, formatDate, formatKm } from "./format";
 import { formatHours } from "./horas";
 import { buildDesglose, monthLabel } from "./pagoChofer";
-import { PAGE_H, PAGE_W, PdfDoc, textWidth, wrapText } from "./pdfWriter";
+import { PAGE_H, PAGE_W, PdfDoc, wrapText } from "./pdfWriter";
 import { XS, buildXlsx } from "./xlsxWriter";
 
 const EMPRESA = "Gamonal Trasporti SRL";
@@ -196,21 +196,17 @@ export const downloadPagoChoferXlsx = async (params) => {
 
   if (m.categoria) {
     const c = m.categoria;
-    section(`Cálculo por categoría: ${c.categoria.label} (${c.cumple ? "cumple" : "no cumple"})`);
+    section(`Cálculo por categoría: ${c.categoria.label}`);
     r = add([{ v: `Meta ${c.categoria.label}: ${c.categoria.metaKm.toLocaleString("es-AR")} km · Referencia neta: ${formatCurrency(c.categoria.referencia)}/mes · Factor: ${c.factor}`, s: XS.label }]);
     merge(r, "A", "E");
-    r = add([{ v: c.objetivos.map((o) => `${o.label}: ${o.real}${o.ok ? " ✓" : " ✗"}`).join("   ·   "), s: XS.label }]);
-    merge(r, "A", "E");
-    r = add([{ v: "Concepto", s: XS.th }, { v: "Si cumple la meta", s: XS.th }, { s: XS.th }, { v: "Resultado del mes", s: XS.th }, { v: "Importe", s: XS.thRight }]);
-    merge(r, "B", "C");
-    for (const f of c.filas) {
-      r = add([{ v: f.concepto, s: f.subtotal ? XS.totalLabel : XS.td }, { v: f.meta, s: XS.td }, { s: XS.td }, { v: f.real, s: XS.td }, { v: round2(f.valor), s: f.subtotal ? XS.totalMoney : XS.tdMoney }]);
-      merge(r, "B", "C");
-    }
-    r = add([{ v: "RESULTADO", s: XS.totalLabel }, { v: formatCurrency(c.meta.resultado), s: XS.totalLabel }, { s: XS.totalLabel }, { s: XS.totalLabel }, { v: round2(c.resultado), s: XS.totalMoney }], 18);
+    r = add([{ v: "Concepto", s: XS.th }, { v: "Cálculo", s: XS.th }, { s: XS.th }, { s: XS.th }, { v: "Importe", s: XS.thRight }]);
     merge(r, "B", "D");
-    r = add([{ v: c.diferencia > 0 ? `Diferencia con cumplir la meta: ${formatCurrency(c.diferencia)}` : `Supera la meta en ${formatCurrency(-c.diferencia)}`, s: XS.accentTitle }], 18);
-    merge(r, "A", "E");
+    for (const f of c.filas) {
+      r = add([{ v: f.concepto, s: f.subtotal ? XS.totalLabel : XS.td }, { v: f.real, s: XS.td }, { s: XS.td }, { s: XS.td }, { v: round2(f.valor), s: f.subtotal ? XS.totalMoney : XS.tdMoney }], estimateHeight([[f.real, 95]]));
+      merge(r, "B", "D");
+    }
+    r = add([{ v: "RESULTADO DEL MES", s: XS.totalLabel }, { s: XS.totalLabel }, { s: XS.totalLabel }, { s: XS.totalLabel }, { v: round2(c.resultado), s: XS.totalMoney }], 18);
+    merge(r, "A", "D");
     if (c.nota) {
       r = add([{ v: `Nota: ${c.nota}`, s: XS.note }, { s: XS.note }, { s: XS.note }, { s: XS.note }, { s: XS.note }], estimateHeight([[c.nota, 110]]));
       merge(r, "A", "E");
@@ -383,36 +379,18 @@ export const downloadPagoChoferPdf = async (params) => {
   if (m.categoria) {
     const c = m.categoria;
     section(`Cálculo por categoría: ${c.categoria.label}`);
-    ensure(40);
+    ensure(30);
     doc.text(MARGIN, y, `Meta ${c.categoria.label}: ${c.categoria.metaKm.toLocaleString("es-AR")} km  ·  Referencia neta: ${formatCurrency(c.categoria.referencia)}/mes  ·  Factor: ${c.factor}`, { size: 8.5, color: "#374151" });
-    doc.text(PAGE_W - MARGIN, y - 1, c.cumple ? "CUMPLE" : "NO CUMPLE", { size: 9, bold: true, color: c.cumple ? "#15803d" : "#b45309", align: "right" });
-    y += 14;
-    let ox = MARGIN;
-    for (const o of c.objetivos) {
-      const label = `${o.label}: ${o.real}`;
-      const w = Math.min(CONTENT_W, textWidth(label, 7.5) + 12);
-      if (ox + w > PAGE_W - MARGIN) {
-        ox = MARGIN;
-        y += 18;
-      }
-      doc.rect(ox, y, w, 14, { fill: o.ok ? "#dcfce7" : "#fef3c7" });
-      doc.text(ox + 6, y + 3.5, label, { size: 7.5, color: o.ok ? "#166534" : "#92400e" });
-      ox += w + 6;
-    }
-    y += 22;
+    y += 16;
     table(
       [
-        { title: "Concepto", width: 105, bold: true },
-        { title: "Si cumple la meta", width: 165, color: "#374151" },
-        { title: "Resultado del mes", width: 165 },
-        { title: "Importe", width: CONTENT_W - 435, align: "right", bold: true },
+        { title: "Concepto", width: 110, bold: true },
+        { title: "Cálculo", width: 315, color: "#374151" },
+        { title: "Importe", width: CONTENT_W - 425, align: "right", bold: true },
       ],
-      c.filas.map((f) => [f.concepto, f.meta, f.real, formatCurrency(f.valor)]),
-      { total: [`RESULTADO  (si cumple la meta: ${formatCurrency(c.meta.resultado)})`, formatCurrency(c.resultado)] }
+      c.filas.map((f) => [f.concepto, f.real, formatCurrency(f.valor)]),
+      { total: ["RESULTADO DEL MES", formatCurrency(c.resultado)] }
     );
-    ensure(30);
-    doc.text(MARGIN, y - 2, c.diferencia > 0 ? `Diferencia con cumplir la meta: ${formatCurrency(c.diferencia)}` : `Supera el resultado de cumplir la meta en ${formatCurrency(-c.diferencia)}`, { size: 10, bold: true, color: ACCENT });
-    y += 14;
     if (c.nota) {
       for (const line of wrapText(`Nota: ${c.nota}`, CONTENT_W, 8.5)) {
         ensure(12);
