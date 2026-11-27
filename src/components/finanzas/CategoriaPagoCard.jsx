@@ -36,7 +36,7 @@ const fieldClass = "glass-input w-full rounded-lg px-3 py-2 text-[13px] text-ink
 
 // Calculo por categoria (Junior / Senior / Master) del chofer en el mes: comparativo "si cumple la meta" contra lo real, con cada valor
 // editable a mano. Lo guardado se usa tambien en el Excel y el PDF.
-export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
+export const CategoriaPagoCard = ({ driver, month, manual, servicios, onSaved }) => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() => toForm(manual));
   const [saving, setSaving] = useState(false);
@@ -51,7 +51,7 @@ export const CategoriaPagoCard = ({ driver, month, manual, onSaved }) => {
         nota: form.nota,
       }
     : manual;
-  const c = calcularCategoria(driver, borrador ?? {});
+  const c = calcularCategoria(driver, borrador ?? {}, servicios);
 
   const startEdit = () => {
     setForm(toForm(manual));
@@ -242,6 +242,10 @@ export const CategoriasInfo = () => {
         <li>
           <b className="text-ink-50">Conducción</b> = km del mes ÷ factor × {formatCurrency(T.conduccionEur)}. El factor (85, 90 o 95) se elige arriba en cada chofer; si no se
           elige, es 85 cuando cumple los objetivos y 95 cuando no.
+        </li>
+        <li>
+          <b className="text-ink-50">Navette WIZZ:</b> cada servicio del cliente WIZZ (Fiumicino, Catania...) se paga {formatCurrency(T.navettaWizzEur)} fijo por navetta, no por
+          km. Sus km sí cuentan para la meta de la categoría y la productividad.
         </li>
         <li>
           <b className="text-ink-50">Reperibilità</b> = salidas efectivas × {formatCurrency(T.reperibilidadEur)}.

@@ -13,7 +13,7 @@ export const CATEGORIAS = [
   { value: "MASTER", label: "Master", metaKm: 12500, referencia: 1600 },
 ];
 export const FACTORES = [85, 90, 95];
-export const TARIFAS_CATEGORIA = { conduccionEur: 10, reperibilidadEur: 10, esperaEur: 7, salidasMeta: 10, bonoDisponibilidad: 100, bonoProductividad: 100 };
+export const TARIFAS_CATEGORIA = { navettaWizzEur: 200, conduccionEur: 10, reperibilidadEur: 10, esperaEur: 7, salidasMeta: 10, bonoDisponibilidad: 100, bonoProductividad: 100 };
 
 const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const nf = (v, d = 2) => Number(v).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: d });
@@ -24,10 +24,18 @@ export const categoriaPorKm = (km) => [...CATEGORIAS].reverse().find((c) => km >
 
 const has = (v) => v !== null && v !== undefined && v !== "";
 
+// Navetta WIZZ: todo servicio del cliente WIZZ (Fiumicino, Catania...) se paga a tarifa fija por navetta, no por km.
+export const esNavettaWizz = (s) => /\bwizz\b/i.test(String(s?.cliente ?? ""));
+
 // manual: lo guardado para el chofer en el mes ({ categoria, factor, conduccion, ... } con null = automatico).
-export const calcularCategoria = (driver, manual = {}) => {
+// servicios: los servicios del chofer en el mes, para separar las navette WIZZ (si no se pasan, todo se paga por km).
+export const calcularCategoria = (driver, manual = {}, servicios = null) => {
   const T = TARIFAS_CATEGORIA;
   const km = Number(driver.km) || 0;
+  // Navette WIZZ: sus km cuentan para la categoria y la productividad, pero no para la conduccion (se pagan a tarifa fija).
+  const navettas = (servicios ?? []).filter(esNavettaWizz);
+  const kmNavettas = navettas.reduce((sum, s) => sum + (Number(s.km) || 0), 0);
+  const kmConduccion = Math.max(0, km - kmNavettas);
   const salidas = Number(driver.salidasReperibilidad) || 0;
   const esperaHoras = Number(driver.esperaHoras) || 0;
   const esperaPendiente = Number(driver.esperaPendienteHoras) || 0;
@@ -56,7 +64,7 @@ export const calcularCategoria = (driver, manual = {}) => {
   const factor = has(manual.factor) ? Number(manual.factor) : factorAuto;
 
   const auto = {
-    conduccion: round2((km / factor) * T.conduccionEur),
+    conduccion: round2((kmConduccion / factor) * T.conduccionEur),
     reperibilidad: round2(salidas * T.reperibilidadEur),
     esperas: round2(esperaHoras * T.esperaEur),
     disponibilidad: salidas >= T.salidasMeta && faltas === 0 ? T.bonoDisponibilidad : 0,
@@ -67,7 +75,8 @@ export const calcularCategoria = (driver, manual = {}) => {
   const v = Object.fromEntries(Object.keys(auto).map((campo) => [campo, valor(campo)]));
   const editado = (campo) => has(manual[campo]) && round2(manual[campo]) !== auto[campo];
 
-  const actividad = round2(v.conduccion + v.reperibilidad + v.esperas);
+  const pagoNavettas = round2(navettas.length * T.navettaWizzEur);
+  const actividad = round2(v.conduccion + pagoNavettas + v.reperibilidad + v.esperas);
   const resultado = round2(actividad + v.disponibilidad + v.productividad + v.ajuste);
 
   // Escenario "cumple la meta": meta de km de la categoria a factor 85, las 10 salidas, sus mismas esperas y los dos bonos.
@@ -86,11 +95,25 @@ export const calcularCategoria = (driver, manual = {}) => {
       clave: "conduccion",
       concepto: "Conducción",
       meta: `${nf(categoria.metaKm, 0)} ÷ 85 × ${T.conduccionEur} = ${eur(meta.conduccion)}`,
-      real: editado("conduccion") ? `${eur(v.conduccion)} (ajustado)` : `${nf(km, 0)} ÷ ${factor} × ${T.conduccionEur} = ${eur(v.conduccion)}`,
+      real: editado("conduccion")
+        ? `${eur(v.conduccion)} (ajustado)`
+        : `${nf(kmConduccion, 0)}${navettas.length ? " km sin navette" : ""} ÷ ${factor} × ${T.conduccionEur} = ${eur(v.conduccion)}`,
       valorMeta: meta.conduccion,
       valor: v.conduccion,
       editable: true,
     },
+    ...(navettas.length
+      ? [
+          {
+            clave: "navettas",
+            concepto: "Navette WIZZ",
+            meta: "-",
+            real: `${navettas.length} ${navettas.length === 1 ? "navetta" : "navette"} × ${eur(T.navettaWizzEur)} (${nf(kmNavettas, 0)} km, cuentan para la meta)`,
+            valorMeta: 0,
+            valor: pagoNavettas,
+          },
+        ]
+      : []),
     {
       clave: "reperibilidad",
       concepto: "Reperibilità",
@@ -109,7 +132,7 @@ export const calcularCategoria = (driver, manual = {}) => {
       valor: v.esperas,
       editable: true,
     },
-    { clave: "actividad", concepto: "Actividad", meta: eur(meta.actividad), real: "Conducción + reperibilità + esperas", valorMeta: meta.actividad, valor: actividad, subtotal: true },
+    { clave: "actividad", concepto: "Actividad", meta: eur(meta.actividad), real: navettas.length ? "Conducción + navette + reperibilità + esperas" : "Conducción + reperibilità + esperas", valorMeta: meta.actividad, valor: actividad, subtotal: true },
     { clave: "disponibilidad", concepto: "Disponibilidad", meta: eur(meta.disponibilidad), real: editado("disponibilidad") ? "Según la actividad del mes" : `Bono de ${eur(T.bonoDisponibilidad)} con ${T.salidasMeta} salidas y sin faltas injustificadas`, valorMeta: meta.disponibilidad, valor: v.disponibilidad, editable: true },
     { clave: "productividad", concepto: "Productividad", meta: eur(meta.productividad), real: editado("productividad") ? "Según la actividad del mes" : `Bono de ${eur(T.bonoProductividad)} al llegar a la meta de km de la categoría`, valorMeta: meta.productividad, valor: v.productividad, editable: true },
   ];

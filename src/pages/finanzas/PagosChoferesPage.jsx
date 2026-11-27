@@ -365,7 +365,7 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
     setExportError("");
     try {
       const servicios = detail.servicios ?? (await getPagosChoferesRequest({ month, driverId: driver.driverId })).servicios ?? [];
-      const params = { driver, servicios, reglas, month, kmh, categoria: calcularCategoria(driver, categoriaManual ?? {}) };
+      const params = { driver, servicios, reglas, month, kmh, categoria: calcularCategoria(driver, categoriaManual ?? {}, servicios) };
       if (formato === "pdf") {
         if (opciones?.asistencia) params.calendario = (await getCalendarioRequest({ month, driverId: driver.driverId }).catch(() => null))?.days ?? null;
         await downloadPagoChoferPdf(params, opciones);
@@ -439,7 +439,7 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
       <div className="flex flex-col gap-4 px-5 py-4">
         <Alert>{exportError}</Alert>
 
-        <CategoriaPagoCard key={JSON.stringify(categoriaManual ?? null)} driver={driver} month={month} manual={categoriaManual} onSaved={onCategoriaSaved} />
+        <CategoriaPagoCard key={JSON.stringify(categoriaManual ?? null)} driver={driver} month={month} manual={categoriaManual} servicios={detail.servicios} onSaved={onCategoriaSaved} />
 
         <AsistenciaCalendario driverId={driver.driverId} month={month} servicios={detail.servicios} />
 
@@ -678,7 +678,7 @@ export const PagosChoferesPage = () => {
         setReporte({ descargando: true, progreso: `Chofer ${i + 1} de ${data.porChofer.length}...` });
         const kmh = driver.kmhPago?.valor ?? data.reglas.kmBloque;
         const [pago, calendario] = await Promise.all([
-          opciones.entregas || opciones.asistencia ? getPagosChoferesRequest({ month, driverId: driver.driverId }) : Promise.resolve(null),
+          getPagosChoferesRequest({ month, driverId: driver.driverId }),
           opciones.asistencia ? getCalendarioRequest({ month, driverId: driver.driverId }).catch(() => null) : Promise.resolve(null),
         ]);
         choferes.push({
@@ -687,7 +687,7 @@ export const PagosChoferesPage = () => {
           reglas: data.reglas,
           month,
           kmh,
-          categoria: calcularCategoria(driver, categorias[driver.driverId] ?? {}),
+          categoria: calcularCategoria(driver, categorias[driver.driverId] ?? {}, pago?.servicios ?? []),
           calendario: calendario?.days ?? null,
         });
       }
