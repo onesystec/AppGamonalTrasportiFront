@@ -33,7 +33,7 @@ import { downloadBlob } from "../../lib/csv";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
 import { formatHours, pagaPorKm } from "../../lib/horas";
-import { buildDesglose } from "../../lib/pagoChofer";
+import { buildDesglose, servicioHorasTexto, servicioKmTexto } from "../../lib/pagoChofer";
 import { downloadPagoChoferPdf, downloadPagoChoferXlsx } from "../../lib/pagoChoferExport";
 import { calcularCategoria } from "../../lib/categoriaPago";
 import { CategoriaPagoCard, CategoriasInfo } from "../../components/finanzas/CategoriaPagoCard";
@@ -86,10 +86,13 @@ const ServiceList = ({ servicios, reglas, location, marcarAparte = false }) =>
     <p className="px-3 py-4 text-[14px] text-ink-400">No hay servicios pagables en este mes.</p>
   ) : (
     <div className="flex flex-col">
-      <div className="hidden gap-3 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400 lg:grid lg:grid-cols-[100px_minmax(0,1fr)_minmax(0,1.4fr)_100px]">
+      <div className="hidden gap-3 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400 lg:grid lg:grid-cols-[84px_minmax(0,0.9fr)_minmax(0,1.2fr)_76px_86px_minmax(0,1.5fr)_92px]">
         <span>Fecha</span>
-        <span>Servicio</span>
-        <span>Calculo</span>
+        <span>Código</span>
+        <span>Cliente - destino</span>
+        <span className="text-right">Km</span>
+        <span className="text-right">Horas de manejo</span>
+        <span>Cálculo</span>
         <span className="text-right">Pago</span>
       </div>
       {servicios.map((s) => (
@@ -97,15 +100,19 @@ const ServiceList = ({ servicios, reglas, location, marcarAparte = false }) =>
           key={s.id}
           to={`/records/${s.id}`}
           state={{ backgroundLocation: location }}
-          className="grid grid-cols-1 gap-1 rounded-lg px-4 py-2.5 transition-colors hover:bg-line/[0.07] lg:grid-cols-[100px_minmax(0,1fr)_minmax(0,1.4fr)_100px] lg:items-center lg:gap-3 lg:border-b lg:border-b-line/10"
+          className="grid grid-cols-1 gap-1 rounded-lg px-4 py-2.5 transition-colors hover:bg-line/[0.07] lg:grid-cols-[84px_minmax(0,0.9fr)_minmax(0,1.2fr)_76px_86px_minmax(0,1.5fr)_92px] lg:items-center lg:gap-3 lg:border-b lg:border-b-line/10"
         >
           <span className="text-[13px] text-ink-50">{formatDate(s.fecha)}</span>
-          <div className="min-w-0">
-            <span className="block truncate text-[13px] font-medium text-ink-50">{s.codigo}</span>
-            <span className="block truncate text-[12px] text-ink-400">
-              {[s.cliente, s.destinazione].filter(Boolean).join(" - ")}
-            </span>
-          </div>
+          <span className="min-w-0 break-all text-[13px] font-medium text-ink-50">{s.codigo}</span>
+          <span className="min-w-0 text-[12px] text-ink-300">{[s.cliente, s.destinazione].filter(Boolean).join(" - ") || "-"}</span>
+          <span className="text-[12.5px] text-ink-100 lg:text-right">
+            <span className="text-ink-400 lg:hidden">Km: </span>
+            {servicioKmTexto(s)}
+          </span>
+          <span className="text-[12.5px] text-ink-100 lg:text-right">
+            <span className="text-ink-400 lg:hidden">Horas de manejo: </span>
+            {servicioHorasTexto(s)}
+          </span>
           <div className="min-w-0 text-[12px] text-ink-300">
             {!pagaPorKm({ fechaServicio: s.fecha }) && <HorasEstadoChip estado={s.horasEstado} className="mr-1.5" />}
             {payCalcText(s, reglas)}

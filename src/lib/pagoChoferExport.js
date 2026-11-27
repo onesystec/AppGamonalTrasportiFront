@@ -5,7 +5,7 @@ import { downloadBlob } from "./csv";
 import { payCalcText } from "./finanzas";
 import { formatCurrency, formatDate, formatKm } from "./format";
 import { formatHours } from "./horas";
-import { buildDesglose, monthLabel } from "./pagoChofer";
+import { buildDesglose, monthLabel, servicioHorasTexto, servicioKmTexto } from "./pagoChofer";
 import { PAGE_H, PAGE_W, PdfDoc, wrapText } from "./pdfWriter";
 import { XS, buildXlsx } from "./xlsxWriter";
 
@@ -99,7 +99,9 @@ const buildModel = (params) => {
   const filasServicios = (servicios ?? []).map((s) => ({
     fecha: formatDate(s.fecha),
     codigo: s.codigo ?? "",
-    cliente: [s.cliente, s.destinazione].filter(Boolean).join(" - "),
+    cliente: [s.cliente, s.destinazione].filter(Boolean).join(" - ") || "-",
+    km: servicioKmTexto(s),
+    horas: servicioHorasTexto(s),
     calculo: payCalcText(s, reglasChofer),
     pago: s.total,
   }));
@@ -225,11 +227,11 @@ export const downloadPagoChoferXlsx = async (params) => {
 
   if (m.servicios.length) {
     section(`Servicios del mes (${m.servicios.length})`);
-    add([{ v: "Fecha", s: XS.th }, { v: "Servicio", s: XS.th }, { v: "Cliente - destino", s: XS.th }, { v: "Cálculo", s: XS.th }, { v: "Pago", s: XS.thRight }]);
+    add([{ v: "Fecha", s: XS.th }, { v: "Código", s: XS.th }, { v: "Cliente - destino", s: XS.th }, { v: "Cálculo", s: XS.th }, { v: "Pago", s: XS.thRight }, { v: "Km", s: XS.thRight }, { v: "Horas de manejo", s: XS.thRight }]);
     for (const s of m.servicios)
       add(
-        [{ v: s.fecha, s: XS.td }, { v: s.codigo, s: XS.td }, { v: s.cliente, s: XS.td }, { v: s.calculo, s: XS.td }, { v: round2(s.pago), s: XS.tdMoney }],
-        estimateHeight([[s.codigo, 32], [s.cliente, 22], [s.calculo, 46]])
+        [{ v: s.fecha, s: XS.td }, { v: s.codigo, s: XS.td }, { v: s.cliente, s: XS.td }, { v: s.calculo, s: XS.td }, { v: round2(s.pago), s: XS.tdMoney }, { v: s.km, s: XS.td }, { v: s.horas, s: XS.td }],
+        estimateHeight([[s.codigo, 26], [s.cliente, 22], [s.calculo, 46]])
       );
     r = add([{ v: "Total servicios", s: XS.totalLabel }, { s: XS.totalLabel }, { s: XS.totalLabel }, { s: XS.totalLabel }, { v: round2(m.totalServicios), s: XS.totalMoney }], 18);
     merge(r, "A", "D");
@@ -249,7 +251,7 @@ export const downloadPagoChoferXlsx = async (params) => {
 
   const blob = buildXlsx({
     name: "Pago chofer",
-    cols: [19, 24, 24, 50, 15],
+    cols: [19, 24, 24, 50, 15, 11, 15],
     rows,
     merges,
     image: logo?.png ? { png: logo.png, col: 0, row: 0, width: 66, height: 66 } : undefined,
@@ -420,14 +422,13 @@ export const downloadPagoChoferPdf = async (params) => {
     section(`Servicios del mes (${m.servicios.length})`);
     table(
       [
-        { title: "Fecha", width: 54 },
-        { title: "Servicio", width: 96, bold: true },
-        { title: "Cliente - destino", width: 118 },
-        { title: "Cálculo", width: 172, color: "#374151" },
-        { title: "Pago", width: CONTENT_W - 440, align: "right", bold: true },
+        { title: "Fecha", width: 58 },
+        { title: "Código", width: 112, bold: true },
+        { title: "Cliente - destino", width: 205 },
+        { title: "Km", width: 60, align: "right" },
+        { title: "Horas de manejo", width: CONTENT_W - 435, align: "right" },
       ],
-      m.servicios.map((s) => [s.fecha, s.codigo, s.cliente, s.calculo, formatCurrency(s.pago)]),
-      { total: ["TOTAL SERVICIOS", formatCurrency(m.totalServicios)] }
+      m.servicios.map((s) => [s.fecha, s.codigo, s.cliente, s.km, s.horas])
     );
   }
 
