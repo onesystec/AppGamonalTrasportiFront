@@ -42,3 +42,9 @@ export const getGastosServiciosRequest = (month) =>
 export const getTarifasKmRequest = () => api.get(`${BASE}/tarifas-km`).then((res) => res.data.data.tarifas);
 
 export const setTarifasKmRequest = (tarifas) => api.put(`${BASE}/tarifas-km`, tarifas).then((res) => res.data.data.tarifas);
+
+// Calculo por categoria (Junior, Senior, Master) de Pago a choferes: valores cambiados a mano por chofer en el mes, y guardarlos.
+export const getCategoriasPagoRequest = ({ month }) =>
+  api.get(`${BASE}/categorias-pago`, { params: { month } }).then((res) => res.data.data.categorias);
+
+export const setCategoriaPagoRequest = (body) => api.put(`${BASE}/categoria-pago`, body).then((res) => res.data.data.categoria);

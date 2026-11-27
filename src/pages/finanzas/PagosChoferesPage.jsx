@@ -27,13 +27,15 @@ import { useAuth } from "../../context/AuthContext";
 import { PayRulesCard } from "../../components/horas/PayRulesCard";
 import { parseApiError } from "../../lib/api";
 import { COSTO_COLORS, currentMonth, kmSourceLabel, payCalcText } from "../../lib/finanzas";
-import { downloadPresenciasRequest, getPagosChoferesRequest, setPagoAparteRequest, setVelocidadPagoRequest } from "../../lib/finanzas.api";
+import { downloadPresenciasRequest, getCategoriasPagoRequest, getPagosChoferesRequest, setPagoAparteRequest, setVelocidadPagoRequest } from "../../lib/finanzas.api";
 import { downloadBlob } from "../../lib/csv";
 import { HorasEstadoChip } from "../../components/horas/HorasEstadoChip";
 import { formatCurrency, formatDate, formatKm } from "../../lib/format";
 import { formatHours, pagaPorKm } from "../../lib/horas";
 import { buildDesglose } from "../../lib/pagoChofer";
 import { downloadPagoChoferPdf, downloadPagoChoferXlsx } from "../../lib/pagoChoferExport";
+import { calcularCategoria } from "../../lib/categoriaPago";
+import { CategoriaPagoCard, CategoriasInfo } from "../../components/finanzas/CategoriaPagoCard";
 
 const FORMATO_KEY = "gamonal-presencias-formato";
 const FORMATOS = [
@@ -285,7 +287,7 @@ const DriverListItem = ({ driver, active, onSelect }) => (
 );
 
 // Detalle del chofer elegido (OWNER/ADMIN): resumen del mes, desglose, ajustes, descargas y sus servicios.
-const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad, canEditAparte, onPagoAparte, savingAparte, onVerCalculo }) => {
+const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocidad, savingVelocidad, canEditAparte, onPagoAparte, savingAparte, onVerCalculo, categoriaManual, onCategoriaSaved }) => {
   const [detail, setDetail] = useState({ servicios: null, loading: false, error: "" });
   const [exporting, setExporting] = useState("");
   const [exportError, setExportError] = useState("");
@@ -318,7 +320,7 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
     setExportError("");
     try {
       const servicios = detail.servicios ?? (await getPagosChoferesRequest({ month, driverId: driver.driverId })).servicios ?? [];
-      const params = { driver, servicios, reglas, month, kmh };
+      const params = { driver, servicios, reglas, month, kmh, categoria: calcularCategoria(driver, categoriaManual ?? {}) };
       if (formato === "pdf") await downloadPagoChoferPdf(params);
       else await downloadPagoChoferXlsx(params);
     } catch (err) {
@@ -381,6 +383,8 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
         <Alert>{exportError}</Alert>
 
         <DesglosePago driver={driver} onVerCalculo={(filas) => onVerCalculo(driver, filas)} />
+
+        <CategoriaPagoCard key={JSON.stringify(categoriaManual ?? null)} driver={driver} month={month} manual={categoriaManual} onSaved={onCategoriaSaved} />
 
         {driver.kmRevisar?.length > 0 && (
           <div className="rounded-xl border border-warning-500/30 bg-warning-500/10 px-4 py-3">
@@ -500,6 +504,9 @@ export const PagosChoferesPage = () => {
   const [selectedId, setSelectedId] = useState(null);
   // Ventana informativa: las reglas de pago ("reglas") o el calculo de cada concepto de un chofer ("chofer").
   const [info, setInfo] = useState(null);
+  // Calculo por categoria: lo cambiado a mano en el mes, por chofer (driverId -> valores).
+  const [categorias, setCategorias] = useState({});
+  const [categoriasError, setCategoriasError] = useState("");
 
   // Velocidad de pago de un chofer en el mes mostrado: se guarda y se vuelve a pedir el pago con el valor nuevo.
   const changeVelocidad = async (driverId, kmh) => {
@@ -570,6 +577,25 @@ export const PagosChoferesPage = () => {
     };
   }, [month, isPrivileged]);
 
+  useEffect(() => {
+    if (!isPrivileged) return undefined;
+    let cancelled = false;
+    setCategorias({});
+    setCategoriasError("");
+    getCategoriasPagoRequest({ month })
+      .then((rows) => {
+        if (!cancelled) setCategorias(Object.fromEntries((rows ?? []).map((row) => [row.driverId, row])));
+      })
+      .catch((err) => {
+        if (!cancelled) setCategoriasError(`No se pudieron leer los ajustes del cálculo por categoría: ${parseApiError(err).message}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [month, isPrivileged]);
+
+  const onCategoriaSaved = (driverId, row) => setCategorias((prev) => ({ ...prev, [driverId]: row }));
+
   // El chofer ve su pago dentro de "Mis horas".
   if (!isPrivileged) return <Navigate to="/mis-horas" replace />;
 
@@ -621,6 +647,7 @@ export const PagosChoferesPage = () => {
       )}
 
       <Alert>{error}</Alert>
+      {data && categoriasError && <Alert>{categoriasError}</Alert>}
       {!data && !error && <PageLoader />}
 
       {data && (
@@ -761,6 +788,8 @@ export const PagosChoferesPage = () => {
                     onPagoAparte={changePagoAparte}
                     savingAparte={savingAparte === selected.driverId}
                     onVerCalculo={(driver, filas) => setInfo({ tipo: "chofer", driver, filas })}
+                    categoriaManual={categorias[selected.driverId]}
+                    onCategoriaSaved={onCategoriaSaved}
                   />
                 ) : (
                   <div className="glass-surface rounded-2xl px-5 py-10 text-center text-[14px] text-ink-400">Elige un chofer de la lista.</div>
@@ -797,6 +826,14 @@ export const PagosChoferesPage = () => {
                   <span className="text-[15px] font-bold text-ink-50">{formatCurrency(info.driver.total)}</span>
                 </div>
               </div>
+            )}
+            {info?.tipo !== "chofer" && (
+              <>
+                <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Cálculo por categoría</p>
+                <div className="mb-6">
+                  <CategoriasInfo />
+                </div>
+              </>
             )}
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-400">Reglas de pago vigentes</p>
             <PayRulesCard reglas={data.reglas} variant="stacked" />
