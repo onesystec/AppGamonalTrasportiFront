@@ -215,7 +215,7 @@ export const downloadPagoChoferXlsx = async (params) => {
       r = add([{ v: `Nota: ${c.nota}`, s: XS.note }, { s: XS.note }, { s: XS.note }, { s: XS.note }, { s: XS.note }], estimateHeight([[c.nota, 110]]));
       merge(r, "A", "E");
     }
-    r = add([{ v: "Propuesta ilustrativa: no reemplaza el total a pagar. Pago definitivo sujeto a jornada remunerable y revisión en nómina.", s: XS.small }]);
+    r = add([{ v: "Propuesta ilustrativa. Pago definitivo sujeto a jornada remunerable y revisión en nómina.", s: XS.small }]);
     merge(r, "A", "E");
   }
 
@@ -373,55 +373,15 @@ export const downloadPagoChoferPdf = async (params) => {
     else wrapText(value, colW - 12, 8, true).slice(0, 2).forEach((line, li) => doc.text(x, ry + 9 + li * 9.5, line, { size: 8, bold: true, color: "#1f2937" }));
   });
   const tx = PAGE_W - MARGIN - 14;
-  doc.text(tx, y + boxH / 2 - 16, "TOTAL A PAGAR", { size: 8, bold: true, color: MUTED, align: "right" });
-  doc.text(tx, y + boxH / 2 - 4, formatCurrency(m.total), { size: 17, bold: true, color: NAVY, align: "right" });
+  const destacado = m.categoria
+    ? [`RESULTADO · ${m.categoria.categoria.label.toUpperCase()}`, m.categoria.resultado]
+    : ["TOTAL A PAGAR", m.total];
+  doc.text(tx, y + boxH / 2 - 16, destacado[0], { size: 8, bold: true, color: MUTED, align: "right" });
+  doc.text(tx, y + boxH / 2 - 4, formatCurrency(destacado[1]), { size: 17, bold: true, color: NAVY, align: "right" });
   y += boxH + 12;
-
-  // Resumen en 4 recuadros.
-  if (m.resumen.length) {
-    section("Resumen del mes");
-    const gap = 8;
-    const w = (CONTENT_W - gap * 3) / 4;
-    ensure(70);
-    m.resumen.forEach((item, i) => {
-      const x = MARGIN + i * (w + gap);
-      doc.rect(x, y, w, 66, { stroke: BORDER });
-      doc.text(x + 8, y + 7, item.titulo.toUpperCase(), { size: 7, bold: true, color: MUTED });
-      doc.text(x + 8, y + 18, item.grande, { size: 11, bold: true, color: "#1f2937" });
-      wrapText(item.detalle, w - 16, 7.5).slice(0, 2).forEach((line, li) => doc.text(x + 8, y + 32 + li * 8.5, line, { size: 7.5, color: MUTED }));
-      doc.text(x + 8, y + 51, formatCurrency(item.pago), { size: 9.5, bold: true, color: ACCENT });
-    });
-    y += 74;
-  }
-
-  section("Desglose del pago");
-  table(
-    [
-      { title: "Concepto", width: 140, bold: true },
-      { title: "Cantidad", width: 100 },
-      { title: "Cómo se calcula", width: 190, color: "#374151" },
-      { title: "Pago", width: CONTENT_W - 430, align: "right", bold: true },
-    ],
-    m.filas.length ? m.filas.map((f) => [f.concepto, f.cantidad, f.calculo, formatCurrency(f.pago)]) : [["Sin pagos por servicios este mes", "", "", ""]],
-    { total: ["TOTAL A PAGAR", formatCurrency(m.total)] }
-  );
-
-  if (m.aparte) {
-    section("Básico y aparte");
-    table(
-      [
-        { title: "Concepto", width: 140, bold: true },
-        { title: "Detalle", width: 290 },
-        { title: "Pago", width: CONTENT_W - 430, align: "right", bold: true },
-      ],
-      m.aparte.map((a) => [a.label, a.detalle, formatCurrency(a.pago)]),
-      { total: ["TOTAL A PAGAR (BÁSICO + APARTE)", formatCurrency(m.total)] }
-    );
-  }
 
   if (m.categoria) {
     const c = m.categoria;
-    ensure(330);
     section(`Cálculo por categoría: ${c.categoria.label}`);
     ensure(40);
     doc.text(MARGIN, y, `Meta ${c.categoria.label}: ${c.categoria.metaKm.toLocaleString("es-AR")} km  ·  Referencia neta: ${formatCurrency(c.categoria.referencia)}/mes  ·  Factor: ${c.factor}`, { size: 8.5, color: "#374151" });
@@ -460,7 +420,7 @@ export const downloadPagoChoferPdf = async (params) => {
         y += 11;
       }
     }
-    doc.text(MARGIN, y, "Propuesta ilustrativa: no reemplaza el total a pagar. Pago definitivo sujeto a jornada remunerable y revisión en nómina.", { size: 7.5, color: MUTED });
+    doc.text(MARGIN, y, "Propuesta ilustrativa. Pago definitivo sujeto a jornada remunerable y revisión en nómina.", { size: 7.5, color: MUTED });
     y += 18;
   }
 
@@ -482,10 +442,10 @@ export const downloadPagoChoferPdf = async (params) => {
     section(`Servicios del mes (${m.servicios.length})`);
     table(
       [
-        { title: "Fecha", width: 56 },
-        { title: "Servicio", width: 78, bold: true },
-        { title: "Cliente - destino", width: 120 },
-        { title: "Cálculo", width: 186, color: "#374151" },
+        { title: "Fecha", width: 54 },
+        { title: "Servicio", width: 96, bold: true },
+        { title: "Cliente - destino", width: 118 },
+        { title: "Cálculo", width: 172, color: "#374151" },
         { title: "Pago", width: CONTENT_W - 440, align: "right", bold: true },
       ],
       m.servicios.map((s) => [s.fecha, s.codigo, s.cliente, s.calculo, formatCurrency(s.pago)]),

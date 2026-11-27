@@ -44,7 +44,23 @@ export const textWidth = (text, size, bold = false) => {
 
 // Parte un texto en lineas que entran en `width`.
 export const wrapText = (text, width, size, bold = false) => {
-  const words = String(text ?? "").split(/\s+/).filter(Boolean);
+  // Una palabra mas ancha que la columna (ej. un codigo de servicio largo) se corta en pedazos para que no pise la columna de al lado.
+  const words = [];
+  for (const word of String(text ?? "").split(/\s+/).filter(Boolean)) {
+    if (textWidth(word, size, bold) <= width) {
+      words.push(word);
+      continue;
+    }
+    let piece = "";
+    for (const ch of word) {
+      if (piece && textWidth(piece + ch, size, bold) > width) {
+        words.push(piece);
+        piece = "";
+      }
+      piece += ch;
+    }
+    if (piece) words.push(piece);
+  }
   const lines = [];
   let line = "";
   for (const word of words) {
