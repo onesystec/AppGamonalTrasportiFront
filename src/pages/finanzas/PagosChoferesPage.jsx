@@ -37,6 +37,7 @@ import { buildDesglose, servicioHorasTexto, servicioKmTexto } from "../../lib/pa
 import { PDF_PARTES, downloadPagoChoferPdf, downloadPagoChoferXlsx, downloadReporteMesPdf } from "../../lib/pagoChoferExport";
 import { getCalendarioRequest } from "../../lib/permisos.api";
 import { calcularCategoria } from "../../lib/categoriaPago";
+import { AsistenciaCalendario } from "../../components/finanzas/AsistenciaCalendario";
 import { CategoriaPagoCard, CategoriasInfo } from "../../components/finanzas/CategoriaPagoCard";
 
 const FORMATO_KEY = "gamonal-presencias-formato";
@@ -439,6 +440,8 @@ const DriverDetail = ({ driver, month, reglas, location, velocidades, onVelocida
         <Alert>{exportError}</Alert>
 
         <CategoriaPagoCard key={JSON.stringify(categoriaManual ?? null)} driver={driver} month={month} manual={categoriaManual} onSaved={onCategoriaSaved} />
+
+        <AsistenciaCalendario driverId={driver.driverId} month={month} servicios={detail.servicios} />
 
         {driver.kmRevisar?.length > 0 && (
           <div className="rounded-xl border border-warning-500/30 bg-warning-500/10 px-4 py-3">
